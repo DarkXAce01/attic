@@ -41,6 +41,16 @@ android {
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        unitTests.all {
+            it.maxHeapSize = "1g"
+            // The detector benchmark is heavy; run it on purpose with ./gradlew testDebugUnitTest -Pbenchmark
+            it.systemProperty("attic.benchmark", project.hasProperty("benchmark").toString())
+            it.systemProperty("attic.seed", (project.findProperty("seed") ?: "1000").toString())
+            project.findProperty("debugScene")?.let { s -> it.systemProperty("attic.debugScene", s.toString()) }
+        }
+    }
 }
 
 room {

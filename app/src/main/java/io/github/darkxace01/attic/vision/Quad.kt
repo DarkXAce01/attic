@@ -41,8 +41,10 @@ data class Quad(val tl: Pt, val tr: Pt, val br: Pt, val bl: Pt) {
 
     fun contains(p: Pt): Boolean = pointInConvex(points, p)
 
+    fun intersectionArea(o: Quad): Float = abs(signedArea(clipConvex(points, o.points)))
+
     fun iou(o: Quad): Float {
-        val inter = abs(signedArea(clipConvex(points, o.points)))
+        val inter = intersectionArea(o)
         val union = area + o.area - inter
         return if (union <= 0f) 0f else inter / union
     }

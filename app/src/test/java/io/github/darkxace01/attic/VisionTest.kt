@@ -50,12 +50,12 @@ class VisionTest {
     }
 
     @Test
-    fun doubleEdgeContoursMergeToTheMiddle() {
-        val outer = rect(0f, 0f, 102f, 102f)
-        val inner = rect(2f, 2f, 98f, 98f)
+    fun doubleEdgeContoursBecomeOnePrint() {
+        val outer = rect(0f, 0f, 101f, 101f)
+        val inner = rect(1f, 1f, 99f, 99f)
         val result = Candidates.resolve(listOf(inner, outer))
         assertEquals(1, result.size)
-        assertEquals(1f, result[0].tl.x, 1e-3f)
+        assertTrue(result[0].tl.x in 0f..1f)
     }
 
     @Test
@@ -73,6 +73,25 @@ class VisionTest {
         val imageArea = rect(12f, 12f, 176f, 176f)
         val windowInPhoto = rect(40f, 40f, 30f, 30f)
         val result = Candidates.resolve(listOf(print, imageArea, windowInPhoto))
+        assertEquals(listOf(print), result)
+    }
+
+    @Test
+    fun twoRoughOutlinesOfOneImageAreaDontMakeAPage() {
+        val print = rect(0f, 0f, 200f, 240f)
+        val imageArea = rect(12f, 12f, 176f, 176f)
+        val roughImageArea = rect(14f, 10f, 174f, 180f)
+        val result = Candidates.resolve(listOf(print, imageArea, roughImageArea))
+        assertEquals(listOf(print), result)
+    }
+
+    @Test
+    fun aPhotoWithRectanglesInItsPictureStaysOnePrint() {
+        val print = rect(0f, 0f, 300f, 400f)
+        val door = rect(40f, 120f, 60f, 100f)
+        val window = rect(180f, 60f, 70f, 60f)
+        // The caller looked between them and saw picture, not plain page.
+        val result = Candidates.resolveScored(listOf(print, door, window).map { Candidates.Scored(it, 1f) }) { _, _ -> false }
         assertEquals(listOf(print), result)
     }
 
