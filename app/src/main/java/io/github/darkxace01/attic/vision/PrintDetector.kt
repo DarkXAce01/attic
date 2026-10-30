@@ -125,10 +125,12 @@ class PrintDetector(
                 else -> Candidates.Scored(q, a!!)
             }
         }.filterNot { emptyInside(coarse, it.quad) }.map { c ->
-            // Plain paper strips just inside one or two sides: this is a sleeve pocket with the print
-            // inside it, not the print (a white photo border runs round all four sides).
-            val strips = paperStrips(frame, c.quad)
-            if (strips in 1..2) Candidates.Scored(c.quad, c.score * 0.75f) else c
+            // Plain paper strips just inside some sides: this is a sleeve pocket with the print slid
+            // into it, not the print. A white photo border runs round all four sides, about evenly.
+            val strips = paperStrips(frame, c.quad).filter { it > 0 }
+            val pocket = strips.size in 1..3 || (strips.size == 4 && strips.max() > strips.min() * 2 + 2)
+            trace?.invoke("strips $strips", c.quad, if (pocket) c.score * 0.75f else c.score)
+            if (pocket) Candidates.Scored(c.quad, c.score * 0.75f) else c
         }.map { c ->
             // A straight edge running right across the inside: this outline spans two prints, or a page.
             if (LineRects.crossedInside(c.quad, edgeLines)) Candidates.Scored(c.quad, c.score * 0.7f) else c
@@ -474,13 +476,13 @@ class PrintDetector(
     }
 
     /**
-     * How many sides of [q] have a plain strip of pale paper (sleeve, album card, photo border) running
-     * just inside them and then ending in something different.
+     * For each side of [q], how wide a plain strip of pale paper (sleeve, album card, photo border) runs just
+     * inside it before something different starts; 0 where there's none.
      */
-    private fun paperStrips(f: Frame, q: Quad): Int {
+    private fun paperStrips(f: Frame, q: Quad): IntArray {
         val pts = q.points
         val c = q.center
-        var strips = 0
+        val strips = IntArray(4)
         for (i in 0 until 4) {
             val a = pts[i]
             val b = pts[(i + 1) % 4]
@@ -490,24 +492,32 @@ class PrintDetector(
             if ((c.x - mid.x) * n.x + (c.y - mid.y) * n.y < 0) n = n * -1f // inward
             val across = if (i % 2 == 0) min(pts[0].dist(pts[3]), pts[1].dist(pts[2])) else min(pts[0].dist(pts[1]), pts[3].dist(pts[2]))
             val maxDepth = (across * 0.12f).toInt().coerceAtLeast(4)
-            var bandMean: Triple<Int, Int, Int>? = null
+            fun row(depth: Int) = (0 until 12).mapNotNull { k ->
+                val p = a + (b - a) * (0.15f + 0.7f * k / 11f) + n * depth.toFloat()
+                f.labAt(p.x.roundToInt(), p.y.roundToInt())
+            }.takeIf { it.size >= 8 }
+            fun mean(r: List<Triple<Int, Int, Int>>) = Triple(r.sumOf { it.first } / r.size, r.sumOf { it.second } / r.size, r.sumOf { it.third } / r.size)
+            // The band may shade gradually (a sleeve's shadow), so each row is compared with the one before.
+            var prev: Triple<Int, Int, Int>? = null
             var width = 0
             for (depth in 2..maxDepth) {
-                val row = (0 until 12).mapNotNull { k ->
-                    val p = a + (b - a) * (0.15f + 0.7f * k / 11f) + n * depth.toFloat()
-                    f.labAt(p.x.roundToInt(), p.y.roundToInt())
-                }
-                if (row.size < 8) break
-                val mean = Triple(row.sumOf { it.first } / row.size, row.sumOf { it.second } / row.size, row.sumOf { it.third } / row.size)
-                val plain = row.count { labDistance(it, mean) < 10f } >= row.size * 0.85f
+                val r = row(depth) ?: break
+                val mean = mean(r)
+                val plain = r.count { labDistance(it, mean) < 10f } >= r.size * 0.85f
                 val paper = mean.first >= 165 && abs(mean.second - 128) + abs(mean.third - 128) <= 24
-                val band = bandMean
-                if (band == null) {
-                    if (plain && paper) { bandMean = mean; width = 1 } else break
-                } else if (plain && labDistance(mean, band) < 8f) {
+                val last = prev
+                if (last == null) {
+                    if (plain && paper) { prev = mean; width = 1 } else break
+                } else if (plain && mean.first >= 150 && labDistance(mean, last) < 8f) {
+                    prev = mean
                     width++
                 } else {
-                    if (width >= 3 && labDistance(mean, band) >= 15f) strips++
+                    // The band ends. It's a strip if what follows is clearly something else, allowing a
+                    // row or two of blurred edge first.
+                    if (width >= 3 && (depth..min(depth + 2, maxDepth + 2)).any { dd ->
+                            val rr = row(dd) ?: return@any false
+                            rr.count { labDistance(it, last) >= 15f } >= rr.size * 0.5f
+                        }) strips[i] = width
                     break
                 }
             }

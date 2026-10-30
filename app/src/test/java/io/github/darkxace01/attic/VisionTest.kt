@@ -187,4 +187,37 @@ class VisionTest {
         tracker.update(listOf(q), t)
         assertEquals(id, tracker.visible.single().id)
     }
+
+    @Test
+    fun aPrintAndItsPocketDontTakeTurns() {
+        // Frames find the print most of the time and the sleeve pocket around it otherwise. One outline
+        // shows, the print's, and it doesn't swing between the two.
+        val tracker = QuadTracker(lockAfterMs = 200)
+        val print = rect(0.2f, 0.2f, 0.5f, 0.4f)
+        val pocket = rect(0.17f, 0.17f, 0.56f, 0.46f)
+        var t = 0L
+        val shownEach = mutableListOf<Quad>()
+        repeat(30) { i ->
+            tracker.update(listOf(if (i % 3 == 2) pocket else print), t)
+            t += 33
+            tracker.visible.forEach { shownEach += it.shown }
+            assertTrue("frame $i shows ${tracker.visible.size}", tracker.visible.size <= 1)
+        }
+        assertTrue(tracker.visible.single().locked)
+        assertTrue(tracker.visible.single().shown.maxCornerShift(print) < 0.001f)
+        assertTrue(shownEach.drop(4).all { it.maxCornerShift(print) < 0.001f })
+    }
+
+    @Test
+    fun anOutlineFoundNowAndThenNeverShows() {
+        val tracker = QuadTracker()
+        val print = rect(0.2f, 0.2f, 0.5f, 0.4f)
+        val ghost = rect(0.6f, 0.6f, 0.3f, 0.3f)
+        var t = 0L
+        repeat(40) { i ->
+            tracker.update(if (i % 3 == 0) listOf(print, ghost) else listOf(print), t)
+            t += 33
+        }
+        assertEquals(1, tracker.visible.size)
+    }
 }

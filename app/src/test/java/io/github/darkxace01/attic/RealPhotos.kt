@@ -125,18 +125,72 @@ class RealPhotos {
                 val noise = Mat(moved.size(), moved.type())
                 org.opencv.core.Core.randn(noise, 0.0, 3.0)
                 org.opencv.core.Core.add(moved, noise, moved)
+                val resolvedNow = mutableListOf<Quad>()
+                val stripsNow = mutableListOf<Triple<String, Quad, Float?>>()
+                detector.trace = { src, rq, sc ->
+                    if (src == "resolved") resolvedNow += rq.scale(2f, 2f)
+                    if (src.startsWith("strips")) {
+                        stripsNow += Triple(src, rq.scale(2f, 2f), sc)
+                    }
+                }
                 val q = detector.detect(moved)
+                detector.trace = null
                 counts += q.size
+                if (i < 2) for ((ti, t0) in truth.withIndex()) {
+                    val t = t0.map { p -> Pt((m.get(0, 0)[0] * p.x + m.get(0, 1)[0] * p.y + m.get(0, 2)[0]).toFloat(), (m.get(1, 0)[0] * p.x + m.get(1, 1)[0] * p.y + m.get(1, 2)[0]).toFloat()) }
+                    stripsNow.filter { it.second.iou(t) > 0.75f }.sortedByDescending { it.third }.distinctBy { it.second.points.map { p -> p.x.toInt() / 4 to p.y.toInt() / 4 } }.take(5).forEach { (src, sq, sc) ->
+                        println("      frame $i truth $ti: ${"%.3f".format(sc)} $src iou ${"%.2f".format(sq.iou(t))} area ${"%.2f".format(sq.area / t.area)}")
+                    }
+                }
                 // Move the truths the same way to score this frame.
                 val m0 = m.get(0, 0)[0]; val m1 = m.get(0, 1)[0]; val m2 = m.get(0, 2)[0]
                 val m3 = m.get(1, 0)[0]; val m4 = m.get(1, 1)[0]; val m5 = m.get(1, 2)[0]
                 val movedTruth = truth.map { t -> t.map { p -> Pt((m0 * p.x + m1 * p.y + m2).toFloat(), (m3 * p.x + m4 * p.y + m5).toFloat()) } }
                 frameScores += score(movedTruth, q)
+                println("      frame $i: " + movedTruth.joinToString { t -> q.maxByOrNull { it.iou(t) }?.let { b -> "iou %.2f area %.2f".format(b.iou(t), b.area / t.area) } ?: "none" } + "  | before border: " + movedTruth.joinToString { t -> resolvedNow.maxByOrNull { it.iou(t) }?.let { b -> "%.2f/%.2f".format(b.iou(t), b.area / t.area) } ?: "none" })
                 if (i < 3) Scenes.writeOverlay(File(out, "${f.nameWithoutExtension}_frame$i.png"), moved, emptyList(), q)
                 listOf(moved, noise, m).forEach { it.release() }
             }
             println("   per-frame counts: $counts")
             println("   per-frame: $frameScores")
+
+            // A held phone: slow drift and a little shake, through the tracker as the camera screen runs it
+            // (about 8 frames a second). Reports what's on screen and what auto-capture would take.
+            val tracker = io.github.darkxace01.attic.vision.QuadTracker()
+            val w = live.cols().toFloat(); val h = live.rows().toFloat()
+            var x = 0.0; var y = 0.0; var a = 0.0
+            val timeline = StringBuilder()
+            var captured: List<Quad>? = null
+            var lockedSince = -1L; var lockedIds = emptySet<Long>()
+            repeat(28) { i ->
+                val now = i * 125L
+                x += r.nextDouble(-1.5, 1.5); y += r.nextDouble(-1.5, 1.5); a += r.nextDouble(-0.08, 0.08)
+                val m = Imgproc.getRotationMatrix2D(org.opencv.core.Point(live.cols() / 2.0, live.rows() / 2.0), a, 1.0)
+                m.put(0, 2, m.get(0, 2)[0] + x); m.put(1, 2, m.get(1, 2)[0] + y)
+                val moved = Mat()
+                Imgproc.warpAffine(live, moved, m, live.size(), Imgproc.INTER_LINEAR, org.opencv.core.Core.BORDER_REFLECT)
+                val noise = Mat(moved.size(), moved.type())
+                org.opencv.core.Core.randn(noise, 0.0, 3.0)
+                org.opencv.core.Core.add(moved, noise, moved)
+                val tracks = tracker.update(detector.detect(moved).map { it.scale(1f / w, 1f / h) }, now)
+                if (i >= 20) println("      frame $i: " + tracks.joinToString { "#${it.id} agree ${"%.2f".format(it.agreement)} of ${it.history.size} spread ${"%.4f".format(io.github.darkxace01.attic.vision.QuadTracker.spread(it.history))}" })
+                timeline.append(tracks.size).append(if (tracks.isNotEmpty() && tracks.all { it.locked }) "L " else "  ")
+                val ids = tracks.map { it.id }.toSet()
+                if (tracks.isNotEmpty() && tracks.all { it.locked } && ids == lockedIds) {
+                    if (captured == null && now - lockedSince >= 900) {
+                        val m0 = m.get(0, 0)[0]; val m1 = m.get(0, 1)[0]; val m2 = m.get(0, 2)[0]
+                        val m3 = m.get(1, 0)[0]; val m4 = m.get(1, 1)[0]; val m5 = m.get(1, 2)[0]
+                        val movedTruth = truth.map { t -> t.map { p -> Pt((m0 * p.x + m1 * p.y + m2).toFloat(), (m3 * p.x + m4 * p.y + m5).toFloat()) } }
+                        captured = tracks.map { it.shown.scale(w, h) }
+                        timeline.append("[capture at frame $i: ${score(movedTruth, captured!!)}] ")
+                    }
+                } else {
+                    lockedSince = now; lockedIds = if (tracks.isNotEmpty() && tracks.all { it.locked }) ids else emptySet()
+                }
+                listOf(moved, noise, m).forEach { it.release() }
+            }
+            println("   held phone, prints on screen (L = all locked): $timeline")
+            if (captured == null) println("   held phone: no auto-capture")
             listOf(bgr, rgba, live).forEach { it.release() }
         }
     }

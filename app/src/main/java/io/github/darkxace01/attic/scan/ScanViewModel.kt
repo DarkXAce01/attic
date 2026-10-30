@@ -123,12 +123,14 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     private var imageCapture: ImageCapture? = null
     private val previewCache = HashMap<Long, Pair<Long, LivePreview>>()
 
-    // Auto-capture: fire once everything in view is locked, then wait until the scene changes.
+    // Auto-capture: fire once the same prints have stayed locked for a moment, then wait until the scene
+    // changes. Any print appearing or vanishing starts the countdown over, so it never fires mid-change.
     private var armed = true
     private var lastCaptureAt = 0L
     private var allLockedSince = 0L
+    private var lockedIds = emptySet<Long>()
     private var emptySince = 0L
-    private val autoDelayMs = 600L
+    private val autoDelayMs = 900L
 
     fun bind(provider: ProcessCameraProvider, owner: LifecycleOwner, previewView: PreviewView) {
         val ratio43 = AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
@@ -220,10 +222,12 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         }
 
         val allLocked = tracks.isNotEmpty() && tracks.all { it.locked }
-        if (allLocked) {
+        val ids = tracks.map { it.id }.toSet()
+        if (allLocked && ids == lockedIds) {
             if (allLockedSince == 0L) allLockedSince = now
         } else {
-            allLockedSince = 0L
+            allLockedSince = if (allLocked) now else 0L
+            lockedIds = if (allLocked) ids else emptySet()
         }
         val s = _state.value
         val counting = s.autoCapture && armed && !s.saving && allLocked
