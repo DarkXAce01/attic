@@ -19,29 +19,37 @@ object ColorFix {
     private const val CLIP = 0.005
     private const val MAX_GAIN = 2.2
 
-    fun apply(rgba: Mat): Mat {
+    /** Fixes an RGBA image; alpha is kept. */
+    fun apply(rgba: Mat): Mat = stretch(rgba)
+
+    /** Fixes an RGB image. */
+    fun applyRgb(rgb: Mat): Mat = stretch(rgb)
+
+    private fun stretch(img: Mat): Mat {
+        val n = img.channels()
         val small = Mat()
-        val scale = 800.0 / max(rgba.cols(), rgba.rows())
-        if (scale < 1) org.opencv.imgproc.Imgproc.resize(rgba, small, org.opencv.core.Size(), scale, scale) else rgba.copyTo(small)
+        val scale = 800.0 / max(img.cols(), img.rows())
+        if (scale < 1) org.opencv.imgproc.Imgproc.resize(img, small, org.opencv.core.Size(), scale, scale) else img.copyTo(small)
 
         val channels = ArrayList<Mat>()
         Core.split(small, channels)
-        val lut = Mat(1, 256, CvType.CV_8UC4)
-        val table = ByteArray(256 * 4)
-        for (c in 0 until 4) {
-            val (lo, hi) = if (c == 3) 0 to 255 else percentiles(channels[c])
+        val lut = Mat(1, 256, CvType.makeType(CvType.CV_8U, n))
+        val table = ByteArray(256 * n)
+        for (c in 0 until n) {
+            val isAlpha = c == 3
+            val (lo, hi) = if (isAlpha) 0 to 255 else percentiles(channels[c])
             val range = max(1, hi - lo)
             // Cap the gain; centre whatever stretch is left so midtones stay where they were.
             val gain = min(255.0 / range, MAX_GAIN)
             val offset = if (255.0 / range > MAX_GAIN) (lo + hi) / 2.0 - 127.5 / gain else lo.toDouble()
             for (v in 0 until 256) {
-                val out = if (c == 3) v else ((v - offset) * gain).roundToInt().coerceIn(0, 255)
-                table[v * 4 + c] = out.toByte()
+                val out = if (isAlpha) v else ((v - offset) * gain).roundToInt().coerceIn(0, 255)
+                table[v * n + c] = out.toByte()
             }
         }
         lut.put(0, 0, table)
         val out = Mat()
-        Core.LUT(rgba, lut, out)
+        Core.LUT(img, lut, out)
         (channels + listOf(small, lut)).forEach { it.release() }
         return out
     }

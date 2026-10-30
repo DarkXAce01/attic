@@ -27,6 +27,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
 import io.github.darkxace01.attic.data.Library
 import io.github.darkxace01.attic.library
+import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.FrameTransform
 import io.github.darkxace01.attic.vision.PrintDetector
 import io.github.darkxace01.attic.vision.Quad
@@ -93,6 +94,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         viewModelScope.launch {
             library.importLooseScans()
             scanningAlbumId.value = library.scanningAlbum().id
+            library.renderMissing()
         }
         viewModelScope.launch {
             combine(scanningAlbumId.filterNotNull(), library.albums()) { id, list -> list.firstOrNull { it.id == id } }
@@ -288,7 +290,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             }
             full.release()
             val saved = if (prints.isEmpty()) emptyList() else library.saveCapture(jpeg, frame, prints)
-            val thumbs = prints.map { previewOf(it.image, Quad.ofSize(it.image.cols(), it.image.rows())) }
+            val thumbs = prints.map { previewOf(it.image, Quad.ofSize(it.image.cols(), it.image.rows()), enhance = true) }
             val soft = prints.count { it.sharpness < SOFT_SHARPNESS }
             prints.forEach { it.image.release() }
             // New prints go straight into the gallery too, so they're safe the moment they're scanned.
@@ -318,8 +320,10 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         captureExecutor.shutdown()
     }
 
-    private fun previewOf(frame: Mat, quad: Quad): ImageBitmap {
-        val flat = Rectify.warp(frame, quad, maxSide = 320)
+    private fun previewOf(frame: Mat, quad: Quad, enhance: Boolean = false): ImageBitmap {
+        var flat = Rectify.warp(frame, quad, maxSide = 320)
+        // Saved prints are shown the way they were kept: enhanced.
+        if (enhance) flat = Enhance.apply(flat, Enhance.NATURAL).also { flat.release() }
         val bmp = Bitmap.createBitmap(flat.cols(), flat.rows(), Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(flat, bmp)
         flat.release()

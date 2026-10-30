@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -39,6 +40,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -62,6 +64,8 @@ import io.github.darkxace01.attic.ui.TextSheet
 import io.github.darkxace01.attic.ui.TopBar
 import io.github.darkxace01.attic.ui.fieldColors
 import io.github.darkxace01.attic.ui.theme.Palette
+import io.github.darkxace01.attic.vision.Enhance
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -92,7 +96,12 @@ fun PrintScreen(printId: Long, onBack: () -> Unit, onFixCrop: (Long) -> Unit) {
         TopBar(album?.title ?: "", onBack = onBack) {
             if (busy) Text("Saving…", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
         }
-        ZoomableImage(p, library.displayFile(p), Modifier.fillMaxWidth().weight(1f))
+        ZoomableImage(
+            p,
+            file = library.displayFile(p),
+            before = library.originalFile(p).takeIf { p.enhance != Enhance.OFF },
+            modifier = Modifier.fillMaxWidth().weight(1f),
+        )
 
         Column(
             Modifier
@@ -110,6 +119,14 @@ fun PrintScreen(printId: Long, onBack: () -> Unit, onFixCrop: (Long) -> Unit) {
             DetailRow("Where", p.place, "Add a place") { editing = Editing.Place }
             DetailRow("Caption", p.caption, "Add a caption") { editing = Editing.Caption }
 
+            Spacer(Modifier.height(14.dp))
+            LookChoice(p.enhance) { level -> work { library.setEnhance(printId, level) } }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                if (p.enhance == Enhance.OFF) "Exactly as scanned." else "Hold the photo to see it as scanned.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Palette.Muted,
+            )
             Spacer(Modifier.height(10.dp))
             Text(
                 qualityLine(p),
@@ -120,7 +137,6 @@ fun PrintScreen(printId: Long, onBack: () -> Unit, onFixCrop: (Long) -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 QuietButton("Fix crop", onClick = { onFixCrop(printId) })
                 QuietButton("Rotate", onClick = { work { library.rotate(printId) } })
-                QuietButton(if (p.colorFix) "Original colour" else "Fix colour", onClick = { work { library.setColorFix(printId, !p.colorFix) } })
                 Spacer(Modifier.weight(1f))
                 QuietButton("Delete", onClick = { confirmDelete = true }, color = Palette.Warning)
             }
@@ -199,9 +215,11 @@ private fun DetailRow(label: String, value: String?, placeholder: String, onClic
 }
 
 @Composable
-private fun ZoomableImage(p: PrintEntity, file: java.io.File, modifier: Modifier) {
+private fun ZoomableImage(p: PrintEntity, file: java.io.File, before: java.io.File?, modifier: Modifier) {
     var scale by remember(p.id) { mutableFloatStateOf(1f) }
     var offset by remember(p.id) { mutableStateOf(Offset.Zero) }
+    var comparing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     val transform = rememberTransformableState { _, zoom, pan, _ ->
         scale = (scale * zoom).coerceIn(1f, 12f)
         offset = if (scale == 1f) Offset.Zero else offset + pan
@@ -211,29 +229,78 @@ private fun ZoomableImage(p: PrintEntity, file: java.io.File, modifier: Modifier
             .background(Palette.Ground)
             .transformable(transform)
             .pointerInput(Unit) {
-                detectTapGestures(onDoubleTap = {
-                    if (scale > 1f) { scale = 1f; offset = Offset.Zero } else scale = 3f
-                })
+                detectTapGestures(
+                    onDoubleTap = { if (scale > 1f) { scale = 1f; offset = Offset.Zero } else scale = 3f },
+                    // Holding shows the scan as it came off the camera. A short wait first, so a pinch or
+                    // a double tap doesn't flash it.
+                    onPress = {
+                        if (before != null) {
+                            val show = scope.launch { delay(180); comparing = true }
+                            tryAwaitRelease()
+                            show.cancel()
+                            comparing = false
+                        }
+                    },
+                )
             },
     ) {
-        AsyncImage(
-            // Full size, so zooming in shows the real detail of the scan.
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(file)
-                .size(Size.ORIGINAL)
-                .memoryCacheKey("${file.path}#${p.version}")
-                .diskCacheKey("${file.path}#${p.version}")
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
-                .graphicsLayer {
-                    scaleX = scale; scaleY = scale
-                    translationX = offset.x; translationY = offset.y
-                },
-        )
+        val layer = Modifier
+            .fillMaxSize()
+            .padding(12.dp)
+            .graphicsLayer {
+                scaleX = scale; scaleY = scale
+                translationX = offset.x; translationY = offset.y
+            }
+        // Both are loaded up front so switching is instant, not a reload.
+        if (before != null) FullImage(before, p.version, layer)
+        FullImage(file, p.version, layer.graphicsLayer { alpha = if (comparing) 0f else 1f })
+    }
+}
+
+@Composable
+private fun FullImage(file: java.io.File, version: Int, modifier: Modifier) {
+    AsyncImage(
+        // Full size, so zooming in shows the real detail of the scan.
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(file)
+            .size(Size.ORIGINAL)
+            .memoryCacheKey("${file.path}#$version")
+            .diskCacheKey("${file.path}#$version")
+            .build(),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = modifier,
+    )
+}
+
+/** Original, natural or strong, as one quiet segmented row. */
+@Composable
+private fun LookChoice(level: Int, onChoose: (Int) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Palette.Surface)
+            .padding(4.dp),
+    ) {
+        for (l in listOf(Enhance.OFF, Enhance.NATURAL, Enhance.STRONG)) {
+            val selected = l == level
+            Box(
+                Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(if (selected) Palette.SurfaceHigh else Palette.Surface)
+                    .clickable(enabled = !selected) { onChoose(l) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    Enhance.label(l),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (selected) Palette.Ink else Palette.Muted,
+                )
+            }
+        }
     }
 }
 

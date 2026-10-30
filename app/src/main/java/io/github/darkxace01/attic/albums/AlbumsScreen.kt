@@ -85,7 +85,7 @@ fun AlbumsScreen(onOpen: (Long) -> Unit) {
                     )
                 }
             }
-            items(albums, key = { it.id }) { a -> AlbumCover(a, library.root) { onOpen(a.id) } }
+            items(albums, key = { it.id }) { a -> AlbumCover(a, library.coverFile(a)) { onOpen(a.id) } }
         }
     }
 
@@ -135,7 +135,7 @@ private fun SafetyLine(counts: LibraryCounts, exporting: String?, onExport: () -
 }
 
 @Composable
-private fun AlbumCover(a: AlbumSummary, root: File, onClick: () -> Unit) {
+private fun AlbumCover(a: AlbumSummary, cover: File?, onClick: () -> Unit) {
     Column(Modifier.clickable(onClick = onClick)) {
         Box(
             Modifier
@@ -145,9 +145,9 @@ private fun AlbumCover(a: AlbumSummary, root: File, onClick: () -> Unit) {
                 .background(Palette.Surface),
             contentAlignment = Alignment.Center,
         ) {
-            if (a.coverDir != null && a.coverFile != null) {
+            if (cover != null) {
                 AsyncImage(
-                    model = File(File(root, a.coverDir), a.coverFile),
+                    model = cover,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),

@@ -7,7 +7,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
-import io.github.darkxace01.attic.vision.ColorFix
+import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.FrameTransform
 import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.Rectify
@@ -29,8 +29,9 @@ import java.util.Locale
  * Everything Attic keeps: albums and prints in the database, the files under files/scans.
  *
  * Each capture folder holds `original.jpg` (the untouched camera photo, never modified) and one PNG per
- * print. Edits are stored as data (crop corners, colour fix) and the PNG is rebuilt from the original,
- * so nothing is ever lost by editing.
+ * print. Edits are stored as data (crop corners, enhancement) and the PNGs are rebuilt from the original,
+ * so nothing is ever lost by editing. The enhanced look sits next to the plain crop as `print_N_e1.png`
+ * (natural) or `print_N_e2.png` (strong).
  */
 class Library(private val context: Context) {
     val db = AtticDatabase.open(context)
@@ -48,10 +49,31 @@ class Library(private val context: Context) {
     fun allPeople(): Flow<List<String>> = dao.allPeople()
     fun counts(): Flow<LibraryCounts> = dao.counts()
 
-    /** The file to show: the colour-fixed version when that's switched on. */
-    fun displayFile(p: PrintEntity): File = if (p.colorFix) fixedFile(p) else p.file(root)
+    /** The file to show and export: the enhanced version when there is one. */
+    fun displayFile(p: PrintEntity): File = enhancedFile(p, p.enhance).takeIf { it.exists() } ?: p.file(root)
 
-    private fun fixedFile(p: PrintEntity) = File(File(root, p.scanDir), p.fileName.removeSuffix(".png") + "_fix.png")
+    /** The plain crop, for comparing against the enhanced one. */
+    fun originalFile(p: PrintEntity): File = p.file(root)
+
+    /** The album's cover: its first print, the way it's shown everywhere else. */
+    fun coverFile(a: AlbumSummary): File? {
+        val dir = a.coverDir ?: return null
+        val name = a.coverFile ?: return null
+        return enhancedFile(dir, name, a.coverEnhance ?: Enhance.OFF).takeIf { it.exists() } ?: File(File(root, dir), name)
+    }
+
+    private fun enhancedFile(p: PrintEntity, level: Int): File = enhancedFile(p.scanDir, p.fileName, level)
+
+    private fun enhancedFile(dir: String, fileName: String, level: Int): File =
+        if (level == Enhance.OFF) File(File(root, dir), fileName)
+        else File(File(root, dir), fileName.removeSuffix(".png") + "_e$level.png")
+
+    /** Every derived file a print can have, including the colour-fix files of earlier builds. */
+    private fun derivedFiles(p: PrintEntity): List<File> {
+        val dir = File(root, p.scanDir)
+        val stem = p.fileName.removeSuffix(".png")
+        return listOf("_fix", "_e1", "_e2").map { File(dir, "$stem$it.png") }
+    }
 
     // ---- albums ----
 
@@ -120,6 +142,7 @@ class Library(private val context: Context) {
                 width = p.image.cols(), height = p.image.rows(), sharpness = p.sharpness,
                 quad = p.quad.encode(), createdAt = now,
             )
+            renderEnhanced(e, p.image)
             e.copy(id = dao.insertPrint(e))
         }
     }
@@ -136,16 +159,28 @@ class Library(private val context: Context) {
         dao.print(id)?.let { dao.updatePrint(it.copy(version = it.version + 1)) }
     }
 
-    suspend fun setColorFix(id: Long, on: Boolean) = io {
+    suspend fun setEnhance(id: Long, level: Int) = io {
         val p = dao.print(id) ?: return@io
-        if (on && !fixedFile(p).exists()) {
-            val src = Imgcodecs.imread(p.file(root).path)
-            val rgba = Mat().also { Imgproc.cvtColor(src, it, Imgproc.COLOR_BGR2RGBA) }
-            val fixed = ColorFix.apply(rgba)
-            writePng(fixed, fixedFile(p))
-            listOf(src, rgba, fixed).forEach { it.release() }
-        }
-        dao.updatePrint(p.copy(colorFix = on, version = p.version + 1))
+        if (p.enhance == level) return@io
+        val updated = p.copy(enhance = level, version = p.version + 1)
+        if (!enhancedFile(updated, level).exists()) renderEnhanced(updated, null)
+        dao.updatePrint(updated)
+    }
+
+    /** Writes the enhanced file for [p]'s level, from [flat] when the caller already has the crop loaded. */
+    private fun renderEnhanced(p: PrintEntity, flat: Mat?) {
+        if (p.enhance == Enhance.OFF) return
+        val src = flat ?: readPng(p.file(root)) ?: return
+        val out = Enhance.apply(src, p.enhance)
+        writePng(out, enhancedFile(p, p.enhance))
+        out.release()
+        if (flat == null) src.release()
+    }
+
+    /** Fills in enhanced files that are missing (prints from before enhancement, or an interrupted save). */
+    suspend fun renderMissing() = io {
+        dao.allPrints().filter { it.enhance != Enhance.OFF && !enhancedFile(it, it.enhance).exists() && it.file(root).exists() }
+            .forEach { renderEnhanced(it, null) }
     }
 
     /** Remakes the crop from the untouched original with new corners (upright-original pixels). */
@@ -154,16 +189,12 @@ class Library(private val context: Context) {
         val original = loadUprightOriginal(p) ?: return@io
         val flat = Rectify.warp(original, quad)
         writePng(flat, p.file(root))
-        fixedFile(p).delete()
+        derivedFiles(p).forEach { it.delete() }
         val updated = p.copy(
             quad = quad.encode(), width = flat.cols(), height = flat.rows(),
             sharpness = Rectify.sharpness(flat), version = p.version + 1,
         )
-        if (p.colorFix) {
-            val fixed = ColorFix.apply(flat)
-            writePng(fixed, fixedFile(p))
-            fixed.release()
-        }
+        renderEnhanced(updated, flat)
         flat.release()
         original.release()
         dao.updatePrint(updated)
@@ -207,7 +238,7 @@ class Library(private val context: Context) {
     private fun deletePrintNow(p: PrintEntity) {
         p.galleryUri?.let { runCatching { context.contentResolver.delete(Uri.parse(it), null, null) } }
         p.file(root).delete()
-        fixedFile(p).delete()
+        derivedFiles(p).forEach { it.delete() }
         dao.untagAll(p.id)
         dao.deletePrint(p.id)
         val dir = File(root, p.scanDir)
@@ -314,6 +345,15 @@ class Library(private val context: Context) {
                 )
             }
         }
+    }
+
+    private fun readPng(file: File): Mat? {
+        val bgr = Imgcodecs.imread(file.path)
+        if (bgr.empty()) { bgr.release(); return null }
+        val rgba = Mat()
+        Imgproc.cvtColor(bgr, rgba, Imgproc.COLOR_BGR2RGBA)
+        bgr.release()
+        return rgba
     }
 
     private fun writePng(rgba: Mat, file: File) {

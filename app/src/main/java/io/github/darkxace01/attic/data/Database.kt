@@ -1,6 +1,7 @@
 package io.github.darkxace01.attic.data
 
 import android.content.Context
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -13,6 +14,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.Pt
 import io.github.darkxace01.attic.vision.Quad
 import kotlinx.coroutines.flow.Flow
@@ -51,7 +55,8 @@ data class PrintEntity(
     val sharpness: Double,
     /** Corners in the upright original photo, "x,y,x,y,x,y,x,y". */
     val quad: String,
-    val colorFix: Boolean = false,
+    /** [Enhance] level: 0 original, 1 natural, 2 strong. The crop itself is never changed by it. */
+    @ColumnInfo(defaultValue = "1") val enhance: Int = Enhance.NATURAL,
     val dateFrom: Long? = null,
     val dateTo: Long? = null,
     val dateLabel: String? = null,
@@ -83,6 +88,7 @@ data class AlbumSummary(
     val pages: Int,
     val coverDir: String?,
     val coverFile: String?,
+    val coverEnhance: Int?,
 )
 
 data class LibraryCounts(val total: Int, val inGallery: Int)
@@ -100,7 +106,8 @@ interface AtticDao {
         """
         SELECT a.id, a.title, a.dateLabel, COUNT(p.id) AS count, COUNT(DISTINCT p.page) AS pages,
             (SELECT scanDir FROM print WHERE albumId = a.id ORDER BY page, position LIMIT 1) AS coverDir,
-            (SELECT fileName FROM print WHERE albumId = a.id ORDER BY page, position LIMIT 1) AS coverFile
+            (SELECT fileName FROM print WHERE albumId = a.id ORDER BY page, position LIMIT 1) AS coverFile,
+            (SELECT enhance FROM print WHERE albumId = a.id ORDER BY page, position LIMIT 1) AS coverEnhance
         FROM album a LEFT JOIN print p ON p.albumId = a.id
         GROUP BY a.id ORDER BY a.createdAt DESC
         """,
@@ -143,7 +150,7 @@ interface AtticDao {
 
 @Database(
     entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -151,7 +158,29 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2).build()
+
+        /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(PRINT_V2.replace("`print`", "`print_new`"))
+                val kept = "id, albumId, scanDir, fileName, page, position, width, height, sharpness, quad, dateFrom, " +
+                    "dateTo, dateLabel, place, caption, createdAt, version, galleryUri, exportedVersion"
+                db.execSQL("INSERT INTO print_new ($kept, enhance) SELECT $kept, CASE WHEN colorFix THEN 1 ELSE 0 END FROM print")
+                db.execSQL("DROP TABLE print")
+                db.execSQL("ALTER TABLE print_new RENAME TO print")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_print_albumId` ON `print` (`albumId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_print_dateFrom` ON `print` (`dateFrom`)")
+            }
+        }
+
+        /** The print table exactly as Room creates it at version 2 (schemas/…/2.json). */
+        private const val PRINT_V2 = "CREATE TABLE IF NOT EXISTS `print` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+            "`albumId` INTEGER NOT NULL, `scanDir` TEXT NOT NULL, `fileName` TEXT NOT NULL, `page` INTEGER NOT NULL, " +
+            "`position` INTEGER NOT NULL, `width` INTEGER NOT NULL, `height` INTEGER NOT NULL, `sharpness` REAL NOT NULL, " +
+            "`quad` TEXT NOT NULL, `enhance` INTEGER NOT NULL DEFAULT 1, `dateFrom` INTEGER, `dateTo` INTEGER, " +
+            "`dateLabel` TEXT, `place` TEXT, `caption` TEXT, `createdAt` INTEGER NOT NULL, `version` INTEGER NOT NULL, " +
+            "`galleryUri` TEXT, `exportedVersion` INTEGER NOT NULL)"
     }
 }
 
