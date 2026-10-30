@@ -1,9 +1,9 @@
-package io.github.darkxace01.album.store
+package io.github.darkxace01.attic.store
 
 import android.content.ContentValues
 import android.content.Context
 import android.provider.MediaStore
-import io.github.darkxace01.album.vision.Quad
+import io.github.darkxace01.attic.vision.Quad
 import org.json.JSONArray
 import org.json.JSONObject
 import org.opencv.core.Mat
@@ -74,12 +74,12 @@ class PrintStore(private val context: Context) {
         if (dir.listFiles().orEmpty().none { it.name.startsWith("print_") }) dir.deleteRecursively()
     }
 
-    /** Copies a print into Pictures/Album so it can be checked full-size in any gallery app. */
+    /** Copies a print into Pictures/Attic so it can be checked full-size in any gallery app. */
     fun exportToGallery(print: SavedPrint): Boolean {
         val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "album_${print.scanId}_${print.index}.png")
+            put(MediaStore.Images.Media.DISPLAY_NAME, "attic_${print.scanId}_${print.index}.png")
             put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Album")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Attic")
             put(MediaStore.Images.Media.IS_PENDING, 1)
         }
         val resolver = context.contentResolver

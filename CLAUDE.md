@@ -1,4 +1,4 @@
-# Album: notes for Claude
+# Attic: notes for Claude
 
 - Product plan and roadmap: `PLAN.md`. Current phase is in `README.md`.
 - Kotlin + Jetpack Compose, Android only, `minSdk 29`. Build with `source scripts/env.sh` first (the JDK,

@@ -1,4 +1,4 @@
-package io.github.darkxace01.album.vision
+package io.github.darkxace01.attic.vision
 
 import org.opencv.core.Core
 import org.opencv.core.CvType

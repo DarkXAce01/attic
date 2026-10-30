@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "io.github.darkxace01.album"
+    namespace = "io.github.darkxace01.attic"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.darkxace01.album"
+        applicationId = "io.github.darkxace01.attic"
         // Android 10: scoped storage and MediaStore RELATIVE_PATH for saving prints to the gallery.
         minSdk = 29
         targetSdk = 36

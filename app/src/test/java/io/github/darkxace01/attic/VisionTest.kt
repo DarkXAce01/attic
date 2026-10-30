@@ -1,9 +1,9 @@
-package io.github.darkxace01.album
+package io.github.darkxace01.attic
 
-import io.github.darkxace01.album.vision.Candidates
-import io.github.darkxace01.album.vision.Pt
-import io.github.darkxace01.album.vision.Quad
-import io.github.darkxace01.album.vision.QuadTracker
+import io.github.darkxace01.attic.vision.Candidates
+import io.github.darkxace01.attic.vision.Pt
+import io.github.darkxace01.attic.vision.Quad
+import io.github.darkxace01.attic.vision.QuadTracker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

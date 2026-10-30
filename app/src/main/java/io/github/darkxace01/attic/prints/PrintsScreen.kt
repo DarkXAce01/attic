@@ -1,4 +1,4 @@
-package io.github.darkxace01.album.prints
+package io.github.darkxace01.attic.prints
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -45,8 +45,8 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.size.Size
-import io.github.darkxace01.album.store.SavedPrint
-import io.github.darkxace01.album.ui.theme.Palette
+import io.github.darkxace01.attic.store.SavedPrint
+import io.github.darkxace01.attic.ui.theme.Palette
 import java.util.Locale
 
 @Composable

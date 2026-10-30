@@ -1,4 +1,4 @@
-package io.github.darkxace01.album
+package io.github.darkxace01.attic
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -28,18 +28,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.darkxace01.album.prints.PrintViewer
-import io.github.darkxace01.album.prints.PrintsScreen
-import io.github.darkxace01.album.scan.ScanScreen
-import io.github.darkxace01.album.scan.ScanViewModel
-import io.github.darkxace01.album.store.PrintStore
-import io.github.darkxace01.album.store.SavedPrint
-import io.github.darkxace01.album.ui.theme.Palette
+import io.github.darkxace01.attic.prints.PrintViewer
+import io.github.darkxace01.attic.prints.PrintsScreen
+import io.github.darkxace01.attic.scan.ScanScreen
+import io.github.darkxace01.attic.scan.ScanViewModel
+import io.github.darkxace01.attic.store.PrintStore
+import io.github.darkxace01.attic.store.SavedPrint
+import io.github.darkxace01.attic.ui.theme.Palette
 
 private enum class Screen { Scan, Prints, Viewer }
 
 @Composable
-fun AlbumApp() {
+fun AtticApp() {
     val context = LocalContext.current
     var hasCamera by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
@@ -95,7 +95,7 @@ private fun CameraIntro(onAllow: () -> Unit) {
         Text("Bring your old photos in", style = MaterialTheme.typography.titleLarge, color = Palette.Ink)
         Spacer(Modifier.height(12.dp))
         Text(
-            "Point your camera at a print or a whole album page. Album finds each photo, straightens it " +
+            "Point your camera at a print or a whole album page. Attic finds each photo, straightens it " +
                 "and saves a clean copy. Nothing leaves your phone.",
             style = MaterialTheme.typography.bodyLarge,
             color = Palette.Muted,

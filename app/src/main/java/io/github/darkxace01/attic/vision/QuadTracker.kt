@@ -1,4 +1,4 @@
-package io.github.darkxace01.album.vision
+package io.github.darkxace01.attic.vision
 
 /**
  * Follows prints across camera frames so the outlines don't flicker, and decides when each one is

@@ -1,4 +1,4 @@
-package io.github.darkxace01.album.ui.theme
+package io.github.darkxace01.attic.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -26,7 +26,7 @@ object Palette {
 
 private val Figures = "tnum"
 
-val AlbumTypography = Typography(
+val AtticTypography = Typography(
     titleLarge = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold),
     titleMedium = TextStyle(fontSize = 17.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium),
     bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, fontFeatureSettings = Figures),
@@ -36,7 +36,7 @@ val AlbumTypography = Typography(
 )
 
 @Composable
-fun AlbumTheme(content: @Composable () -> Unit) {
+fun AtticTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Palette.Accent,
@@ -52,7 +52,7 @@ fun AlbumTheme(content: @Composable () -> Unit) {
             outline = Palette.SurfaceHigh,
             error = Palette.Warning,
         ),
-        typography = AlbumTypography,
+        typography = AtticTypography,
         content = content,
     )
 }

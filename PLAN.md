@@ -1,13 +1,13 @@
-# Album: Product & Build Plan
+# Attic: Product & Build Plan
 
-Working name: **Album**. Change it later.
+Name: **Attic**, where the old albums are found. Repo: github.com/DarkXAce01/attic (public).
 Started 2026-10-30. Android first, Kotlin + Jetpack Compose. Free forever, no ads, nothing leaves the phone.
 
 ---
 
 ## 1. The vision
 
-> Point your phone at an old album page. Album finds every print, flattens it, removes the glare, reads the
+> Point your phone at an old album page. Attic finds every print, flattens it, removes the glare, reads the
 > date stamped in the corner, and asks "who's this?". Then it rebuilds the album as a book you can hold and
 > flip on your phone, with your mother's voice telling the story behind each photo.
 > Later, it becomes the gallery for all your photos, old and new, on one timeline.
@@ -57,7 +57,7 @@ Tags: **[MVP]** first release · **[v1]** public launch · **[v2]** after launch
 | **Flip-side capture** | v1 | After a scan, "flip it over?". The back (handwriting, studio stamps, dates) is attached to the print. |
 | **Date-stamp reader** | v1 | Reads the orange date printed in the corner by 90s cameras ('98 7 14) and the photo lab's date on the back. |
 | **Polaroid & border-aware cropping** | v1 | Keeps white borders and handwritten Polaroid captions as part of the print, with an option to crop to the image only. |
-| **Film negatives & slides mode** | v2 | Lay negatives on a laptop or tablet showing a white screen (the app has a "lightbox" screen for a second phone). Album inverts the negative and removes the orange film base color. Rescues photos that were never printed. |
+| **Film negatives & slides mode** | v2 | Lay negatives on a laptop or tablet showing a white screen (the app has a "lightbox" screen for a second phone). Attic inverts the negative and removes the orange film base color. Rescues photos that were never printed. |
 | **Flatbed import** | v2 | Bring in scanner images (TIFF/PNG); they're split and flattened the same way. |
 | **Session progress** | MVP | "Nani's red album · page 14 · 61 prints". Resume any time. Makes a 1,000-photo job feel finishable. |
 
@@ -74,8 +74,8 @@ Tags: **[MVP]** first release · **[v1]** public launch · **[v2]** after launch
 | **Story sessions** | v1 | "Interview mode" for grandparents: the app shows photos one by one, full screen, records them talking, and splits the audio per photo automatically. Feels like a podcast with your family. |
 | **Handwriting & captions** | v1 | Text read from backs and album margins becomes searchable captions. |
 | **Era hint** | v2 | When there's no date, the app suggests a decade from print size, border style, paper and color fade. Always shown as a suggestion, never stored as fact. |
-| **Places & then-and-now** | v2 | Pin a photo to a place. Stand in the same spot today and the camera overlays the old photo so you can line it up; Album makes a before/after slider. |
-| **Family help pack** | v2 | No server needed. Export a "help me tag" pack over WhatsApp or Nearby Share. A relative tags faces and dates on their phone and sends it back; Album merges the answers. |
+| **Places & then-and-now** | v2 | Pin a photo to a place. Stand in the same spot today and the camera overlays the old photo so you can line it up; Attic makes a before/after slider. |
+| **Family help pack** | v2 | No server needed. Export a "help me tag" pack over WhatsApp or Nearby Share. A relative tags faces and dates on their phone and sends it back; Attic merges the answers. |
 | **Duplicate finder** | v1 | Catches the same print scanned twice, or one that's already in your phone gallery. |
 
 ### C. Revive: restoration, honestly
@@ -274,8 +274,8 @@ donations that unlock nothing.
 ---
 
 ## 9. Open decisions
-1. **Name.** "Album" is a placeholder.
-2. **Open source?** Sweepy is GPL-3.0; doing the same here builds the same trust.
+1. ~~Name~~: decided, **Attic**.
+2. ~~Open source~~: decided, public from day one (GPL-3.0, like Sweepy).
 3. **minSdk.** Depends on the oldest phone in your family that should run it.
 4. **First album theme.** Rebuilt (your parents' real pages) is a given. Of the materials, which one do you
    want perfect first: Leather-bound, Cloth & corners, Scrapbook, or Shoebox?

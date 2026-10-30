@@ -1,4 +1,4 @@
-package io.github.darkxace01.album.scan
+package io.github.darkxace01.attic.scan
 
 import android.app.Application
 import android.graphics.Bitmap
@@ -26,12 +26,12 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
-import io.github.darkxace01.album.store.PrintStore
-import io.github.darkxace01.album.store.SavedPrint
-import io.github.darkxace01.album.vision.PrintDetector
-import io.github.darkxace01.album.vision.Quad
-import io.github.darkxace01.album.vision.QuadTracker
-import io.github.darkxace01.album.vision.Rectify
+import io.github.darkxace01.attic.store.PrintStore
+import io.github.darkxace01.attic.store.SavedPrint
+import io.github.darkxace01.attic.vision.PrintDetector
+import io.github.darkxace01.attic.vision.Quad
+import io.github.darkxace01.attic.vision.QuadTracker
+import io.github.darkxace01.attic.vision.Rectify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -1,4 +1,4 @@
-package io.github.darkxace01.album.scan
+package io.github.darkxace01.attic.scan
 
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -52,7 +52,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.darkxace01.album.ui.theme.Palette
+import io.github.darkxace01.attic.ui.theme.Palette
 
 @Composable
 fun ScanScreen(vm: ScanViewModel, onOpenPrints: () -> Unit) {

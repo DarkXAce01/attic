@@ -1,4 +1,4 @@
-package io.github.darkxace01.album.vision
+package io.github.darkxace01.attic.vision
 
 /**
  * Turns raw rectangle candidates into the set of prints.

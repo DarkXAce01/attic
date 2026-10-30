@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Album"
+rootProject.name = "Attic"
 include(":app")

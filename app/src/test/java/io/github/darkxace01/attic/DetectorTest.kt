@@ -1,9 +1,9 @@
-package io.github.darkxace01.album
+package io.github.darkxace01.attic
 
-import io.github.darkxace01.album.vision.PrintDetector
-import io.github.darkxace01.album.vision.Pt
-import io.github.darkxace01.album.vision.Quad
-import io.github.darkxace01.album.vision.Rectify
+import io.github.darkxace01.attic.vision.PrintDetector
+import io.github.darkxace01.attic.vision.Pt
+import io.github.darkxace01.attic.vision.Quad
+import io.github.darkxace01.attic.vision.Rectify
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
