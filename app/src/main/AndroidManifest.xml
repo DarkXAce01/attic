@@ -7,6 +7,7 @@
     <!-- No INTERNET permission: nothing ever leaves the phone. -->
 
     <application
+        android:name=".AtticApplication"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"

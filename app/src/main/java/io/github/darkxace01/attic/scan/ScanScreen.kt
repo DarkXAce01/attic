@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -58,7 +58,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.darkxace01.attic.ui.theme.Palette
 
 @Composable
-fun ScanScreen(vm: ScanViewModel, onOpenPrints: () -> Unit) {
+fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
     val haptics = LocalHapticFeedback.current
     val flash = remember { Animatable(0f) }
@@ -74,17 +74,34 @@ fun ScanScreen(vm: ScanViewModel, onOpenPrints: () -> Unit) {
         Modifier
             .fillMaxSize()
             .background(Palette.Ground)
-            .systemBarsPadding(),
+            .statusBarsPadding(),
     ) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .height(64.dp)
                 .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Scan", style = MaterialTheme.typography.titleLarge, color = Palette.Ink)
-            Spacer(Modifier.weight(1f))
+            // Which album the next page goes into. Tap to switch or start a new one.
+            Column(
+                Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onPickAlbum),
+            ) {
+                Text(
+                    state.albumTitle.ifEmpty { " " } + "  ▾",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Palette.Ink,
+                    maxLines = 1,
+                )
+                Text(
+                    if (state.albumPages == 0) "Ready for the first page" else "Next is page ${state.albumPages + 1}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Palette.Muted,
+                )
+            }
             Text("Auto", style = MaterialTheme.typography.labelLarge, color = Palette.Muted)
             Spacer(Modifier.width(10.dp))
             Switch(
@@ -134,7 +151,7 @@ fun ScanScreen(vm: ScanViewModel, onOpenPrints: () -> Unit) {
                 .height(112.dp)
                 .padding(horizontal = 20.dp),
         ) {
-            PrintsButton(state.savedTotal, onOpenPrints, Modifier.align(Alignment.CenterStart))
+            PrintsButton(state.albumPrints, { onOpenAlbum(state.albumId) }, Modifier.align(Alignment.CenterStart))
             Shutter(
                 enabled = !state.saving,
                 ready = state.outlines.isNotEmpty() && state.outlines.all { it.locked },
@@ -152,7 +169,8 @@ private fun statusLine(s: ScanUiState): String {
     return when {
         s.error != null -> s.error
         s.saving -> "Saving…"
-        s.justSaved > 0 -> if (s.justSaved == 1) "Saved 1 photo" else "Saved ${s.justSaved} photos"
+        s.justSavedSoft > 0 -> if (s.justSavedSoft == 1) "1 photo came out soft. Hold steadier and scan again." else "${s.justSavedSoft} photos came out soft. Hold steadier and scan again."
+        s.justSaved > 0 -> if (s.justSaved == 1) "Saved 1 photo to page ${s.albumPages}" else "Saved ${s.justSaved} photos to page ${s.albumPages}"
         s.waitingForNext -> "Done. Turn the page or move to the next photo."
         n == 0 -> "Point at a photo or an album page."
         s.outlines.all { it.locked } && !s.autoCapture -> "Found $photos. Tap to capture."
@@ -283,6 +301,6 @@ private fun PrintsButton(count: Int, onClick: () -> Unit, modifier: Modifier) {
             .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Text("$count", style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
-        Text(if (count == 1) "print" else "prints", style = MaterialTheme.typography.labelMedium, color = Palette.Muted)
+        Text(if (count == 1) "photo" else "photos", style = MaterialTheme.typography.labelMedium, color = Palette.Muted)
     }
 }

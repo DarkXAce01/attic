@@ -6,18 +6,26 @@ Free forever, no ads, no internet permission. Nothing leaves your phone.
 
 See [PLAN.md](PLAN.md) for the product plan and roadmap.
 
-## Status: Phase 0 spike
+## Status: Phase 1, "Scan & keep"
 
-Proving that phone-camera crops can be impeccable before building anything else.
+**Scan**
+- Live outlines around every print in view (several per album page). They lock and freeze once you hold
+  still; the shutter ring fills, then it captures by itself and waits for the next page
+- A live strip showing each print flattened, then the real saved crops right after a capture
+- Full-resolution capture: each print is re-detected on the full photo, its edges fitted to the real
+  edges (sub-pixel), then flattened. Soft (blurry) shots are flagged right away
+- Scans go into the album you pick at the top of the scan screen, one capture per page
 
-- Live outlines around every print in view (several per album page)
-- A live strip showing each print flattened, exactly as it'll be saved
-- Auto-capture once everything in view is held still; it waits for the page to change before firing again
-- Full-resolution capture: each print is re-detected on the full photo, then each edge is fitted to the
-  real edge (sub-pixel), then flattened
-- Originals kept untouched in app storage; each print saved as lossless PNG and copied to
-  `Pictures/Attic` so you can zoom in from any gallery app
-- A prints screen with full-size zoom, size in megapixels, and a sharpness score
+**Keep**
+- Albums, page by page. Album dates that undated photos inherit
+- Dates the way people say them: "summer 87", "about 1985", "early 90s", "14/7/1998", "'98 7 14"
+- People (with suggestions from everyone you've tagged), place, caption
+- Fix crop on the untouched original with a magnifying loupe, or snap to edges. Rotate. Fix colour
+  (undoes fading and colour casts)
+- Every print also goes into `Pictures/Attic/<album>` as a high-quality JPEG with its real date,
+  people, place and caption written into the EXIF, so Google Photos and Immich sort it correctly.
+  Edits update the gallery copy in place
+- Originals are never modified; all edits are redone from them
 
 ## Build and run on your phone
 

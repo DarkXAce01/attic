@@ -3,7 +3,6 @@ package io.github.darkxace01.attic.scan
 import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Rect as AndroidRect
 import android.os.SystemClock
 import android.util.Rational
 import android.util.Size
@@ -26,8 +25,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
-import io.github.darkxace01.attic.store.PrintStore
-import io.github.darkxace01.attic.store.SavedPrint
+import io.github.darkxace01.attic.data.Library
+import io.github.darkxace01.attic.library
+import io.github.darkxace01.attic.vision.FrameTransform
 import io.github.darkxace01.attic.vision.PrintDetector
 import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.QuadTracker
@@ -36,6 +36,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.opencv.android.Utils
@@ -63,21 +65,58 @@ data class ScanUiState(
     /** Already captured what's in view; waiting for the page to change. */
     val waitingForNext: Boolean = false,
     val justSaved: Int = 0,
-    val savedTotal: Int = 0,
+    /** How many of the last capture's prints look soft enough to be worth retaking. */
+    val justSavedSoft: Int = 0,
+    /** The album scans go into, and how far into it we are. */
+    val albumId: Long = 0,
+    val albumTitle: String = "",
+    val albumPages: Int = 0,
+    val albumPrints: Int = 0,
     /** Changes on every capture, so the UI can flash. */
     val shutterTick: Long = 0,
     val error: String? = null,
 )
 
 class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Analyzer {
-    private val store = PrintStore(app)
+    private val library: Library = app.library
     private val detector = PrintDetector()
     private val tracker = QuadTracker()
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private val captureExecutor = Executors.newSingleThreadExecutor()
 
-    private val _state = MutableStateFlow(ScanUiState(savedTotal = store.all().size))
+    private val _state = MutableStateFlow(ScanUiState())
     val state: StateFlow<ScanUiState> = _state
+
+    private val scanningAlbumId = MutableStateFlow<Long?>(null)
+
+    init {
+        viewModelScope.launch {
+            library.importLooseScans()
+            scanningAlbumId.value = library.scanningAlbum().id
+        }
+        viewModelScope.launch {
+            combine(scanningAlbumId.filterNotNull(), library.albums()) { id, list -> list.firstOrNull { it.id == id } }
+                .collect { a ->
+                    if (a != null) _state.update { it.copy(albumId = a.id, albumTitle = a.title, albumPages = a.pages, albumPrints = a.count) }
+                }
+        }
+    }
+
+    /** Re-reads which album new scans go into, after it's been switched. */
+    fun refreshAlbum() {
+        viewModelScope.launch { scanningAlbumId.value = library.scanningAlbum().id }
+    }
+
+    fun scanInto(albumId: Long) {
+        viewModelScope.launch {
+            library.setScanningAlbum(albumId)
+            scanningAlbumId.value = albumId
+        }
+    }
+
+    fun newAlbum(title: String) {
+        viewModelScope.launch { scanningAlbumId.value = library.newAlbum(title).id }
+    }
 
     private var imageCapture: ImageCapture? = null
     private val previewCache = HashMap<Long, Pair<Long, LivePreview>>()
@@ -163,7 +202,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
                 previewCache[t.id] = now to p
                 p
             } else {
-                cached!!.second
+                cached.second
             }
         }
         frame.release()
@@ -211,13 +250,15 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
 
         capture.takePicture(captureExecutor, object : ImageCapture.OnImageCapturedCallback() {
             override fun onCaptureSuccess(image: ImageProxy) {
-                val rotation = image.imageInfo.rotationDegrees
-                val crop = AndroidRect(image.cropRect)
-                val size = Size(image.width, image.height)
+                val crop = image.cropRect
+                val frame = FrameTransform(
+                    image.width, image.height, crop.left, crop.top, crop.width(), crop.height(),
+                    image.imageInfo.rotationDegrees,
+                )
                 val buffer = image.planes[0].buffer
                 val jpeg = ByteArray(buffer.remaining()).also(buffer::get)
                 image.close()
-                viewModelScope.launch(Dispatchers.Default) { process(jpeg, rotation, crop, size, quads) }
+                viewModelScope.launch(Dispatchers.Default) { process(jpeg, frame, quads) }
             }
 
             override fun onError(exception: ImageCaptureException) {
@@ -227,13 +268,13 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         })
     }
 
-    private suspend fun process(jpeg: ByteArray, rotation: Int, crop: AndroidRect, size: Size, normQuads: List<Quad>) {
+    private suspend fun process(jpeg: ByteArray, frame: FrameTransform, normQuads: List<Quad>) {
         val result = runCatching {
             val bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)
             val decoded = Mat()
             Utils.bitmapToMat(bitmap, decoded)
             bitmap.recycle()
-            val full = decoded.cropAndRotate(crop, size, rotation)
+            val full = frame.apply(decoded)
             if (full !== decoded) decoded.release()
 
             val w = full.cols().toFloat()
@@ -243,34 +284,34 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             val prints = rough.map { q ->
                 val refined = detector.refine(full, q)
                 val flat = Rectify.warp(full, refined)
-                PrintStore.NewPrint(flat, refined, Rectify.sharpness(flat))
+                Library.NewPrint(flat, refined, Rectify.sharpness(flat))
             }
-            val saved = store.save(jpeg, rotation, full.cols(), full.rows(), prints)
-            val thumbs = prints.map { previewOf(it.image, Quad.ofSize(it.image.cols(), it.image.rows())) }
-            prints.forEach { it.image.release() }
             full.release()
-            saved.forEach(store::exportToGallery)
-            saved to thumbs
+            val saved = if (prints.isEmpty()) emptyList() else library.saveCapture(jpeg, frame, prints)
+            val thumbs = prints.map { previewOf(it.image, Quad.ofSize(it.image.cols(), it.image.rows())) }
+            val soft = prints.count { it.sharpness < SOFT_SHARPNESS }
+            prints.forEach { it.image.release() }
+            // New prints go straight into the gallery too, so they're safe the moment they're scanned.
+            saved.forEach { library.export(it.id) }
+            Triple(saved, thumbs, soft)
         }
-        result.onSuccess { (saved, thumbs) ->
+        result.onSuccess { (saved, thumbs, soft) ->
             _state.update {
                 it.copy(
                     saving = false,
                     justSaved = saved.size,
+                    justSavedSoft = soft,
                     lastSaved = thumbs,
-                    savedTotal = it.savedTotal + saved.size,
                     error = if (saved.isEmpty()) "No photos found in that shot" else null,
                 )
             }
-            delay(2500)
-            _state.update { if (it.lastSaved === thumbs) it.copy(justSaved = 0, lastSaved = emptyList()) else it }
+            delay(if (soft > 0) 4000 else 2500)
+            _state.update { if (it.lastSaved === thumbs) it.copy(justSaved = 0, justSavedSoft = 0, lastSaved = emptyList()) else it }
         }.onFailure { e ->
             armed = true
             _state.update { it.copy(saving = false, error = "Couldn't save: ${e.message}") }
         }
     }
-
-    fun refreshCount() = _state.update { it.copy(savedTotal = store.all().size) }
 
     override fun onCleared() {
         analysisExecutor.shutdown()
@@ -306,23 +347,5 @@ private fun ImageProxy.toUprightRgba(): Mat {
     return out
 }
 
-/**
- * Applies the capture's crop rectangle (when the JPEG wasn't already cropped) and rotation.
- * Returns the same Mat when there was nothing to do.
- */
-private fun Mat.cropAndRotate(crop: AndroidRect, size: Size, rotation: Int): Mat {
-    var m = this
-    val sameSize = cols() == size.width && rows() == size.height
-    if (sameSize && (crop.width() < size.width || crop.height() < size.height) && crop.width() > 0) {
-        m = submat(Rect(crop.left, crop.top, crop.width(), crop.height())).clone()
-    }
-    if (rotation == 0) return m
-    val out = Mat()
-    when (rotation) {
-        90 -> Core.rotate(m, out, Core.ROTATE_90_CLOCKWISE)
-        180 -> Core.rotate(m, out, Core.ROTATE_180)
-        else -> Core.rotate(m, out, Core.ROTATE_90_COUNTERCLOCKWISE)
-    }
-    if (m !== this) m.release()
-    return out
-}
+/** Under this, a print looks soft (focus or shake) and is worth retaking. */
+const val SOFT_SHARPNESS = 60.0

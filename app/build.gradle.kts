@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -41,6 +43,10 @@ android {
     }
 }
 
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -60,6 +66,11 @@ dependencies {
     implementation(libs.camera.view)
     implementation(libs.opencv)
     implementation(libs.coil.compose)
+    implementation(libs.androidx.exifinterface)
+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     // Geometry and tracking are plain Kotlin, so they're tested on the computer.
     testImplementation(libs.junit)

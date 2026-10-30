@@ -1,6 +1,9 @@
 [versions]
 agp = "9.4.1"
 kotlin = "2.4.21"
+ksp = "2.3.12"
+room = "2.8.5"
+exifinterface = "1.4.2"
 composeBom = "2026.09.00"
 activityCompose = "1.13.0"
 coreKtx = "1.19.1"
@@ -27,6 +30,10 @@ camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cam
 camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 camera-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
 opencv = { module = "org.opencv:opencv", version.ref = "opencv" }
+room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
+room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
+room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "exifinterface" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 junit = { module = "junit:junit", version.ref = "junit" }
 opencv-desktop = { module = "org.openpnp:opencv", version.ref = "opencvDesktop" }
@@ -34,3 +41,5 @@ opencv-desktop = { module = "org.openpnp:opencv", version.ref = "opencvDesktop" 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+room = { id = "androidx.room", version.ref = "room" }
