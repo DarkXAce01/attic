@@ -49,6 +49,8 @@ android {
             it.systemProperty("attic.benchmark", project.hasProperty("benchmark").toString())
             it.systemProperty("attic.seed", (project.findProperty("seed") ?: "1000").toString())
             project.findProperty("debugScene")?.let { s -> it.systemProperty("attic.debugScene", s.toString()) }
+            project.findProperty("explain")?.let { s -> it.systemProperty("attic.explain", s.toString()) }
+            project.findProperty("zoom")?.let { s -> it.systemProperty("attic.zoom", s.toString()) }
         }
     }
 }

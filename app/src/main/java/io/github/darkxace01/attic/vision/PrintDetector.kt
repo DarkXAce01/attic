@@ -67,6 +67,7 @@ class PrintDetector(
     /** Test hook: sees every candidate with its source and verification score (null = rejected). */
     internal var trace: ((source: String, quad: Quad, score: Float?) -> Unit)? = null
     private var lastSides = ""
+    internal var segmentTrace: ((List<LineRects.Segment>) -> Unit)? = null
 
     fun detect(rgba: Mat): List<Quad> {
         val scale = min(1.0, workSize.toDouble() / max(rgba.cols(), rgba.rows()))
@@ -104,6 +105,8 @@ class PrintDetector(
         edgeCandidates(fgx, fgy, fineMag, w, h, 0.75f).forEach { raw += "fine75" to it }
         edgeCandidates(cgx, cgy, coarseMag, w, h, 0.85f).forEach { raw += "coarse85" to it }
         segmentCandidates(coarse).forEach { raw += "segment" to it }
+        val (lineQuads, edgeLines) = lineCandidates(frame)
+        lineQuads.forEach { raw += "lines" to it }
 
         val scored = raw.mapNotNull { (source, q) ->
             // Snap onto the real edges, and keep whichever of before/after verifies better.
@@ -121,8 +124,18 @@ class PrintDetector(
                 b != null && (a == null || b >= a) -> Candidates.Scored(snapped, b)
                 else -> Candidates.Scored(q, a!!)
             }
+        }.filterNot { emptyInside(coarse, it.quad) }.map { c ->
+            // Plain paper strips just inside one or two sides: this is a sleeve pocket with the print
+            // inside it, not the print (a white photo border runs round all four sides).
+            val strips = paperStrips(frame, c.quad)
+            if (strips in 1..2) Candidates.Scored(c.quad, c.score * 0.75f) else c
+        }.map { c ->
+            // A straight edge running right across the inside: this outline spans two prints, or a page.
+            if (LineRects.crossedInside(c.quad, edgeLines)) Candidates.Scored(c.quad, c.score * 0.7f) else c
         }
+        val cut = raw.map { it.second }.filter { verifyCut(frame, coarse, it) }
         val resolved = Candidates.resolveScored(scored) { outer, inner -> plainBetween(coarse, outer, inner) }
+            .filterNot { q -> cut.any { it.area > q.area * 1.3f && it.intersectionArea(q) >= q.area * 0.8f } }
         resolved.forEach { trace?.invoke("resolved", it, null) }
         val prints = resolved.map { includeWhiteBorder(frame, it) }
         val inv = (1.0 / scale).toFloat()
@@ -149,6 +162,33 @@ class PrintDetector(
         edges.release()
         return out
     }
+
+    /**
+     * Rectangles assembled from straight edge pieces, for prints whose outline is broken (glare on the
+     * sleeve, a grey sky against a grey page) and so never forms a closed contour.
+     */
+    private fun lineCandidates(f: Frame): Pair<List<Quad>, List<LineRects.EdgeLine>> {
+        // LSD grows lines from pixels whose gradient points the same way, so a long faint edge survives
+        // in a busy frame where a thresholded edge map drowns in texture. Lightness carries nearly all of
+        // them; the colour channels rarely add one.
+        val l = Mat(f.h, f.w, CvType.CV_8UC1)
+        l.put(0, 0, ByteArray(f.w * f.h) { f.lab[it * 3] })
+        val lines = Mat()
+        lsd.detect(l, lines)
+        l.release()
+        val short = min(f.w, f.h).toFloat()
+        val segments = (0 until lines.rows()).mapNotNull { r ->
+            val v = lines.get(r, 0)
+            LineRects.Segment(Pt(v[0].toFloat(), v[1].toFloat()), Pt(v[2].toFloat(), v[3].toFloat())).takeIf { it.length >= short * 0.04f }
+        }
+        lines.release()
+        segmentTrace?.invoke(segments)
+        val minSide = sqrt(f.w.toFloat() * f.h * minAreaShare) * 0.6f
+        val joined = LineRects.join(segments)
+        return LineRects.find(segments, minSide = minSide, maxSide = max(f.w, f.h) * 0.98f).map { it.quad } to joined
+    }
+
+    private val lsd by lazy { Imgproc.createLineSegmentDetector() }
 
     /**
      * Learns the page colour and keeps what differs from it. A big region (a page on a table) is searched
@@ -274,9 +314,21 @@ class PrintDetector(
      * different from just outside (smoothed Lab)? Three sides must pass; the fourth may be weak (a print
      * edge that happens to match the page there).
      */
-    private fun verify(fine: Frame, coarse: Frame, q: Quad): Float? {
+    /**
+     * A print cut off by the frame edge: never returned (it can't be cropped whole), but what's inside it is
+     * part of its picture, not a print of its own. Its sides along the frame edge aren't checked.
+     */
+    private fun verifyCut(fine: Frame, coarse: Frame, q: Quad): Boolean {
+        if (shapeOk(q, fine.w, fine.h) || !shapeOk(q, fine.w, fine.h, allowCut = true)) return false
+        return verify(fine, coarse, q, skipFrameSides = true) != null
+    }
+
+    private fun verify(fine: Frame, coarse: Frame, q: Quad, skipFrameSides: Boolean = false): Float? {
         lastSides = ""
-        if (!shapeOk(q, fine.w, fine.h)) return null
+        if (!shapeOk(q, fine.w, fine.h, allowCut = skipFrameSides)) return null
+        val margin = 0.015f * max(fine.w, fine.h)
+        fun nearFrame(p: Pt) = p.x < margin || p.y < margin || p.x > fine.w - margin || p.y > fine.h - margin
+        var sidesChecked = 0
         val pts = q.points
         val c = q.center
         var passed = 0
@@ -287,6 +339,8 @@ class PrintDetector(
             val b = pts[(i + 1) % 4]
             val len = a.dist(b)
             if (len < 6f) return null
+            if (skipFrameSides && nearFrame(a) && nearFrame(b)) continue
+            sidesChecked++
             val d = (b - a) * (1f / len)
             var n = Pt(-d.y, d.x)
             val mid = (a + b) * 0.5f
@@ -295,6 +349,9 @@ class PrintDetector(
             var onEdge = 0
             var counted = 0
             val contrasts = ArrayList<Float>(samples)
+            val strengths = ArrayList<Float>(samples)
+            var calm = 0
+            var calmCounted = 0
             for (k in 0 until samples) {
                 val p = a + (b - a) * (0.12f + 0.76f * k / (samples - 1))
                 var best = 0f
@@ -307,22 +364,47 @@ class PrintDetector(
                 if (!any) continue
                 counted++
                 if (best >= fine.edgeStrength) onEdge++
-                val inside = coarse.labAt((p.x + n.x * 6).roundToInt(), (p.y + n.y * 6).roundToInt())
-                val outside = coarse.labAt((p.x - n.x * 6).roundToInt(), (p.y - n.y * 6).roundToInt())
-                if (inside != null && outside != null) contrasts += labDistance(inside, outside)
+                strengths += best / fine.edgeStrength
+                // Close to the edge on the sharp frame, so a thin strip (the sleeve showing beside a print)
+                // is seen for what it is; and further out on the smooth one, which patterns can't fool.
+                // The smaller of the two counts.
+                val inNear = fine.labAt((p.x + n.x * 3).roundToInt(), (p.y + n.y * 3).roundToInt())
+                val outNear = fine.labAt((p.x - n.x * 3).roundToInt(), (p.y - n.y * 3).roundToInt())
+                val inFar = coarse.labAt((p.x + n.x * 6).roundToInt(), (p.y + n.y * 6).roundToInt())
+                val outFar = coarse.labAt((p.x - n.x * 6).roundToInt(), (p.y - n.y * 6).roundToInt())
+                if (inNear != null && outNear != null && inFar != null && outFar != null) {
+                    contrasts += min(labDistance(inNear, outNear), labDistance(inFar, outFar))
+                }
+                // Just outside a print is page, sleeve or border: calm. Just outside a shape cut out of a
+                // photo is more photo.
+                var quiet = 0
+                var looked = 0
+                for (o in intArrayOf(4, 6, 8)) {
+                    val g = fine.grad((p.x - n.x * o).roundToInt(), (p.y - n.y * o).roundToInt()) ?: continue
+                    looked++
+                    if (hypot(g.first, g.second) < fine.edgeStrength * 0.7f) quiet++
+                }
+                if (looked >= 2) {
+                    calmCounted++
+                    if (quiet * 3 >= looked * 2) calm++
+                }
             }
             if (counted < samples / 2) return null
             val support = onEdge.toFloat() / counted
             val contrast = if (contrasts.isEmpty()) 0f else contrasts.sorted()[contrasts.size / 2]
-            val sideScore = 0.6f * support + 0.4f * min(1f, contrast / 18f)
-            if (trace != null) lastSides += " [${"%.2f".format(support)} ${"%.0f".format(contrast)}]"
+            val calmShare = if (calmCounted == 0) 0.5f else calm.toFloat() / calmCounted
+            val strength = min(5f, strengths.sorted()[strengths.size / 2]) / 5f
+            // Graded, not pass/fail, so that of two outlines on real edges (a print and the sleeve pocket
+            // around it) the one on the stronger, more contrasting edges wins.
+            val sideScore = 0.25f * support + 0.25f * strength + 0.3f * min(1f, contrast / 45f) + 0.2f * calmShare
+            if (trace != null) lastSides += " [${"%.2f".format(support)} ${"%.1f".format(strength * 5)} ${"%.0f".format(contrast)} ${"%.2f".format(calmShare)}]"
             if (support >= 0.5f && contrast >= 5f) passed++
             weakest = min(weakest, support)
             total += sideScore
         }
-        if (passed < 3 || weakest < 0.25f) return null
-        val score = total / 4f
-        return if (score >= 0.55f) score else null
+        if (passed < min(3, sidesChecked) || weakest < 0.25f) return null
+        val score = total / sidesChecked
+        return if (score >= 0.4f) score else null
     }
 
     /**
@@ -346,28 +428,12 @@ class PrintDetector(
             if ((c.x - mid.x) * n.x + (c.y - mid.y) * n.y > 0) n = n * -1f // outward
             val across = if (i % 2 == 0) min(pts[0].dist(pts[3]), pts[1].dist(pts[2])) else min(pts[0].dist(pts[1]), pts[3].dist(pts[2]))
             val maxStep = (across * 0.25f).toInt().coerceAtLeast(3)
-            var white = 0
-            var ended = false
-            for (step in 1..maxStep) {
-                var whiteHere = 0
-                var counted = 0
-                for (k in 0 until 12) {
-                    val p = a + (b - a) * (0.15f + 0.7f * k / 11f) + n * step.toFloat()
-                    val lab = f.labAt(p.x.roundToInt(), p.y.roundToInt()) ?: continue
-                    counted++
-                    val chroma = abs(lab.second - 128) + abs(lab.third - 128)
-                    if (lab.first >= 210 && chroma <= 16) whiteHere++
-                }
-                if (counted < 6) break
-                if (whiteHere >= counted * 0.75f) {
-                    white = step
-                } else {
-                    ended = white > 0
-                    break
-                }
-            }
-            if (ended && white >= 2) {
-                shifts[i] = white + 0.5f
+            val out = whiteBand(f, a, b, n, maxStep)
+            if (out >= 2) {
+                shifts[i] = out + 0.5f
+                bordered++
+            } else if (whiteBand(f, a, b, n * -1f, maxStep) >= 2) {
+                // The border is already inside the outline on this side.
                 bordered++
             }
         }
@@ -388,37 +454,191 @@ class PrintDetector(
     }
 
     /**
+     * An outline around nothing but the page: almost all one colour inside, and that colour is what's just
+     * outside it too. Outlines assembled from a page edge and the edge of a print enclose exactly that.
+     */
+    private fun emptyInside(f: Frame, q: Quad): Boolean {
+        val minX = q.points.minOf { it.x }.toInt()
+        val maxX = q.points.maxOf { it.x }.toInt()
+        val minY = q.points.minOf { it.y }.toInt()
+        val maxY = q.points.maxOf { it.y }.toInt()
+        val step = max(2, max(maxX - minX, maxY - minY) / 24)
+        val samples = ArrayList<Triple<Int, Int, Int>>()
+        for (y in minY..maxY step step) for (x in minX..maxX step step) {
+            if (q.contains(Pt(x.toFloat(), y.toFloat()))) f.labAt(x, y)?.let(samples::add)
+        }
+        val inside = modal(samples) ?: return false
+        if (samples.count { labDistance(it, inside) < 14f } < samples.size * 0.75f) return false
+        val around = surroundColor(f, q) ?: return false
+        return labDistance(inside, around) < 12f
+    }
+
+    /**
+     * How many sides of [q] have a plain strip of pale paper (sleeve, album card, photo border) running
+     * just inside them and then ending in something different.
+     */
+    private fun paperStrips(f: Frame, q: Quad): Int {
+        val pts = q.points
+        val c = q.center
+        var strips = 0
+        for (i in 0 until 4) {
+            val a = pts[i]
+            val b = pts[(i + 1) % 4]
+            val d = (b - a) * (1f / a.dist(b))
+            var n = Pt(-d.y, d.x)
+            val mid = (a + b) * 0.5f
+            if ((c.x - mid.x) * n.x + (c.y - mid.y) * n.y < 0) n = n * -1f // inward
+            val across = if (i % 2 == 0) min(pts[0].dist(pts[3]), pts[1].dist(pts[2])) else min(pts[0].dist(pts[1]), pts[3].dist(pts[2]))
+            val maxDepth = (across * 0.12f).toInt().coerceAtLeast(4)
+            var bandMean: Triple<Int, Int, Int>? = null
+            var width = 0
+            for (depth in 2..maxDepth) {
+                val row = (0 until 12).mapNotNull { k ->
+                    val p = a + (b - a) * (0.15f + 0.7f * k / 11f) + n * depth.toFloat()
+                    f.labAt(p.x.roundToInt(), p.y.roundToInt())
+                }
+                if (row.size < 8) break
+                val mean = Triple(row.sumOf { it.first } / row.size, row.sumOf { it.second } / row.size, row.sumOf { it.third } / row.size)
+                val plain = row.count { labDistance(it, mean) < 10f } >= row.size * 0.85f
+                val paper = mean.first >= 165 && abs(mean.second - 128) + abs(mean.third - 128) <= 24
+                val band = bandMean
+                if (band == null) {
+                    if (plain && paper) { bandMean = mean; width = 1 } else break
+                } else if (plain && labDistance(mean, band) < 8f) {
+                    width++
+                } else {
+                    if (width >= 3 && labDistance(mean, band) >= 15f) strips++
+                    break
+                }
+            }
+        }
+        return strips
+    }
+
+    /** How many pixels of white photo paper lie beyond side [a]-[b] in direction [n], ending in something else; 0 if none. */
+    private fun whiteBand(f: Frame, a: Pt, b: Pt, n: Pt, maxStep: Int): Int {
+        var white = 0
+        for (step in 1..maxStep) {
+            var whiteHere = 0
+            var counted = 0
+            for (k in 0 until 12) {
+                val p = a + (b - a) * (0.15f + 0.7f * k / 11f) + n * step.toFloat()
+                val lab = f.labAt(p.x.roundToInt(), p.y.roundToInt()) ?: continue
+                counted++
+                val chroma = abs(lab.second - 128) + abs(lab.third - 128)
+                if (lab.first >= 210 && chroma <= 16) whiteHere++
+            }
+            if (counted < 6) return 0
+            when {
+                whiteHere >= counted * 0.75f -> white = step
+                white > 0 -> return white
+                // A few pixels of blurred edge before the paper starts.
+                step > 3 -> return 0
+            }
+        }
+        return 0
+    }
+
+    /**
      * True when [outer] is a page holding the prints [inner], not a photo with rectangles in its picture.
      * A page is one colour between its prints (patterns blur out at the coarse scale); a picture isn't.
      */
     private fun plainBetween(f: Frame, outer: Quad, inner: List<Quad>): Boolean {
         val covered = inner.sumOf { it.area.toDouble() }.toFloat() / outer.area
-        if (inner.size == 1 && covered > 0.6f) return false
+        if (inner.size == 1 && covered > 0.6f) {
+            // Tight around one thing: is the outer one a sleeve pocket (the print is inside) or the print
+            // (the inner one is part of its picture, or its picture inside a white border)? A pocket
+            // shows as plain strips on two opposite sides (a pocket wider than the print), or as one plain
+            // band that is the sleeve itself: the same colour as just outside. A band of sky is plain too,
+            // but it isn't the colour of the page around the print.
+            val gaps = sideGaps(outer, inner[0])
+            val size = sqrt(outer.area)
+            val offset = gaps.map { it > size * 0.015f }
+            val opposite = offset.count { it } == 2 && offset[0] == offset[2]
+            val single = offset.count { it } == 1
+            if (!opposite && !single) return false
+            val band = plainBand(f, outer, inner) ?: return false
+            if (band.second < 0.7f) return false
+            if (opposite) return true
+            val around = surroundColor(f, outer) ?: return false
+            return labDistance(band.first, around) < 12f
+        }
         // Pages are full of prints; a picture's own rectangles are usually small details.
         if (inner.size >= 2 && covered >= 0.3f) return true
+        return plainShare(f, outer, inner) >= 0.6f || (inner.size >= 2 && plainShare(f, outer, inner) < 0f)
+    }
+
+    /** How far each side of [inner] sits from [outer], measured outward from the side's middle. */
+    private fun sideGaps(outer: Quad, inner: Quad): List<Float> {
+        val op = outer.points
+        val outerLines = (0 until 4).map { i -> Line(op[i], (op[(i + 1) % 4] - op[i]).let { it * (1f / hypot(it.x, it.y)) }) }
+        val ip = inner.points
+        return (0 until 4).map { i -> val mid = (ip[i] + ip[(i + 1) % 4]) * 0.5f; outerLines.minOf { it.distance(mid) } }
+    }
+
+    /**
+     * Share of the band between [outer] and [inner] that is one colour, 0..1, or -1 when the band is too
+     * thin to sample.
+     */
+    private fun plainShare(f: Frame, outer: Quad, inner: List<Quad>): Float = plainBand(f, outer, inner)?.second ?: -1f
+
+    /** The most common colour just outside [q]. */
+    private fun surroundColor(f: Frame, q: Quad): Triple<Int, Int, Int>? {
+        val pts = q.points
+        val c = q.center
+        val samples = ArrayList<Triple<Int, Int, Int>>()
+        for (i in 0 until 4) {
+            val a = pts[i]; val b = pts[(i + 1) % 4]
+            val d = (b - a) * (1f / a.dist(b))
+            var n = Pt(-d.y, d.x)
+            val mid = (a + b) * 0.5f
+            if ((c.x - mid.x) * n.x + (c.y - mid.y) * n.y > 0) n = n * -1f
+            for (k in 0 until 12) for (o in intArrayOf(5, 8)) {
+                val p = a + (b - a) * (0.1f + 0.8f * k / 11f) + n * o.toFloat()
+                f.labAt(p.x.roundToInt(), p.y.roundToInt())?.let(samples::add)
+            }
+        }
+        return modal(samples)
+    }
+
+    private fun modal(samples: List<Triple<Int, Int, Int>>): Triple<Int, Int, Int>? {
+        if (samples.isEmpty()) return null
+        val counts = HashMap<Int, Int>()
+        for (s in samples) counts.merge((s.first shr 4) * 256 + (s.second shr 4) * 16 + (s.third shr 4), 1, Int::plus)
+        val bin = counts.maxBy { it.value }.key
+        val m = samples.filter { (it.first shr 4) * 256 + (it.second shr 4) * 16 + (it.third shr 4) == bin }
+        return Triple(m.sumOf { it.first } / m.size, m.sumOf { it.second } / m.size, m.sumOf { it.third } / m.size)
+    }
+
+    /** The band between [outer] and [inner]: its most common colour, and the share of it near that colour. */
+    private fun plainBand(f: Frame, outer: Quad, inner: List<Quad>): Pair<Triple<Int, Int, Int>, Float>? {
         val minX = outer.points.minOf { it.x }.toInt()
         val maxX = outer.points.maxOf { it.x }.toInt()
         val minY = outer.points.minOf { it.y }.toInt()
         val maxY = outer.points.maxOf { it.y }.toInt()
         val samples = ArrayList<Triple<Int, Int, Int>>()
-        val step = max(2, (max(maxX - minX, maxY - minY) / 40))
-        for (y in minY..maxY step step) for (x in minX..maxX step step) {
-            val p = Pt(x.toFloat(), y.toFloat())
-            if (!outer.contains(p) || inner.any { it.contains(p) }) continue
-            f.labAt(x, y)?.let(samples::add)
+        // A coarse grid, or every pixel when the band is thin (a sleeve pocket a few pixels wider).
+        for (step in listOf(max(2, (max(maxX - minX, maxY - minY) / 40)), 1)) {
+            samples.clear()
+            for (y in minY..maxY step step) for (x in minX..maxX step step) {
+                val p = Pt(x.toFloat(), y.toFloat())
+                if (!outer.contains(p) || inner.any { it.contains(p) }) continue
+                f.labAt(x, y)?.let(samples::add)
+            }
+            if (samples.size >= 40) break
         }
-        if (samples.size < 20) return inner.size >= 2
-        val counts = HashMap<Int, Int>()
-        for (s in samples) counts.merge((s.first shr 4) * 256 + (s.second shr 4) * 16 + (s.third shr 4), 1, Int::plus)
-        val bin = counts.maxBy { it.value }.key
-        val modal = samples.filter { (it.first shr 4) * 256 + (it.second shr 4) * 16 + (it.third shr 4) == bin }
-        val ref = Triple(modal.sumOf { it.first } / modal.size, modal.sumOf { it.second } / modal.size, modal.sumOf { it.third } / modal.size)
-        val share = samples.count { labDistance(it, ref) < 14f }.toFloat() / samples.size
-        return share >= 0.6f
+        if (samples.size < 20) return null
+        val ref = modal(samples) ?: return null
+        return ref to samples.count { labDistance(it, ref) < 14f }.toFloat() / samples.size
     }
 
-    private fun shapeOk(q: Quad, w: Int, h: Int): Boolean {
-        if (!q.isReasonable()) return false
+    private fun shapeOk(q: Quad, w: Int, h: Int, allowCut: Boolean = false): Boolean {
+        // Held over an album the camera sees prints nearly square-on: corners close to right angles,
+        // opposite sides close in length.
+        if (!q.isReasonable(68f, 112f)) return false
+        val p = q.points
+        if (min(p[0].dist(p[1]), p[3].dist(p[2])) < max(p[0].dist(p[1]), p[3].dist(p[2])) * 0.75f) return false
+        if (min(p[0].dist(p[3]), p[1].dist(p[2])) < max(p[0].dist(p[3]), p[1].dist(p[2])) * 0.75f) return false
         val area = q.area
         if (area < w.toFloat() * h * minAreaShare || area > w.toFloat() * h * 0.985f) return false
         val longSide = max(q.outputWidth, q.outputHeight)
@@ -427,7 +647,7 @@ class PrintDetector(
         // A print cut off by the frame edge can't be cropped properly; wait until it's fully in view.
         val margin = 0.01f * max(w, h)
         val onEdge = q.points.count { it.x < margin || it.y < margin || it.x > w - margin || it.y > h - margin }
-        return onEdge < 2
+        return allowCut || onEdge < 2
     }
 
     // ---- helpers ----

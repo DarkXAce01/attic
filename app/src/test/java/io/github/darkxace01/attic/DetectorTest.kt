@@ -110,7 +110,17 @@ class DetectorTest {
         Imgproc.GaussianBlur(scene, camera, Size(3.0, 3.0), 0.8)
         addNoise(camera, 6.0)
 
-        val found = PrintDetector().detect(camera)
+        val detector = PrintDetector()
+        val seen = mutableListOf<Triple<String, Quad, Float?>>()
+        if (System.getProperty("attic.explain") == name) {
+            detector.trace = { s, q, sc -> seen += Triple(s, q, sc) }
+            io.github.darkxace01.attic.vision.Candidates.why = { q, w -> println("why ${q.points.joinToString { "(%.0f,%.0f)".format(it.x, it.y) }}: $w") }
+        }
+        val found = detector.detect(camera)
+        io.github.darkxace01.attic.vision.Candidates.why = null
+        seen.filter { it.third != null && it.first.startsWith("resolved").not() }.sortedByDescending { it.third }.take(15).forEach { (src, q, sc) ->
+            println("cand ${"%.3f".format(sc)} ${src.take(60)} ${q.points.joinToString { "(%.0f,%.0f)".format(it.x, it.y) }}")
+        }
         writeOverlay(name, camera, truths, found)
 
         assertEquals("$name: number of prints found", truths.size, found.size)

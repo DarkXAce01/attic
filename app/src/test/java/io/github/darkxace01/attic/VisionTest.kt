@@ -95,6 +95,30 @@ class VisionTest {
         assertEquals(listOf(print), result)
     }
 
+    private fun seg(x1: Float, y1: Float, x2: Float, y2: Float) = io.github.darkxace01.attic.vision.LineRects.Segment(Pt(x1, y1), Pt(x2, y2))
+
+    @Test
+    fun aPrintWithABrokenEdgeIsStillARectangle() {
+        // Glare has wiped out half the top edge.
+        val segments = listOf(
+            seg(100f, 100f, 180f, 100f), seg(240f, 100f, 300f, 100f),
+            seg(300f, 100f, 300f, 240f), seg(300f, 240f, 100f, 240f), seg(100f, 240f, 100f, 100f),
+        )
+        val found = io.github.darkxace01.attic.vision.LineRects.find(segments, minSide = 50f, maxSide = 600f)
+        assertTrue(found.isNotEmpty())
+        assertTrue(found[0].quad.iou(rect(100f, 100f, 200f, 140f)) > 0.97f)
+    }
+
+    @Test
+    fun linesThatOnlyCrossDontMakeAPrint() {
+        // Two long lines each way crossing like a noughts-and-crosses grid: no corners anywhere.
+        val segments = listOf(
+            seg(0f, 100f, 400f, 100f), seg(0f, 260f, 400f, 260f),
+            seg(100f, 0f, 100f, 400f), seg(280f, 0f, 280f, 400f),
+        )
+        assertTrue(io.github.darkxace01.attic.vision.LineRects.find(segments, minSide = 50f, maxSide = 600f).isEmpty())
+    }
+
     private fun jitter(q: Quad, r: kotlin.random.Random, amount: Float) =
         q.map { Pt(it.x + (r.nextFloat() - 0.5f) * 2 * amount, it.y + (r.nextFloat() - 0.5f) * 2 * amount) }
 

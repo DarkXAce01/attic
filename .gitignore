@@ -20,3 +20,7 @@ dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Real album photos for testing the detector: private, never commit
+imgs/
+*:Zone.Identifier
