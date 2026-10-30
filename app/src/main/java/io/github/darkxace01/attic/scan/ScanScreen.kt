@@ -24,7 +24,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -135,6 +138,7 @@ fun ScanScreen(vm: ScanViewModel, onOpenPrints: () -> Unit) {
             Shutter(
                 enabled = !state.saving,
                 ready = state.outlines.isNotEmpty() && state.outlines.all { it.locked },
+                progress = state.readyProgress,
                 onClick = vm::capture,
                 modifier = Modifier.align(Alignment.Center),
             )
@@ -152,8 +156,8 @@ private fun statusLine(s: ScanUiState): String {
         s.waitingForNext -> "Done. Turn the page or move to the next photo."
         n == 0 -> "Point at a photo or an album page."
         s.outlines.all { it.locked } && !s.autoCapture -> "Found $photos. Tap to capture."
-        s.outlines.all { it.locked } -> "Found $photos. Capturing…"
-        else -> "Found $photos. Hold still."
+        s.outlines.all { it.locked } -> "Found $photos. Hold still…"
+        else -> "Found $photos. Hold steady."
     }
 }
 
@@ -196,43 +200,78 @@ private fun Outlines(outlines: List<Outline>, modifier: Modifier) {
     }
 }
 
-/** What each print will look like once saved: flattened and straightened, live. */
+/**
+ * What each print will look like once saved, flattened and straightened, live. Right after a capture
+ * it shows the real saved crops instead.
+ */
 @Composable
 private fun PreviewStrip(state: ScanUiState) {
+    val saved = state.lastSaved
     LazyRow(
         Modifier
             .fillMaxWidth()
             .height(84.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        itemsIndexed(state.previews) { _, bitmap ->
-            Image(
-                bitmap = bitmap,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .height(76.dp)
-                    .aspectRatio(bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1))
-                    .clip(RoundedCornerShape(2.dp)),
-            )
+        if (saved.isNotEmpty()) {
+            items(saved.size, key = { "saved$it" }) { i -> PrintThumb(saved[i], highlighted = true) }
+        } else {
+            items(state.previews, key = { it.id }) { p -> PrintThumb(p.image, highlighted = p.locked) }
         }
     }
 }
 
 @Composable
-private fun Shutter(enabled: Boolean, ready: Boolean, onClick: () -> Unit, modifier: Modifier) {
+private fun PrintThumb(bitmap: ImageBitmap, highlighted: Boolean) {
+    Image(
+        bitmap = bitmap,
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+            .height(76.dp)
+            .aspectRatio(bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1))
+            .clip(RoundedCornerShape(2.dp))
+            .graphicsLayer { alpha = if (highlighted) 1f else 0.6f },
+    )
+}
+
+@Composable
+private fun Shutter(enabled: Boolean, ready: Boolean, progress: Float, onClick: () -> Unit, modifier: Modifier) {
     val ring = if (ready) Palette.Accent else Palette.Ink
     Box(
         modifier
             .size(76.dp)
-            .border(3.dp, ring.copy(alpha = if (enabled) 1f else 0.4f), CircleShape)
-            .padding(7.dp)
             .clip(CircleShape)
-            .background(if (enabled) Palette.Ink else Palette.SurfaceHigh)
             .clickable(enabled = enabled, onClick = onClick),
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        // The ring fills while auto-capture counts down, so you know to keep holding still.
+        Canvas(Modifier.fillMaxSize()) {
+            val w = 3.dp.toPx()
+            val inset = w / 2
+            val arcSize = androidx.compose.ui.geometry.Size(size.width - w, size.height - w)
+            drawArc(
+                color = ring.copy(alpha = if (enabled) (if (progress > 0f) 0.3f else 1f) else 0.4f),
+                startAngle = 0f, sweepAngle = 360f, useCenter = false,
+                topLeft = Offset(inset, inset), size = arcSize, style = Stroke(w),
+            )
+            if (progress > 0f) {
+                drawArc(
+                    color = Palette.Accent,
+                    startAngle = -90f, sweepAngle = 360f * progress, useCenter = false,
+                    topLeft = Offset(inset, inset), size = arcSize, style = Stroke(w),
+                )
+            }
+        }
+        Box(
+            Modifier
+                .size(62.dp)
+                .clip(CircleShape)
+                .background(if (enabled) Palette.Ink else Palette.SurfaceHigh),
+        )
+    }
 }
 
 @Composable

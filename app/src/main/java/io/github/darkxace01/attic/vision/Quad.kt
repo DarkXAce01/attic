@@ -85,6 +85,8 @@ data class Quad(val tl: Pt, val tr: Pt, val br: Pt, val bl: Pt) {
             return Quad(r[0], r[1], r[2], r[3])
         }
 
+        fun ofSize(w: Int, h: Int) = Quad(Pt(0f, 0f), Pt(w.toFloat(), 0f), Pt(w.toFloat(), h.toFloat()), Pt(0f, h.toFloat()))
+
         /** Corners averaged one by one. Both quads must already be in the same order. */
         fun average(a: Quad, b: Quad) = a.lerp(b, 0.5f)
     }

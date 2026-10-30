@@ -45,13 +45,19 @@ import org.opencv.core.Mat
 import org.opencv.core.Rect
 import java.util.concurrent.Executors
 
-data class Outline(val quad: Quad, val locked: Boolean)
+data class Outline(val id: Long, val quad: Quad, val locked: Boolean)
+
+data class LivePreview(val id: Long, val image: ImageBitmap, val locked: Boolean)
 
 data class ScanUiState(
     /** Prints in view, in 0..1 coordinates of the upright camera frame. */
     val outlines: List<Outline> = emptyList(),
-    /** Flattened previews of the prints in view, in reading order. */
-    val previews: List<ImageBitmap> = emptyList(),
+    /** Flattened previews of the prints in view, one per print, in a stable order. */
+    val previews: List<LivePreview> = emptyList(),
+    /** The final, full-resolution crops of the last capture, shown for a moment after saving. */
+    val lastSaved: List<ImageBitmap> = emptyList(),
+    /** 0..1 while everything in view is locked and auto-capture is counting down. */
+    val readyProgress: Float = 0f,
     val autoCapture: Boolean = true,
     val saving: Boolean = false,
     /** Already captured what's in view; waiting for the page to change. */
@@ -74,13 +80,14 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     val state: StateFlow<ScanUiState> = _state
 
     private var imageCapture: ImageCapture? = null
-    private var lastPreviewAt = 0L
+    private val previewCache = HashMap<Long, Pair<Long, LivePreview>>()
 
     // Auto-capture: fire once everything in view is locked, then wait until the scene changes.
     private var armed = true
     private var lastCaptureAt = 0L
     private var allLockedSince = 0L
     private var emptySince = 0L
+    private val autoDelayMs = 600L
 
     fun bind(provider: ProcessCameraProvider, owner: LifecycleOwner, previewView: PreviewView) {
         val ratio43 = AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
@@ -144,13 +151,20 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
 
         val found = detector.detect(frame).map { it.scale(1f / w, 1f / h) }
         val tracks = tracker.update(found, now)
-            .sortedWith(compareBy({ (it.quad.center.y * 4).toInt() }, { it.quad.center.x }))
 
-        val previews = if (now - lastPreviewAt > 250 || tracks.size != _state.value.previews.size) {
-            lastPreviewAt = now
-            tracks.map { t -> previewOf(frame, t.quad.scale(w, h)) }
-        } else {
-            null
+        // Previews are kept per print: rebuilt when a print appears or locks, and at most every 700 ms
+        // while it's moving, so the strip doesn't churn.
+        previewCache.keys.retainAll(tracks.map { it.id }.toSet())
+        val previews = tracks.map { t ->
+            val cached = previewCache[t.id]
+            val stale = cached == null || cached.second.locked != t.locked || (!t.locked && now - cached.first > 700)
+            if (stale) {
+                val p = LivePreview(t.id, previewOf(frame, t.shown.scale(w, h)), t.locked)
+                previewCache[t.id] = now to p
+                p
+            } else {
+                cached!!.second
+            }
         }
         frame.release()
 
@@ -170,27 +184,30 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         } else {
             allLockedSince = 0L
         }
+        val s = _state.value
+        val counting = s.autoCapture && armed && !s.saving && allLocked
+        val progress = if (counting) ((now - allLockedSince).toFloat() / autoDelayMs).coerceIn(0f, 1f) else 0f
 
-        _state.update { s ->
-            s.copy(
-                outlines = tracks.map { Outline(it.quad, it.locked) },
-                previews = previews ?: s.previews,
+        _state.update {
+            it.copy(
+                outlines = tracks.map { t -> Outline(t.id, t.shown, t.locked) },
+                previews = previews,
                 waitingForNext = !armed && tracks.isNotEmpty(),
+                readyProgress = progress,
             )
         }
 
-        val s = _state.value
-        if (s.autoCapture && armed && !s.saving && allLocked && now - allLockedSince >= 250) capture()
+        if (counting && progress >= 1f) capture()
     }
 
     /** Takes the full-resolution photo and flattens every print in view. */
     fun capture() {
         val capture = imageCapture ?: return
         if (_state.value.saving) return
-        val quads = tracker.current.map { it.quad }
+        val quads = tracker.visible.map { it.shown }
         armed = false
         lastCaptureAt = SystemClock.elapsedRealtime()
-        _state.update { it.copy(saving = true, shutterTick = lastCaptureAt, error = null) }
+        _state.update { it.copy(saving = true, shutterTick = lastCaptureAt, error = null, readyProgress = 0f) }
 
         capture.takePicture(captureExecutor, object : ImageCapture.OnImageCapturedCallback() {
             override fun onCaptureSuccess(image: ImageProxy) {
@@ -229,22 +246,24 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
                 PrintStore.NewPrint(flat, refined, Rectify.sharpness(flat))
             }
             val saved = store.save(jpeg, rotation, full.cols(), full.rows(), prints)
+            val thumbs = prints.map { previewOf(it.image, Quad.ofSize(it.image.cols(), it.image.rows())) }
             prints.forEach { it.image.release() }
             full.release()
             saved.forEach(store::exportToGallery)
-            saved
+            saved to thumbs
         }
-        result.onSuccess { saved ->
+        result.onSuccess { (saved, thumbs) ->
             _state.update {
                 it.copy(
                     saving = false,
                     justSaved = saved.size,
+                    lastSaved = thumbs,
                     savedTotal = it.savedTotal + saved.size,
                     error = if (saved.isEmpty()) "No photos found in that shot" else null,
                 )
             }
-            delay(2200)
-            _state.update { if (it.justSaved == saved.size) it.copy(justSaved = 0) else it }
+            delay(2500)
+            _state.update { if (it.lastSaved === thumbs) it.copy(justSaved = 0, lastSaved = emptyList()) else it }
         }.onFailure { e ->
             armed = true
             _state.update { it.copy(saving = false, error = "Couldn't save: ${e.message}") }

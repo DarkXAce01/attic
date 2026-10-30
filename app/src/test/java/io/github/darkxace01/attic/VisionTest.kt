@@ -76,36 +76,72 @@ class VisionTest {
         assertEquals(listOf(print), result)
     }
 
+    private fun jitter(q: Quad, r: kotlin.random.Random, amount: Float) =
+        q.map { Pt(it.x + (r.nextFloat() - 0.5f) * 2 * amount, it.y + (r.nextFloat() - 0.5f) * 2 * amount) }
+
     @Test
-    fun trackerLocksAfterHoldingStill() {
-        val tracker = QuadTracker(lockAfterMs = 400)
+    fun aOneFrameGhostNeverShows() {
+        val tracker = QuadTracker()
+        tracker.update(listOf(rect(0.2f, 0.2f, 0.3f, 0.3f)), 0)
+        tracker.update(emptyList(), 33)
+        assertTrue(tracker.visible.isEmpty())
+    }
+
+    @Test
+    fun jitteryDetectionsStillLock() {
+        // Real detections wobble by a few pixels every frame; that must not stop the lock.
+        val tracker = QuadTracker(lockAfterMs = 300)
         val q = rect(0.2f, 0.2f, 0.5f, 0.4f)
+        val r = kotlin.random.Random(1)
         var t = 0L
-        repeat(6) { tracker.update(listOf(q), t); t += 50 }
-        assertFalse(tracker.current.single().locked)
-        repeat(6) { tracker.update(listOf(q), t); t += 50 }
-        assertTrue(tracker.current.single().locked)
+        repeat(20) { tracker.update(listOf(jitter(q, r, 0.004f)), t); t += 33 }
+        assertTrue(tracker.visible.single().locked)
     }
 
     @Test
-    fun movingResetsTheLock() {
+    fun lockedOutlineStaysFrozenThroughJitter() {
         val tracker = QuadTracker(lockAfterMs = 200)
+        val q = rect(0.2f, 0.2f, 0.5f, 0.4f)
+        val r = kotlin.random.Random(2)
         var t = 0L
-        repeat(10) { tracker.update(listOf(rect(0.2f, 0.2f, 0.5f, 0.4f)), t); t += 50 }
-        assertTrue(tracker.current.single().locked)
-        tracker.update(listOf(rect(0.25f, 0.22f, 0.5f, 0.4f)), t)
-        assertFalse(tracker.current.single().locked)
+        repeat(15) { tracker.update(listOf(jitter(q, r, 0.003f)), t); t += 33 }
+        val frozen = tracker.visible.single().shown
+        repeat(15) { tracker.update(listOf(jitter(q, r, 0.008f)), t); t += 33 }
+        assertEquals(frozen, tracker.visible.single().shown)
+        assertTrue(tracker.visible.single().locked)
     }
 
     @Test
-    fun briefDropoutKeepsTheSameTrack() {
+    fun oneBadFrameDoesntMoveTheOutline() {
         val tracker = QuadTracker()
         val q = rect(0.2f, 0.2f, 0.5f, 0.4f)
-        tracker.update(listOf(q), 0)
-        val id = tracker.current.single().id
-        tracker.update(emptyList(), 50)
-        tracker.update(emptyList(), 100)
-        tracker.update(listOf(q), 150)
-        assertEquals(id, tracker.current.single().id)
+        var t = 0L
+        repeat(6) { tracker.update(listOf(q), t); t += 33 }
+        // One frame catches the print's inner image area instead of its edge.
+        tracker.update(listOf(rect(0.23f, 0.23f, 0.44f, 0.34f)), t)
+        assertTrue(tracker.visible.single().shown.maxCornerShift(q) < 0.001f)
+    }
+
+    @Test
+    fun reallyMovingUnlocks() {
+        val tracker = QuadTracker(lockAfterMs = 200)
+        var t = 0L
+        repeat(12) { tracker.update(listOf(rect(0.2f, 0.2f, 0.5f, 0.4f)), t); t += 33 }
+        assertTrue(tracker.visible.single().locked)
+        repeat(6) { tracker.update(listOf(rect(0.26f, 0.24f, 0.5f, 0.4f)), t); t += 33 }
+        assertFalse(tracker.visible.single().locked)
+    }
+
+    @Test
+    fun droppedFramesDontBlink() {
+        val tracker = QuadTracker()
+        val q = rect(0.2f, 0.2f, 0.5f, 0.4f)
+        var t = 0L
+        repeat(5) { tracker.update(listOf(q), t); t += 33 }
+        val id = tracker.visible.single().id
+        repeat(5) { tracker.update(emptyList(), t); t += 33 }
+        assertEquals(id, tracker.visible.single().id)
+        tracker.update(listOf(q), t)
+        assertEquals(id, tracker.visible.single().id)
     }
 }
