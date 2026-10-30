@@ -1,0 +1,22 @@
+# Gradle / Android Studio
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+.kotlin/
+
+# Signing: never commit
+*.jks
+*.keystore
+keystore.properties
+
+# APKs for installing on the phone
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
