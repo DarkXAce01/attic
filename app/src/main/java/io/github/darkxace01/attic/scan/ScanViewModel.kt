@@ -26,11 +26,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
 import io.github.darkxace01.attic.data.Library
+import io.github.darkxace01.attic.finalOutline
 import io.github.darkxace01.attic.library
+import io.github.darkxace01.attic.printNet
 import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.FrameTransform
-import io.github.darkxace01.attic.vision.EdgeFit
-import io.github.darkxace01.attic.vision.EdgeSnap
 import io.github.darkxace01.attic.vision.PrintNet
 import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.QuadTracker
@@ -82,7 +82,7 @@ data class ScanUiState(
 
 class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Analyzer {
     private val library: Library = app.library
-    private val detector = PrintNet(app.assets.open("printnet.onnx").use { it.readBytes() })
+    private val detector = app.printNet
     private val tracker = QuadTracker()
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private val captureExecutor = Executors.newSingleThreadExecutor()
@@ -290,9 +290,10 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             // Pressed the shutter with nothing tracked: look for prints in the photo itself.
             val rough = normQuads.map { it.scale(w, h) }.ifEmpty { detector.detect(full) }
             val prints = rough.map { q ->
-                // The preview outline is good to about a pixel of the analysis frame; settle each side on
-                // the real edge in the full photo, searching no further than that.
-                val refined = EdgeSnap.snap(full, q, (EdgeFit.diagonal(q) * 0.012f).coerceAtLeast(4f))
+                // The preview outline is good to about a pixel of the small analysis frame, which in the full
+                // photo can be a sliver of album page. The network takes a closer look at just this print,
+                // then each side settles on the real edge.
+                val refined = detector.finalOutline(full, q)
                 val flat = Rectify.warp(full, refined)
                 Library.NewPrint(flat, refined, Rectify.sharpness(flat))
             }

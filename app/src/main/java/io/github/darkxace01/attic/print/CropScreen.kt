@@ -39,13 +39,13 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import io.github.darkxace01.attic.data.PrintEntity
+import io.github.darkxace01.attic.finalOutline
 import io.github.darkxace01.attic.library
+import io.github.darkxace01.attic.printNet
 import io.github.darkxace01.attic.ui.PrimaryButton
 import io.github.darkxace01.attic.ui.QuietButton
 import io.github.darkxace01.attic.ui.TopBar
 import io.github.darkxace01.attic.ui.theme.Palette
-import io.github.darkxace01.attic.vision.EdgeFit
-import io.github.darkxace01.attic.vision.EdgeSnap
 import io.github.darkxace01.attic.vision.Pt
 import io.github.darkxace01.attic.vision.Quad
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +66,7 @@ private class Original(val image: ImageBitmap, val scale: Float, val full: Mat)
 @Composable
 fun CropScreen(printId: Long, onDone: () -> Unit) {
     val library = LocalContext.current.library
+    val net = LocalContext.current.printNet
     val scope = rememberCoroutineScope()
     var print by remember { mutableStateOf<PrintEntity?>(null) }
     var original by remember { mutableStateOf<Original?>(null) }
@@ -112,7 +113,7 @@ fun CropScreen(printId: Long, onDone: () -> Unit) {
                 scope.launch {
                     val snapped = withContext(Dispatchers.Default) {
                         val fullQuad = q.scale(1f / o.scale, 1f / o.scale)
-                        EdgeSnap.snap(o.full, fullQuad, (EdgeFit.diagonal(fullQuad) * 0.02f).coerceAtLeast(6f))
+                        net.finalOutline(o.full, fullQuad, edgeSearch = 0.02f)
                     }
                     quad = snapped.scale(o.scale, o.scale)
                 }

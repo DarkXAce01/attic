@@ -1,5 +1,7 @@
 package io.github.darkxace01.attic
 
+import io.github.darkxace01.attic.vision.EdgeFit
+import io.github.darkxace01.attic.vision.EdgeSnap
 import io.github.darkxace01.attic.vision.PrintNet
 import io.github.darkxace01.attic.vision.Pt
 import io.github.darkxace01.attic.vision.Quad
@@ -7,6 +9,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.BeforeClass
 import org.junit.Test
+import org.opencv.core.Mat
+import org.opencv.imgproc.Imgproc
 import java.io.File
 
 class PrintNetTest {
@@ -51,5 +55,38 @@ class PrintNetTest {
         val found = PrintNet.quads(arrayOf(print, core, FloatArray(w * h)))
         assertEquals(1, found.size)
         assertTrue("corners ${found[0]}", found[0].maxCornerShift(whole) < 1.5f)
+    }
+
+    /**
+     * At capture, taking the network's close look at each print, when it sits on stronger edges, never
+     * makes outlines worse than fitting the edges of the whole-frame outline alone (on real album pages it
+     * makes them tighter: see RealPhotos). Scenes are scaled up 3x to stand in for the full-resolution photo.
+     */
+    @Test
+    fun theCloseLookNeverLoosensCaptureOutlines() {
+        val scenes = Scenes(7)
+        var before = 0.0
+        var after = 0.0
+        var n = 0
+        repeat(12) {
+            val scene = scenes.random()
+            val full = Mat()
+            Imgproc.resize(scene.image, full, org.opencv.core.Size(), 3.0, 3.0, Imgproc.INTER_CUBIC)
+            for (rough in net.detect(scene.image)) {
+                val t = scene.truths.maxByOrNull { it.iou(rough) }?.takeIf { it.iou(rough) > 0.8f } ?: continue
+                val guess = rough.scale(3f, 3f)
+                val truth = t.scale(3f, 3f)
+                before += EdgeSnap.snap(full, guess, (EdgeFit.diagonal(guess) * 0.012f).coerceAtLeast(4f)).iou(truth)
+                val a = net.finalOutline(full, guess).iou(truth)
+                val b0 = EdgeSnap.snap(full, guess, (EdgeFit.diagonal(guess) * 0.012f).coerceAtLeast(4f)).iou(truth)
+                val r = net.refineAt(full, guess)
+                after += a
+                n++
+            }
+            listOf(scene.image, full).forEach { it.release() }
+        }
+        println("capture IoU over $n prints: edges only ${"%.4f".format(before / n)}, with close look ${"%.4f".format(after / n)}")
+        assertTrue(n > 15)
+        assertTrue(after / n >= before / n - 0.002)
     }
 }

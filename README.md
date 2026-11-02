@@ -14,12 +14,15 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - A live strip showing each print flattened, then the real saved crops right after a capture
 - Detection that finds prints on striped, flowered and dark pages, under glare, with or without white
   borders, and tells a page full of prints from a photo with rectangles in it
-- Full-resolution capture: each print is re-detected on the full photo, its edges fitted to the real
-  edges (sub-pixel), then flattened. Soft (blurry) shots are flagged right away
+- Prints are found by a small neural network trained for exactly this (see `ml/`), on the phone
+- Full-resolution capture: the network takes a second, close look at each print in the full photo so
+  no sliver of album page is left at the edges, its sides are fitted to the real edges (sub-pixel), then
+  it's flattened. Soft (blurry) shots are flagged right away
 - Scans go into the album you pick at the top of the scan screen, one capture per page
 
 **Keep**
-- Albums, page by page. Album dates that undated photos inherit
+- Albums, page by page. Swipe left and right through an album's photos. Album dates that undated
+  photos inherit
 - Dates the way people say them: "summer 87", "about 1985", "early 90s", "14/7/1998", "'98 7 14"
 - People (with suggestions from everyone you've tagged), place, caption
 - Fix crop on the untouched original with a magnifying loupe, or snap to edges. Rotate

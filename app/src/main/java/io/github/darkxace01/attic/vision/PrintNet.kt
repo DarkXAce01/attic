@@ -50,6 +50,36 @@ class PrintNet(model: ByteArray) {
         }
     }
 
+    /**
+     * A second, close look at one print in a full-resolution photo. The network sees the whole frame at
+     * 288 x 384, so in a page shot each print is only a hundred or so map pixels across and its outline can
+     * be off by a sliver, leaving a strip of album page in the crop. Here it looks again at just the area
+     * around [guess], several times closer, and the outline it finds there replaces the guess. Null if the
+     * close look doesn't find the same print.
+     */
+    fun refineAt(full: Mat, guess: Quad): Quad? {
+        val xs = guess.points.map { it.x }
+        val ys = guess.points.map { it.y }
+        val cx = (xs.min() + xs.max()) / 2
+        val cy = (ys.min() + ys.max()) / 2
+        // The print with a margin of page around it, as the network was trained to see prints, at the
+        // network's own 3:4 shape so nothing is stretched.
+        var bw = (xs.max() - xs.min()) * 1.35f
+        var bh = (ys.max() - ys.min()) * 1.35f
+        if (bw / bh > W.toFloat() / H) bh = bw * H / W else bw = bh * W / H
+        val x0 = (cx - bw / 2).toInt().coerceAtLeast(0)
+        val y0 = (cy - bh / 2).toInt().coerceAtLeast(0)
+        val x1 = (cx + bw / 2).toInt().coerceAtMost(full.cols())
+        val y1 = (cy + bh / 2).toInt().coerceAtMost(full.rows())
+        // Not worth it unless it's a real zoom: the whole-frame look was already this close.
+        if (x1 - x0 < 64 || y1 - y0 < 64 || (x1 - x0) > 0.8f * full.cols() && (y1 - y0) > 0.8f * full.rows()) return null
+        val roi = full.submat(org.opencv.core.Rect(x0, y0, x1 - x0, y1 - y0))
+        val found = try { detect(roi) } finally { roi.release() }
+        val local = guess.map { Pt(it.x - x0, it.y - y0) }
+        val best = found.maxByOrNull { it.iou(local) }?.takeIf { it.iou(local) >= 0.75f } ?: return null
+        return best.map { Pt(it.x + x0, it.y + y0) }
+    }
+
     private fun run(rgba: Mat): Array<FloatArray> {
         val rgb = Mat()
         Imgproc.cvtColor(rgba, rgb, Imgproc.COLOR_RGBA2RGB)

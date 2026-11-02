@@ -6,6 +6,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -31,7 +33,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -71,8 +75,53 @@ import java.util.Locale
 
 private enum class Editing { None, Date, People, Place, Caption }
 
+/**
+ * One photo with its details. Swipe left and right for the other photos in the album, in page order.
+ * [onShowing] is told which photo is on screen.
+ */
 @Composable
-fun PrintScreen(printId: Long, onBack: () -> Unit, onFixCrop: (Long) -> Unit) {
+fun PrintScreen(startId: Long, onShowing: (Long) -> Unit, onBack: () -> Unit, onFixCrop: (Long) -> Unit) {
+    val library = LocalContext.current.library
+    val start by remember(startId) { library.print(startId) }.collectAsStateWithLifecycle(null)
+    val albumId = start?.albumId ?: return
+    val prints by remember(albumId) { library.printsIn(albumId) }.collectAsStateWithLifecycle(null)
+    val ids = prints?.map { it.id } ?: return
+    if (ids.isEmpty()) return
+    val pager = rememberPagerState(initialPage = ids.indexOf(startId).coerceAtLeast(0)) { ids.size }
+    var zoomed by remember { mutableStateOf(false) }
+    LaunchedEffect(pager, ids) {
+        snapshotFlow { pager.currentPage }.collect { i -> ids.getOrNull(i)?.let(onShowing) }
+    }
+    HorizontalPager(
+        pager,
+        key = { ids.getOrElse(it) { -1L } },
+        // A zoomed-in photo pans instead.
+        userScrollEnabled = !zoomed,
+        pageSpacing = 16.dp,
+        modifier = Modifier.fillMaxSize(),
+    ) { i ->
+        val id = ids.getOrNull(i) ?: return@HorizontalPager
+        PrintPage(
+            id,
+            position = if (ids.size > 1) "${i + 1} of ${ids.size}" else null,
+            onZoomed = { if (pager.currentPage == i) zoomed = it },
+            onBack = onBack,
+            onFixCrop = onFixCrop,
+            // Deleting a photo shows the next one, or goes back once the album is empty.
+            onDeleted = { if (ids.size <= 1) onBack() },
+        )
+    }
+}
+
+@Composable
+private fun PrintPage(
+    printId: Long,
+    position: String?,
+    onZoomed: (Boolean) -> Unit,
+    onBack: () -> Unit,
+    onFixCrop: (Long) -> Unit,
+    onDeleted: () -> Unit,
+) {
     val library = LocalContext.current.library
     val print by remember(printId) { library.print(printId) }.collectAsStateWithLifecycle(null)
     val p = print ?: return
@@ -94,10 +143,12 @@ fun PrintScreen(printId: Long, onBack: () -> Unit, onFixCrop: (Long) -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         TopBar(album?.title ?: "", onBack = onBack) {
-            if (busy) Text("Saving…", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+            val note = if (busy) "Saving…" else position
+            if (note != null) Text(note, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
         }
         ZoomableImage(
             p,
+            onZoomed = onZoomed,
             file = library.displayFile(p),
             before = library.originalFile(p).takeIf { p.enhance != Enhance.OFF },
             modifier = Modifier.fillMaxWidth().weight(1f),
@@ -176,7 +227,7 @@ fun PrintScreen(printId: Long, onBack: () -> Unit, onFixCrop: (Long) -> Unit) {
             confirmButton = {
                 QuietButton("Delete", color = Palette.Warning, onClick = {
                     confirmDelete = false
-                    scope.launch { library.delete(printId); onBack() }
+                    scope.launch { library.delete(printId); onDeleted() }
                 })
             },
             dismissButton = { QuietButton("Keep", onClick = { confirmDelete = false }) },
@@ -215,7 +266,7 @@ private fun DetailRow(label: String, value: String?, placeholder: String, onClic
 }
 
 @Composable
-private fun ZoomableImage(p: PrintEntity, file: java.io.File, before: java.io.File?, modifier: Modifier) {
+private fun ZoomableImage(p: PrintEntity, onZoomed: (Boolean) -> Unit, file: java.io.File, before: java.io.File?, modifier: Modifier) {
     var scale by remember(p.id) { mutableFloatStateOf(1f) }
     var offset by remember(p.id) { mutableStateOf(Offset.Zero) }
     var comparing by remember { mutableStateOf(false) }
@@ -224,10 +275,12 @@ private fun ZoomableImage(p: PrintEntity, file: java.io.File, before: java.io.Fi
         scale = (scale * zoom).coerceIn(1f, 12f)
         offset = if (scale == 1f) Offset.Zero else offset + pan
     }
+    LaunchedEffect(scale > 1f) { onZoomed(scale > 1f) }
     Box(
         modifier
             .background(Palette.Ground)
-            .transformable(transform)
+            // One finger only pans a zoomed-in photo; otherwise it swipes to the next one.
+            .transformable(transform, canPan = { scale > 1f })
             .pointerInput(Unit) {
                 detectTapGestures(
                     onDoubleTap = { if (scale > 1f) { scale = 1f; offset = Offset.Zero } else scale = 3f },

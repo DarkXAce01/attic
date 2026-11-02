@@ -47,7 +47,10 @@ private sealed interface Route {
     data object Scan : Route
     data object Albums : Route
     data class Album(val id: Long) : Route
-    data class Print(val id: Long) : Route
+    data class Print(val id: Long) : Route {
+        /** The photo swiped to, so coming back from fixing a crop returns to it. */
+        var showing: Long = id
+    }
     data class Crop(val id: Long) : Route
 }
 
@@ -93,7 +96,7 @@ fun AtticApp() {
                     )
                 }
                 is Route.Print -> Box(Modifier.statusBarsPadding()) {
-                    PrintScreen(top.id, onBack = ::back, onFixCrop = { go(Route.Crop(it)) })
+                    PrintScreen(top.showing, onShowing = { top.showing = it }, onBack = ::back, onFixCrop = { go(Route.Crop(it)) })
                 }
                 is Route.Crop -> Box(Modifier.statusBarsPadding()) { CropScreen(top.id, onDone = ::back) }
             }

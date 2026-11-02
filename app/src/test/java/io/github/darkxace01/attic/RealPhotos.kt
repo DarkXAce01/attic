@@ -76,6 +76,16 @@ class RealPhotos {
             val ms = (System.nanoTime() - t0) / 1_000_000
             val sc = score(truth, q)
             println("$name: $sc in $ms ms, best IoU per print ${truth.joinToString { t -> "%.2f".format(q.maxOfOrNull { it.iou(t) } ?: 0f) }}")
+            // The capture: the outlines scaled up to the full photo, then fitted there. Before: edges only.
+            // Now: the network's close second look at each print first.
+            val fs = rgba.cols() / live.cols().toFloat()
+            val fullTruth = truth.map { it.scale(fs, fs) }
+            fun fit(g: Quad) = EdgeSnap.snap(rgba, g, (EdgeFit.diagonal(g) * 0.012f).coerceAtLeast(4f))
+            val guesses = q.map { it.scale(fs, fs) }
+            val before = guesses.map(::fit)
+            val after = guesses.map { g -> net.finalOutline(rgba, g) }
+            fun ious(found: List<Quad>) = fullTruth.joinToString { t -> "%.3f".format(found.maxOfOrNull { it.iou(t) } ?: 0f) }
+            println("   capture IoU at ${rgba.cols()}x${rgba.rows()}: edges only ${ious(before)}; with close look ${ious(after)}")
             total += truth.size
             found += sc.substringBefore("/").toInt()
             extra += sc.substringAfter("+").toInt()
