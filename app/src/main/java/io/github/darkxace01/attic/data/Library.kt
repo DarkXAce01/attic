@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
+import io.github.darkxace01.attic.vision.Deglare
 import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.FrameTransform
 import io.github.darkxace01.attic.vision.Quad
@@ -32,6 +33,10 @@ import java.util.Locale
  * print. Edits are stored as data (crop corners, enhancement) and the PNGs are rebuilt from the original,
  * so nothing is ever lost by editing. The enhanced look sits next to the plain crop as `print_N_e1.png`
  * (natural) or `print_N_e2.png` (strong).
+ *
+ * A glare-free capture also keeps the other shots, `shot_2.jpg` and on (with `frame_2.json` and on), and
+ * for each print `sweep_print_N.json`: where that print is in each of them. Fixing the crop redoes the
+ * merge from all of them, so the glare stays gone.
  */
 class Library(private val context: Context) {
     val db = AtticDatabase.open(context)
@@ -116,27 +121,39 @@ class Library(private val context: Context) {
 
     // ---- prints ----
 
-    class NewPrint(val image: Mat, val quad: Quad, val sharpness: Double)
+    /**
+     * One print of a capture. [others] is where it is in each of the capture's other shots (glare-free
+     * captures), null for a shot it isn't in.
+     */
+    class NewPrint(val image: Mat, val quad: Quad, val sharpness: Double, val others: List<Quad?> = emptyList())
 
-    /** Saves one capture (one album page): the original photo plus a PNG per print. */
-    suspend fun saveCapture(originalJpeg: ByteArray, frame: FrameTransform, prints: List<NewPrint>): List<PrintEntity> = io {
+    class Shot(val jpeg: ByteArray, val frame: FrameTransform)
+
+    /**
+     * Saves one capture (one album page): the original photo plus a PNG per print, and for a glare-free
+     * capture the [otherShots] too.
+     */
+    suspend fun saveCapture(
+        originalJpeg: ByteArray,
+        frame: FrameTransform,
+        prints: List<NewPrint>,
+        otherShots: List<Shot> = emptyList(),
+    ): List<PrintEntity> = io {
         val album = dao.album(prefs.getLong("scanningAlbum", -1)) ?: dao.albums().firstOrNull() ?: newAlbumNow("My first album")
         val now = System.currentTimeMillis()
         val dirName = now.toString()
         val dir = File(root, dirName).apply { mkdirs() }
         File(dir, "original.jpg").writeBytes(originalJpeg)
-        File(dir, "frame.json").writeText(
-            JSONObject()
-                .put("bufferWidth", frame.bufferWidth).put("bufferHeight", frame.bufferHeight)
-                .put("cropLeft", frame.cropLeft).put("cropTop", frame.cropTop)
-                .put("cropWidth", frame.cropWidth).put("cropHeight", frame.cropHeight)
-                .put("rotation", frame.rotation)
-                .toString(),
-        )
+        File(dir, "frame.json").writeText(frame.toJson())
+        otherShots.forEachIndexed { k, shot ->
+            File(dir, "shot_${k + 2}.jpg").writeBytes(shot.jpeg)
+            File(dir, "frame_${k + 2}.json").writeText(shot.frame.toJson())
+        }
         val page = dao.lastPage(album.id) + 1
         prints.mapIndexed { i, p ->
             val name = "print_${i + 1}.png"
             writePng(p.image, File(dir, name))
+            if (p.others.any { it != null }) writeSweep(File(dir, "sweep_print_${i + 1}.json"), p.others)
             val e = PrintEntity(
                 albumId = album.id, scanDir = dirName, fileName = name, page = page, position = i + 1,
                 width = p.image.cols(), height = p.image.rows(), sharpness = p.sharpness,
@@ -183,11 +200,34 @@ class Library(private val context: Context) {
             .forEach { renderEnhanced(it, null) }
     }
 
-    /** Remakes the crop from the untouched original with new corners (upright-original pixels). */
+    /**
+     * Remakes the crop from the untouched original with new corners (upright-original pixels). For a
+     * glare-free print the other shots are cut the same way and merged again.
+     */
     suspend fun recrop(id: Long, quad: Quad) = io {
         val p = dao.print(id) ?: return@io
         val original = loadUprightOriginal(p) ?: return@io
-        val flat = Rectify.warp(original, quad)
+        var flat = Rectify.warp(original, quad)
+        val sweepFile = sweepFile(p)
+        val others = if (sweepFile.exists()) readSweep(sweepFile) else emptyList()
+        if (others.any { it != null }) {
+            // The print is flat, so where its old corners went in each shot tells where the new ones go.
+            val old = p.cropQuad
+            val moved = others.map { q -> q?.let { Deglare.mapQuad(quad, old, it) } }
+            val size = flat.cols() to flat.rows()
+            val flats = moved.mapIndexedNotNull { k, q ->
+                q ?: return@mapIndexedNotNull null
+                val shot = loadUpright(File(root, p.scanDir), "shot_${k + 2}.jpg", "frame_${k + 2}.json") ?: return@mapIndexedNotNull null
+                Rectify.warp(shot, q, size = size).also { shot.release() }
+            }
+            if (flats.isNotEmpty()) {
+                val merged = Deglare.merge(flat, flats)
+                flat.release()
+                flat = merged
+            }
+            flats.forEach { it.release() }
+            writeSweep(sweepFile, moved)
+        }
         writePng(flat, p.file(root))
         derivedFiles(p).forEach { it.delete() }
         val updated = p.copy(
@@ -210,15 +250,17 @@ class Library(private val context: Context) {
     /** The original photo, turned upright, as an RGBA Mat. The caller releases it. */
     suspend fun uprightOriginal(p: PrintEntity): Mat? = io { loadUprightOriginal(p) }
 
-    private fun loadUprightOriginal(p: PrintEntity): Mat? {
-        val dir = File(root, p.scanDir)
-        val file = File(dir, "original.jpg")
+    private fun loadUprightOriginal(p: PrintEntity): Mat? = loadUpright(File(root, p.scanDir), "original.jpg", "frame.json")
+
+    /** A photo of a capture folder, turned upright with its frame file. */
+    private fun loadUpright(dir: File, jpeg: String, frameJson: String): Mat? {
+        val file = File(dir, jpeg)
         val bmp = BitmapFactory.decodeFile(file.path) ?: return null
         val m = Mat()
         Utils.bitmapToMat(bmp, m)
         bmp.recycle()
         val frame = runCatching {
-            val j = JSONObject(File(dir, "frame.json").readText())
+            val j = JSONObject(File(dir, frameJson).readText())
             FrameTransform(
                 j.getInt("bufferWidth"), j.getInt("bufferHeight"), j.getInt("cropLeft"), j.getInt("cropTop"),
                 j.getInt("cropWidth"), j.getInt("cropHeight"), j.getInt("rotation"),
@@ -239,6 +281,7 @@ class Library(private val context: Context) {
         p.galleryUri?.let { runCatching { context.contentResolver.delete(Uri.parse(it), null, null) } }
         p.file(root).delete()
         derivedFiles(p).forEach { it.delete() }
+        sweepFile(p).delete()
         dao.untagAll(p.id)
         dao.deletePrint(p.id)
         val dir = File(root, p.scanDir)
@@ -346,6 +389,26 @@ class Library(private val context: Context) {
             }
         }
     }
+
+    private fun sweepFile(p: PrintEntity) = File(File(root, p.scanDir), "sweep_" + p.fileName.removeSuffix(".png") + ".json")
+
+    private fun writeSweep(file: File, others: List<Quad?>) {
+        val arr = org.json.JSONArray()
+        others.forEach { arr.put(it?.encode() ?: JSONObject.NULL) }
+        file.writeText(JSONObject().put("others", arr).toString())
+    }
+
+    private fun readSweep(file: File): List<Quad?> = runCatching {
+        val arr = JSONObject(file.readText()).getJSONArray("others")
+        List(arr.length()) { i -> if (arr.isNull(i)) null else parseQuad(arr.getString(i)) }
+    }.getOrDefault(emptyList())
+
+    private fun FrameTransform.toJson(): String = JSONObject()
+        .put("bufferWidth", bufferWidth).put("bufferHeight", bufferHeight)
+        .put("cropLeft", cropLeft).put("cropTop", cropTop)
+        .put("cropWidth", cropWidth).put("cropHeight", cropHeight)
+        .put("rotation", rotation)
+        .toString()
 
     private fun readPng(file: File): Mat? {
         val bgr = Imgcodecs.imread(file.path)

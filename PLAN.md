@@ -52,7 +52,7 @@ Tags: **[MVP]** first release · **[v1]** public launch · **[v2]** after launch
 | **Manual corner fix** | MVP | Drag the corners with a magnifier loupe. Meant to be rare. |
 | **Album-page mode** | MVP | One shot of a page splits into N prints *and* saves the page layout, which feeds Rebuilt Albums (D). |
 | **Hands-free page turning** | v1 | Phone on a stand or a stack of books above the album. The app notices when you turn the page and scans the new one. You just turn pages. Turns a 3-hour job into a 30-minute one. |
-| **Glare-free sweep** | v1 | Glossy prints and plastic sleeves reflect light. Sweep the phone slowly across and the app merges the frames, keeping only glare-free pixels. Live hotspot warnings in the viewfinder ("tilt a little"). |
+| **Glare-free sweep** | MVP (moved forward) | Glossy prints and plastic sleeves reflect light. Sweep the phone slowly across and the app merges the frames, keeping only glare-free pixels. Live hotspot warnings in the viewfinder ("tilt a little"). |
 | **Curl & bend correction** | v1 | Old prints curl. The app straightens slightly bent prints and pages, not just flat rectangles. |
 | **Flip-side capture** | v1 | After a scan, "flip it over?". The back (handwriting, studio stamps, dates) is attached to the print. |
 | **Date-stamp reader** | v1 | Reads the orange date printed in the corner by 90s cameras ('98 7 14) and the photo lab's date on the back. |

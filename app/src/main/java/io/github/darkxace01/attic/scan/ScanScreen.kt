@@ -102,6 +102,18 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
                     color = Palette.Muted,
                 )
             }
+            // Glare-free: on, it takes each page from a few angles. Quiet when off, filled when on.
+            Text(
+                "Glare-free",
+                style = MaterialTheme.typography.labelLarge,
+                color = if (state.glareFree) Palette.Ink else Palette.Muted,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(50))
+                    .background(if (state.glareFree) Palette.SurfaceHigh else Color.Transparent)
+                    .clickable { vm.setGlareFree(!state.glareFree) }
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+            )
+            Spacer(Modifier.width(8.dp))
             Text("Auto", style = MaterialTheme.typography.labelLarge, color = Palette.Muted)
             Spacer(Modifier.width(10.dp))
             Switch(
@@ -166,13 +178,21 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
 private fun statusLine(s: ScanUiState): String {
     val n = s.outlines.size
     val photos = if (n == 1) "1 photo" else "$n photos"
+    val sweep = s.sweep
     return when {
         s.error != null -> s.error
-        s.saving -> "Saving…"
+        s.saving -> if (s.glareFree) "Removing glare…" else "Saving…"
+        sweep != null -> when (sweep.hint) {
+            SweepHint.MoveLeft -> "Shot ${sweep.taken} of ${sweep.of}. Move the phone a little to the left, then hold."
+            SweepHint.MoveRight -> "Shot ${sweep.taken} of ${sweep.of}. Now a little to the right, then hold."
+            SweepHint.Further -> "A little further, then hold."
+            SweepHint.KeepInView -> "Keep every photo in view."
+        }
         s.justSavedSoft > 0 -> if (s.justSavedSoft == 1) "1 photo came out soft. Hold steadier and scan again." else "${s.justSavedSoft} photos came out soft. Hold steadier and scan again."
         s.justSaved > 0 -> if (s.justSaved == 1) "Saved 1 photo to page ${s.albumPages}" else "Saved ${s.justSaved} photos to page ${s.albumPages}"
         s.waitingForNext -> "Done. Turn the page or move to the next photo."
-        n == 0 -> "Point at a photo or an album page."
+        n == 0 -> if (s.glareFree) "Point at a page. You'll take it from a few angles." else "Point at a photo or an album page."
+        s.glareSeen && !s.glareFree && s.readyProgress == 0f -> "Found $photos. There's glare; try Glare-free."
         s.outlines.all { it.locked } && !s.autoCapture -> "Found $photos. Tap to capture."
         s.outlines.all { it.locked } -> "Found $photos. Hold still…"
         else -> "Found $photos. Hold steady."

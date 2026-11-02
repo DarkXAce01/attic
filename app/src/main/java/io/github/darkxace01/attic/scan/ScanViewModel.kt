@@ -29,6 +29,7 @@ import io.github.darkxace01.attic.data.Library
 import io.github.darkxace01.attic.finalOutline
 import io.github.darkxace01.attic.library
 import io.github.darkxace01.attic.printNet
+import io.github.darkxace01.attic.vision.Deglare
 import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.FrameTransform
 import io.github.darkxace01.attic.vision.PrintNet
@@ -77,8 +78,19 @@ data class ScanUiState(
     val albumPrints: Int = 0,
     /** Changes on every capture, so the UI can flash. */
     val shutterTick: Long = 0,
+    /** Glare-free mode: each page is taken from a few angles and the shots merged. */
+    val glareFree: Boolean = false,
+    /** While a glare-free page is being taken. */
+    val sweep: SweepUi? = null,
+    /** A print in view looks like it has glare on it. */
+    val glareSeen: Boolean = false,
     val error: String? = null,
 )
+
+/** How far a glare-free page has got: [taken] of [of] shots, and what to do next. */
+data class SweepUi(val taken: Int, val of: Int, val hint: SweepHint)
+
+enum class SweepHint { MoveLeft, MoveRight, Further, KeepInView }
 
 class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Analyzer {
     private val library: Library = app.library
@@ -134,6 +146,14 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     private var emptySince = 0L
     private val autoDelayMs = 900L
 
+    // Glare-free: the shots so far of the page being taken. Each holds the prints' outlines (0..1) in the
+    // same order as the first shot, null for a print that wasn't matched.
+    private class SweepShot(val jpeg: ByteArray, val frame: FrameTransform, val quads: List<Quad?>, val ids: List<Long>)
+    private var sweep: MutableList<SweepShot>? = null
+    private var sweepStartedAt = 0L
+    private var sweepTaking = false
+    private val glareCache = HashMap<Long, Boolean>()
+
     fun bind(provider: ProcessCameraProvider, owner: LifecycleOwner, previewView: PreviewView) {
         val ratio43 = AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
         val preview = Preview.Builder()
@@ -184,6 +204,12 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
 
     fun setAutoCapture(on: Boolean) = _state.update { it.copy(autoCapture = on) }
 
+    /** Turning glare-free off in the middle of a page drops the shots taken so far. */
+    fun setGlareFree(on: Boolean) {
+        _state.update { it.copy(glareFree = on, sweep = null) }
+        if (!on) analysisExecutor.execute { sweep = null; sweepTaking = false }
+    }
+
     override fun analyze(image: ImageProxy) {
         val now = SystemClock.elapsedRealtime()
         val frame = try {
@@ -200,11 +226,12 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         // Previews are kept per print: rebuilt when a print appears or locks, and at most every 700 ms
         // while it's moving, so the strip doesn't churn.
         previewCache.keys.retainAll(tracks.map { it.id }.toSet())
+        glareCache.keys.retainAll(tracks.map { it.id }.toSet())
         val previews = tracks.map { t ->
             val cached = previewCache[t.id]
             val stale = cached == null || cached.second.locked != t.locked || (!t.locked && now - cached.first > 700)
             if (stale) {
-                val p = LivePreview(t.id, previewOf(frame, t.shown.scale(w, h)), t.locked)
+                val p = LivePreview(t.id, previewOf(frame, t.shown.scale(w, h)) { flat -> glareCache[t.id] = Deglare.glareShare(flat) > GLARE_SHARE }, t.locked)
                 previewCache[t.id] = now to p
                 p
             } else {
@@ -232,30 +259,120 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             lockedIds = if (allLocked) ids else emptySet()
         }
         val s = _state.value
-        val counting = s.autoCapture && armed && !s.saving && allLocked
+        val sw = sweep
+        val counting = sw == null && s.autoCapture && armed && !s.saving && allLocked
         val progress = if (counting) ((now - allLockedSince).toFloat() / autoDelayMs).coerceIn(0f, 1f) else 0f
+        val sweepUi = sw?.let { sweepStep(it, tracks, allLocked, now) }
 
         _state.update {
             it.copy(
                 outlines = tracks.map { t -> Outline(t.id, t.shown, t.locked) },
                 previews = previews,
-                waitingForNext = !armed && tracks.isNotEmpty(),
-                readyProgress = progress,
+                waitingForNext = sw == null && !armed && tracks.isNotEmpty(),
+                readyProgress = if (sw != null) sw.size.toFloat() / SWEEP_SHOTS else progress,
+                sweep = sweepUi,
+                glareSeen = tracks.any { t -> glareCache[t.id] == true },
             )
         }
 
-        if (counting && progress >= 1f) capture()
+        if (counting && progress >= 1f) captureNow()
     }
 
-    /** Takes the full-resolution photo and flattens every print in view. */
-    fun capture() {
-        val capture = imageCapture ?: return
-        if (_state.value.saving) return
-        val quads = tracker.visible.map { it.shown }
+    /**
+     * One frame of a glare-free page: takes the next shot once the phone has moved far enough from every
+     * shot so far (so the reflections land somewhere else on the prints) and is held still with every
+     * print in view. Finishes after [SWEEP_SHOTS] shots, or with what it has after a while.
+     */
+    private fun sweepStep(sw: List<SweepShot>, tracks: List<QuadTracker.Track>, allLocked: Boolean, now: Long): SweepUi {
+        val matched = matchToFirst(sw[0], tracks)
+        val hintAfterMove = if (sw.size == 1) SweepHint.MoveLeft else SweepHint.MoveRight
+        val ui = { h: SweepHint -> SweepUi(sw.size, SWEEP_SHOTS, h) }
+        if (sweepTaking || _state.value.saving) return ui(hintAfterMove)
+        if (now - sweepStartedAt > SWEEP_TIMEOUT_MS) { finishSweep(); return ui(hintAfterMove) }
+        if (matched == null) return ui(SweepHint.KeepInView)
+        // How far the prints moved from the nearest shot so far, in shares of the frame.
+        val moved = sw.minOf { shot ->
+            matched.indices.mapNotNull { i -> shot.quads[i]?.let { matched[i].shown.maxCornerShift(it) } }.average().toFloat()
+        }
+        if (moved < SWEEP_MOVE) return ui(if (allLocked && moved > SWEEP_MOVE / 3) SweepHint.Further else hintAfterMove)
+        if (!allLocked) return ui(hintAfterMove)
+        sweepTaking = true
+        val quads = matched.map { it.shown }
+        val ids = matched.map { it.id }
+        takeShot(
+            onShot = { jpeg, frame ->
+                sweepTaking = false
+                val list = sweep ?: return@takeShot
+                list += SweepShot(jpeg, frame, quads, ids)
+                if (list.size >= SWEEP_SHOTS) finishSweep()
+            },
+            onError = { sweepTaking = false },
+        )
+        return ui(hintAfterMove)
+    }
+
+    /**
+     * The tracks in view in the first shot's order, or null unless every print of the first shot is
+     * there. By track when the tracker kept them, else by reading order when the count matches.
+     */
+    private fun matchToFirst(first: SweepShot, tracks: List<QuadTracker.Track>): List<QuadTracker.Track>? {
+        val byId = tracks.associateBy { it.id }
+        if (first.ids.all { it in byId }) return first.ids.map { byId.getValue(it) }
+        if (tracks.size != first.ids.size) return null
+        return tracks.sortedWith(compareBy({ (it.shown.center.y * 8).toInt() }, { it.shown.center.x }))
+    }
+
+    private fun finishSweep() {
+        val shots = sweep ?: return
+        sweep = null
+        // Like any capture: wait for the next page. The tracker may have renewed tracks while the phone
+        // moved, so the wait counts from now.
         armed = false
         lastCaptureAt = SystemClock.elapsedRealtime()
-        _state.update { it.copy(saving = true, shutterTick = lastCaptureAt, error = null, readyProgress = 0f) }
+        _state.update { it.copy(saving = true, sweep = null, readyProgress = 0f) }
+        viewModelScope.launch(Dispatchers.Default) { processSweep(shots) }
+    }
 
+    /**
+     * Takes the full-resolution photo and flattens every print in view. In glare-free mode this is the
+     * first of the page's shots, and pressing it again during the page finishes with the shots so far.
+     */
+    fun capture() {
+        if (_state.value.saving) return
+        // On the analysis thread, where the tracker and the sweep live.
+        analysisExecutor.execute(::captureNow)
+    }
+
+    private fun captureNow() {
+        if (_state.value.saving || sweepTaking) return
+        if (sweep != null) { finishSweep(); return }
+        val visible = tracker.visible.sortedWith(compareBy({ (it.shown.center.y * 8).toInt() }, { it.shown.center.x }))
+        val quads = visible.map { it.shown }
+        armed = false
+        if (_state.value.glareFree && quads.isNotEmpty()) {
+            sweepTaking = true
+            takeShot(
+                onShot = { jpeg, frame ->
+                    sweepTaking = false
+                    sweep = mutableListOf(SweepShot(jpeg, frame, quads, visible.map { it.id }))
+                    sweepStartedAt = SystemClock.elapsedRealtime()
+                    _state.update { it.copy(sweep = SweepUi(1, SWEEP_SHOTS, SweepHint.MoveLeft)) }
+                },
+                onError = { sweepTaking = false },
+            )
+            return
+        }
+        _state.update { it.copy(saving = true) }
+        takeShot(
+            onShot = { jpeg, frame -> viewModelScope.launch(Dispatchers.Default) { process(jpeg, frame, quads) } },
+            onError = { _state.update { it.copy(saving = false) } },
+        )
+    }
+
+    private fun takeShot(onShot: (ByteArray, FrameTransform) -> Unit, onError: () -> Unit) {
+        val capture = imageCapture ?: return onError()
+        lastCaptureAt = SystemClock.elapsedRealtime()
+        _state.update { it.copy(shutterTick = lastCaptureAt, error = null, readyProgress = 0f) }
         capture.takePicture(captureExecutor, object : ImageCapture.OnImageCapturedCallback() {
             override fun onCaptureSuccess(image: ImageProxy) {
                 val crop = image.cropRect
@@ -266,58 +383,108 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
                 val buffer = image.planes[0].buffer
                 val jpeg = ByteArray(buffer.remaining()).also(buffer::get)
                 image.close()
-                viewModelScope.launch(Dispatchers.Default) { process(jpeg, frame, quads) }
+                // Sweep state lives on the analysis thread, like the tracker.
+                analysisExecutor.execute { onShot(jpeg, frame) }
             }
 
             override fun onError(exception: ImageCaptureException) {
-                armed = true
-                _state.update { it.copy(saving = false, error = "Couldn't take the photo: ${exception.message}") }
+                analysisExecutor.execute {
+                    armed = true
+                    sweep = null
+                    onError()
+                    _state.update { it.copy(sweep = null, error = "Couldn't take the photo: ${exception.message}") }
+                }
             }
         })
     }
 
-    private suspend fun process(jpeg: ByteArray, frame: FrameTransform, normQuads: List<Quad>) {
-        val result = runCatching {
-            val bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)
-            val decoded = Mat()
-            Utils.bitmapToMat(bitmap, decoded)
-            bitmap.recycle()
-            val full = frame.apply(decoded)
-            if (full !== decoded) decoded.release()
+    private fun decodeUpright(jpeg: ByteArray, frame: FrameTransform): Mat {
+        val bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)
+        val decoded = Mat()
+        Utils.bitmapToMat(bitmap, decoded)
+        bitmap.recycle()
+        val full = frame.apply(decoded)
+        if (full !== decoded) decoded.release()
+        return full
+    }
 
-            val w = full.cols().toFloat()
-            val h = full.rows().toFloat()
-            // Pressed the shutter with nothing tracked: look for prints in the photo itself.
-            val rough = normQuads.map { it.scale(w, h) }.ifEmpty { detector.detect(full) }
-            val prints = rough.map { q ->
-                // The preview outline is good to about a pixel of the small analysis frame, which in the full
-                // photo can be a sliver of album page. The network takes a closer look at just this print,
-                // then each side settles on the real edge.
-                val refined = detector.finalOutline(full, q)
-                val flat = Rectify.warp(full, refined)
-                Library.NewPrint(flat, refined, Rectify.sharpness(flat))
+    /**
+     * A glare-free page: every print cut from every shot at the same size, then merged so each spot comes
+     * from a shot where it has no glare. The first shot is the page's original.
+     */
+    private suspend fun processSweep(shots: List<SweepShot>) = report(runCatching {
+        val first = shots[0]
+        val base = decodeUpright(first.jpeg, first.frame)
+        val bw = base.cols().toFloat(); val bh = base.rows().toFloat()
+        val quads = first.quads.map { q -> detector.finalOutline(base, q!!.scale(bw, bh)) }
+        val flats = quads.map { Rectify.warp(base, it) }
+        base.release()
+        val others = List(quads.size) { mutableListOf<Mat>() }
+        val otherQuads = List(quads.size) { MutableList<Quad?>(shots.size - 1) { null } }
+        for ((k, shot) in shots.drop(1).withIndex()) {
+            val full = decodeUpright(shot.jpeg, shot.frame)
+            val fw = full.cols().toFloat(); val fh = full.rows().toFloat()
+            for (i in quads.indices) {
+                val q = shot.quads.getOrNull(i) ?: continue
+                val fq = detector.finalOutline(full, q.scale(fw, fh))
+                others[i] += Rectify.warp(full, fq, size = flats[i].cols() to flats[i].rows())
+                otherQuads[i][k] = fq
             }
             full.release()
-            val saved = if (prints.isEmpty()) emptyList() else library.saveCapture(jpeg, frame, prints)
-            val thumbs = prints.map { previewOf(it.image, Quad.ofSize(it.image.cols(), it.image.rows()), enhance = true) }
-            val soft = prints.count { it.sharpness < SOFT_SHARPNESS }
-            prints.forEach { it.image.release() }
-            // New prints go straight into the gallery too, so they're safe the moment they're scanned.
-            saved.forEach { library.export(it.id) }
-            Triple(saved, thumbs, soft)
         }
-        result.onSuccess { (saved, thumbs, soft) ->
+        val prints = flats.mapIndexed { i, flat ->
+            val merged = Deglare.merge(flat, others[i])
+            flat.release()
+            others[i].forEach { it.release() }
+            Library.NewPrint(merged, quads[i], Rectify.sharpness(merged), otherQuads[i])
+        }
+        store(prints) { library.saveCapture(first.jpeg, first.frame, it, shots.drop(1).map { s -> Library.Shot(s.jpeg, s.frame) }) }
+    })
+
+    private suspend fun process(jpeg: ByteArray, frame: FrameTransform, normQuads: List<Quad>) = report(runCatching {
+        val full = decodeUpright(jpeg, frame)
+        val w = full.cols().toFloat()
+        val h = full.rows().toFloat()
+        // Pressed the shutter with nothing tracked: look for prints in the photo itself.
+        val rough = normQuads.map { it.scale(w, h) }.ifEmpty { detector.detect(full) }
+        val prints = rough.map { q ->
+            // The preview outline is good to about a pixel of the small analysis frame, which in the full
+            // photo can be a sliver of album page. The network takes a closer look at just this print,
+            // then each side settles on the real edge.
+            val refined = detector.finalOutline(full, q)
+            val flat = Rectify.warp(full, refined)
+            Library.NewPrint(flat, refined, Rectify.sharpness(flat))
+        }
+        full.release()
+        store(prints) { library.saveCapture(jpeg, frame, it) }
+    })
+
+    private class Stored(val saved: List<io.github.darkxace01.attic.data.PrintEntity>, val thumbs: List<ImageBitmap>, val soft: Int)
+
+    /** Saves [prints] with [save], puts them in the gallery and releases them. */
+    private suspend fun store(prints: List<Library.NewPrint>, save: suspend (List<Library.NewPrint>) -> List<io.github.darkxace01.attic.data.PrintEntity>): Stored {
+        val saved = if (prints.isEmpty()) emptyList() else save(prints)
+        val thumbs = prints.map { previewOf(it.image, Quad.ofSize(it.image.cols(), it.image.rows()), enhance = true) }
+        val soft = prints.count { it.sharpness < SOFT_SHARPNESS }
+        prints.forEach { it.image.release() }
+        // New prints go straight into the gallery too, so they're safe the moment they're scanned.
+        saved.forEach { library.export(it.id) }
+        return Stored(saved, thumbs, soft)
+    }
+
+    private suspend fun report(result: Result<Stored>) {
+        result.onSuccess { r ->
             _state.update {
                 it.copy(
                     saving = false,
-                    justSaved = saved.size,
-                    justSavedSoft = soft,
-                    lastSaved = thumbs,
-                    error = if (saved.isEmpty()) "No photos found in that shot" else null,
+                    justSaved = r.saved.size,
+                    justSavedSoft = r.soft,
+                    lastSaved = r.thumbs,
+                    error = if (r.saved.isEmpty()) "No photos found in that shot" else null,
                 )
             }
-            delay(if (soft > 0) 4000 else 2500)
-            _state.update { if (it.lastSaved === thumbs) it.copy(justSaved = 0, justSavedSoft = 0, lastSaved = emptyList()) else it }
+            delay(if (r.soft > 0) 4000 else 2500)
+            _state.update { if (it.lastSaved === r.thumbs) it.copy(justSaved = 0, justSavedSoft = 0, lastSaved = emptyList()) else it }
         }.onFailure { e ->
             armed = true
             _state.update { it.copy(saving = false, error = "Couldn't save: ${e.message}") }
@@ -329,8 +496,9 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         captureExecutor.shutdown()
     }
 
-    private fun previewOf(frame: Mat, quad: Quad, enhance: Boolean = false): ImageBitmap {
+    private fun previewOf(frame: Mat, quad: Quad, enhance: Boolean = false, look: (Mat) -> Unit = {}): ImageBitmap {
         var flat = Rectify.warp(frame, quad, maxSide = 320)
+        look(flat)
         // Saved prints are shown the way they were kept: enhanced.
         if (enhance) flat = Enhance.apply(flat, Enhance.NATURAL).also { flat.release() }
         val bmp = Bitmap.createBitmap(flat.cols(), flat.rows(), Bitmap.Config.ARGB_8888)
@@ -362,3 +530,15 @@ private fun ImageProxy.toUprightRgba(): Mat {
 
 /** Under this, a print looks soft (focus or shake) and is worth retaking. */
 const val SOFT_SHARPNESS = 60.0
+
+/** Shots of a glare-free page. */
+private const val SWEEP_SHOTS = 3
+
+/** How far the prints must move between shots (share of the frame) for the reflections to move off them. */
+private const val SWEEP_MOVE = 0.06f
+
+/** A glare-free page finishes with the shots it has after this long. */
+private const val SWEEP_TIMEOUT_MS = 30_000L
+
+/** A print with more than this share of blown-out, colourless spots has glare on it. */
+private const val GLARE_SHARE = 0.01f

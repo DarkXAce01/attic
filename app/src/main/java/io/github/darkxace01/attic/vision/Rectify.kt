@@ -13,14 +13,17 @@ import kotlin.math.roundToInt
 
 /** Flattens a print and measures how sharp it is. */
 object Rectify {
-    /** Warps [quad] (pixels of [src]) to a flat, upright rectangle at full resolution. */
-    fun warp(src: Mat, quad: Quad, maxSide: Int = Int.MAX_VALUE): Mat {
+    /**
+     * Warps [quad] (pixels of [src]) to a flat, upright rectangle at full resolution, or exactly [size]
+     * (width to height) when given, so shots of the same print come out the same size.
+     */
+    fun warp(src: Mat, quad: Quad, maxSide: Int = Int.MAX_VALUE, size: Pair<Int, Int>? = null): Mat {
         var w = quad.outputWidth
         var h = quad.outputHeight
-        val fit = maxSide / max(w, h)
-        if (fit < 1f) { w *= fit; h *= fit }
-        val outW = w.roundToInt().coerceAtLeast(1)
-        val outH = h.roundToInt().coerceAtLeast(1)
+        val fit = if (size != null) max(size.first / w, size.second / h) else maxSide / max(w, h)
+        if (size == null && fit < 1f) { w *= fit; h *= fit }
+        val outW = size?.first ?: w.roundToInt().coerceAtLeast(1)
+        val outH = size?.second ?: h.roundToInt().coerceAtLeast(1)
 
         val from = MatOfPoint2f(*quad.points.map { Point(it.x.toDouble(), it.y.toDouble()) }.toTypedArray())
         val to = MatOfPoint2f(

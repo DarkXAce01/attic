@@ -18,6 +18,11 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - Full-resolution capture: the network takes a second, close look at each print in the full photo so
   no sliver of album page is left at the edges, its sides are fitted to the real edges (sub-pixel), then
   it's flattened. Soft (blurry) shots are flagged right away
+- Glare-free mode for glossy prints and plastic sleeves: take the page once, then move the phone a
+  little left and a little right when asked. Attic takes a shot each time you hold still, lines the
+  shots up, and wherever one has a reflection it uses another shot where that spot is clear. The rest
+  of the print comes from the first shot unchanged, so nothing gets soft. Fixing the crop later redoes
+  the merge. In normal mode Attic says when it sees glare
 - Scans go into the album you pick at the top of the scan screen, one capture per page
 
 **Keep**
