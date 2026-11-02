@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -39,10 +40,12 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import io.github.darkxace01.attic.data.Library
 import io.github.darkxace01.attic.data.PrintEntity
 import io.github.darkxace01.attic.library
 import io.github.darkxace01.attic.scan.SOFT_SHARPNESS
 import io.github.darkxace01.attic.ui.DateSheet
+import io.github.darkxace01.attic.ui.PageSheet
 import io.github.darkxace01.attic.ui.QuietButton
 import io.github.darkxace01.attic.ui.TextSheet
 import io.github.darkxace01.attic.ui.TopBar
@@ -60,6 +63,7 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
     var renaming by remember { mutableStateOf(false) }
     var dating by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var pageSheet by remember { mutableStateOf<Int?>(null) }
 
     val a = album ?: return
     val pages = prints.groupBy { it.page }.toSortedMap()
@@ -105,18 +109,14 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
             }
             for ((page, onPage) in pages) {
                 item(span = { GridItemSpan(maxLineSpan) }, key = "page$page") {
-                    Text(
-                        "Page $page",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Palette.Muted,
-                        modifier = Modifier.padding(top = 12.dp, bottom = 2.dp),
-                    )
+                    PageHeader(albumId, page, onPage.map { it.version }) { pageSheet = page }
                 }
                 items(onPage, key = { it.id }) { p -> PrintTile(p, library.displayFile(p)) { onOpenPrint(p.id) } }
             }
         }
     }
 
+    pageSheet?.let { page -> PageSheet(albumId, page, onDismiss = { pageSheet = null }) }
     if (renaming) {
         TextSheet(
             "Album name", a.title, "Album name",
@@ -145,6 +145,34 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
             },
             dismissButton = { QuietButton("Keep", onClick = { confirmDelete = false }) },
             containerColor = Palette.Surface,
+        )
+    }
+}
+
+/** "Page 4" and what the page is about, or a way to add it. Tap for the page's details. */
+@Composable
+private fun PageHeader(albumId: Long, page: Int, versions: List<Int>, onClick: () -> Unit) {
+    val library = LocalContext.current.library
+    val details by produceState<Library.PageDetails?>(null, albumId, page, versions) { value = library.pageDetails(albumId, page) }
+    val d = details
+    val summary = d?.let { listOfNotNull(it.date?.label, it.people.joinToString(", ").ifEmpty { null }, it.place).joinToString(" · ") }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Page $page", style = MaterialTheme.typography.labelLarge, color = Palette.Ink)
+        Text(
+            if (summary.isNullOrEmpty()) "Add when, who, where" else summary,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (summary.isNullOrEmpty()) Palette.Muted else Palette.Ink,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 12.dp).weight(1f),
         )
     }
 }

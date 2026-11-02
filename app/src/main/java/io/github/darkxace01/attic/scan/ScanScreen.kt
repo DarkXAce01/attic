@@ -38,6 +38,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +57,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.darkxace01.attic.ui.PageSheet
 import io.github.darkxace01.attic.ui.theme.Palette
 
 @Composable
@@ -62,6 +65,10 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
     val state by vm.state.collectAsStateWithLifecycle()
     val haptics = LocalHapticFeedback.current
     val flash = remember { Animatable(0f) }
+    var pageSheet by remember { mutableStateOf<Pair<Long, Int>?>(null) }
+    // Nothing is taken while the sheet covers the camera.
+    LaunchedEffect(pageSheet) { vm.setPaused(pageSheet != null) }
+    pageSheet?.let { (album, page) -> PageSheet(album, page, onDismiss = { pageSheet = null }) }
 
     LaunchedEffect(state.shutterTick) {
         if (state.shutterTick == 0L) return@LaunchedEffect
@@ -164,6 +171,20 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
                 .padding(horizontal = 20.dp),
         ) {
             PrintsButton(state.albumPrints, { onOpenAlbum(state.albumId) }, Modifier.align(Alignment.CenterStart))
+            // When, who and where for the page just saved. Never in the way: scanning goes on without it.
+            if (state.lastPage > 0 && state.sweep == null) {
+                Column(
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { pageSheet = state.lastAlbumId to state.lastPage }
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.End,
+                ) {
+                    Text("Details", style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
+                    Text("page ${state.lastPage}", style = MaterialTheme.typography.labelMedium, color = Palette.Muted)
+                }
+            }
             Shutter(
                 enabled = !state.saving,
                 ready = state.outlines.isNotEmpty() && state.outlines.all { it.locked },

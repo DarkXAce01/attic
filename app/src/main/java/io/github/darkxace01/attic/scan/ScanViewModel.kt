@@ -84,6 +84,9 @@ data class ScanUiState(
     val sweep: SweepUi? = null,
     /** A print in view looks like it has glare on it. */
     val glareSeen: Boolean = false,
+    /** The page saved last, for adding its details: album and page number, page 0 before any. */
+    val lastAlbumId: Long = 0,
+    val lastPage: Int = 0,
     val error: String? = null,
 )
 
@@ -204,6 +207,11 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
 
     fun setAutoCapture(on: Boolean) = _state.update { it.copy(autoCapture = on) }
 
+    /** While something covers the camera (the page details sheet), nothing is taken. */
+    @Volatile private var paused = false
+
+    fun setPaused(on: Boolean) { paused = on }
+
     /** Turning glare-free off in the middle of a page drops the shots taken so far. */
     fun setGlareFree(on: Boolean) {
         _state.update { it.copy(glareFree = on, sweep = null) }
@@ -260,7 +268,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         }
         val s = _state.value
         val sw = sweep
-        val counting = sw == null && s.autoCapture && armed && !s.saving && allLocked
+        val counting = sw == null && !paused && s.autoCapture && armed && !s.saving && allLocked
         val progress = if (counting) ((now - allLockedSince).toFloat() / autoDelayMs).coerceIn(0f, 1f) else 0f
         val sweepUi = sw?.let { sweepStep(it, tracks, allLocked, now) }
 
@@ -287,7 +295,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         val matched = matchToFirst(sw[0], tracks)
         val hintAfterMove = if (sw.size == 1) SweepHint.MoveLeft else SweepHint.MoveRight
         val ui = { h: SweepHint -> SweepUi(sw.size, SWEEP_SHOTS, h) }
-        if (sweepTaking || _state.value.saving) return ui(hintAfterMove)
+        if (sweepTaking || paused || _state.value.saving) return ui(hintAfterMove)
         if (now - sweepStartedAt > SWEEP_TIMEOUT_MS) { finishSweep(); return ui(hintAfterMove) }
         if (matched == null) return ui(SweepHint.KeepInView)
         // How far the prints moved from the nearest shot so far, in shares of the frame.
@@ -481,6 +489,8 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
                     justSavedSoft = r.soft,
                     lastSaved = r.thumbs,
                     error = if (r.saved.isEmpty()) "No photos found in that shot" else null,
+                    lastAlbumId = r.saved.firstOrNull()?.albumId ?: it.lastAlbumId,
+                    lastPage = r.saved.firstOrNull()?.page ?: it.lastPage,
                 )
             }
             delay(if (r.soft > 0) 4000 else 2500)

@@ -122,6 +122,7 @@ interface AtticDao {
     @Query("SELECT * FROM print WHERE albumId = :albumId ORDER BY page, position") fun printsIn(albumId: Long): Flow<List<PrintEntity>>
     @Query("SELECT * FROM print WHERE albumId = :albumId ORDER BY page, position") fun printsInNow(albumId: Long): List<PrintEntity>
     @Query("SELECT * FROM print ORDER BY createdAt") fun allPrints(): List<PrintEntity>
+    @Query("SELECT place FROM print WHERE place IS NOT NULL GROUP BY place ORDER BY MAX(createdAt) DESC LIMIT 12") fun recentPlaces(): Flow<List<String>>
     @Query("SELECT COALESCE(MAX(page), 0) FROM print WHERE albumId = :albumId") fun lastPage(albumId: Long): Int
     @Query("SELECT DISTINCT scanDir FROM print") fun knownScanDirs(): List<String>
     @Query("SELECT COUNT(*) AS total, SUM(CASE WHEN galleryUri IS NOT NULL AND exportedVersion = version THEN 1 ELSE 0 END) AS inGallery FROM print")

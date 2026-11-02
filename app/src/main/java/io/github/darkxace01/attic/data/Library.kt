@@ -176,6 +176,64 @@ class Library(private val context: Context) {
         dao.print(id)?.let { dao.updatePrint(it.copy(version = it.version + 1)) }
     }
 
+    // ---- pages ----
+
+    /** What every print on a page has in common: the details the page as a whole was given. */
+    data class PageDetails(val count: Int, val date: PhotoDate?, val people: List<String>, val place: String?) {
+        val isEmpty: Boolean get() = date == null && people.isEmpty() && place == null
+    }
+
+    suspend fun pageDetails(albumId: Long, page: Int): PageDetails? = io { pageDetailsNow(albumId, page) }
+
+    private fun pageDetailsNow(albumId: Long, page: Int): PageDetails? {
+        val ps = dao.printsInNow(albumId).filter { it.page == page }
+        if (ps.isEmpty()) return null
+        val people = ps.map { dao.peopleInNow(it.id) }
+        return PageDetails(
+            count = ps.size,
+            date = ps.map { it.date }.distinct().singleOrNull(),
+            people = people.first().filter { name -> people.all { name in it } },
+            place = ps.map { it.place }.distinct().singleOrNull(),
+        )
+    }
+
+    /**
+     * Gives a whole page its details. Only what changed from [before] (what the page had in common) is
+     * written, so a date or a name given to one photo on its own is kept: a name added here goes on every
+     * photo of the page, a name removed here comes off every photo.
+     */
+    suspend fun setPageDetails(albumId: Long, page: Int, before: PageDetails, date: PhotoDate?, people: List<String>, place: String?) = io {
+        val cleanPlace = place?.trim()?.ifEmpty { null }
+        for (p in dao.printsInNow(albumId).filter { it.page == page }) {
+            var u = p
+            if (date != before.date) u = u.copy(dateFrom = date?.from?.toEpochDay(), dateTo = date?.to?.toEpochDay(), dateLabel = date?.label)
+            if (cleanPlace != before.place) u = u.copy(place = cleanPlace)
+            val had = dao.peopleInNow(p.id)
+            val now = pagePeople(had, before.people, people)
+            val peopleChanged = now.toSet() != had.toSet()
+            if (peopleChanged) dao.setPeople(p.id, now)
+            if (u != p || peopleChanged) {
+                u = u.copy(version = u.version + 1)
+                dao.updatePrint(u)
+                exportNow(u)
+            }
+        }
+    }
+
+    fun recentPlaces(): Flow<List<String>> = dao.recentPlaces()
+
+    companion object {
+        /**
+         * One photo's people after its page's names went from [pageBefore] to [pageNow]: names removed from
+         * the page come off, names added go on, and names only this photo had stay.
+         */
+        fun pagePeople(had: List<String>, pageBefore: List<String>, pageNow: List<String>): List<String> {
+            val removed = pageBefore.filter { b -> pageNow.none { it.equals(b, ignoreCase = true) } }
+            val kept = had.filter { h -> removed.none { it.equals(h, ignoreCase = true) } }
+            return kept + pageNow.filter { n -> kept.none { it.equals(n, ignoreCase = true) } }
+        }
+    }
+
     suspend fun setEnhance(id: Long, level: Int) = io {
         val p = dao.print(id) ?: return@io
         if (p.enhance == level) return@io

@@ -26,6 +26,9 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - Scans go into the album you pick at the top of the scan screen, one capture per page
 
 **Keep**
+- Page details: after each page, "Details" by the shutter gives the whole page its when, who and where
+  in one sheet, with the previous page's answers one tap away. Scanning never waits for it; pages
+  without details say so in the album, so you can do them later
 - Albums, page by page. Swipe left and right through an album's photos. Album dates that undated
   photos inherit
 - Dates the way people say them: "summer 87", "about 1985", "early 90s", "14/7/1998", "'98 7 14"

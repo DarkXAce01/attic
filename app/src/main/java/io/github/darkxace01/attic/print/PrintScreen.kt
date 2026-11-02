@@ -60,7 +60,8 @@ import coil3.size.Size
 import io.github.darkxace01.attic.data.PrintEntity
 import io.github.darkxace01.attic.library
 import io.github.darkxace01.attic.scan.SOFT_SHARPNESS
-import io.github.darkxace01.attic.ui.Chip
+import io.github.darkxace01.attic.ui.PeoplePicker
+import io.github.darkxace01.attic.ui.addTyped
 import io.github.darkxace01.attic.ui.DateSheet
 import io.github.darkxace01.attic.ui.PrimaryButton
 import io.github.darkxace01.attic.ui.QuietButton
@@ -357,50 +358,20 @@ private fun LookChoice(level: Int, onChoose: (Int) -> Unit) {
     }
 }
 
-/** Names as chips. People you've tagged before are one tap away. */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/** Who's in this photo, as chips. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PeopleSheet(initial: List<String>, onDismiss: () -> Unit, onSave: (List<String>) -> Unit) {
-    val library = LocalContext.current.library
-    val known by remember { library.allPeople() }.collectAsStateWithLifecycle(emptyList())
     val chosen = remember { mutableStateListOf<String>().apply { addAll(initial) } }
-    var typed by remember { mutableStateOf("") }
-
-    fun add(name: String) {
-        val n = name.trim()
-        if (n.isNotEmpty() && chosen.none { it.equals(n, ignoreCase = true) }) chosen += n
-        typed = ""
-    }
-
+    val typed = remember { mutableStateOf("") }
+    fun save() { addTyped(chosen, typed); onSave(chosen.toList()) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Surface) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp).imePadding().navigationBarsPadding()) {
             Text("Who's in this photo?", style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
             Spacer(Modifier.height(14.dp))
-            if (chosen.isNotEmpty()) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (name in chosen.toList()) Chip("$name  ×", selected = true) { chosen.remove(name) }
-                }
-                Spacer(Modifier.height(14.dp))
-            }
-            OutlinedTextField(
-                value = typed,
-                onValueChange = { typed = it },
-                placeholder = { Text("Add a name", color = Palette.Muted) },
-                singleLine = true,
-                colors = fieldColors(),
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { add(typed) }),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            val suggestions = known.filter { k -> chosen.none { it.equals(k, true) } && k.contains(typed.trim(), ignoreCase = true) }.take(12)
-            if (suggestions.isNotEmpty()) {
-                Spacer(Modifier.height(12.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (s in suggestions) Chip(s) { add(s) }
-                }
-            }
+            PeoplePicker(chosen, typed, onDone = ::save)
             Spacer(Modifier.height(18.dp))
-            PrimaryButton("Save", onClick = { add(typed); onSave(chosen.toList()) }, modifier = Modifier.fillMaxWidth())
+            PrimaryButton("Save", onClick = ::save, modifier = Modifier.fillMaxWidth())
         }
     }
 }
