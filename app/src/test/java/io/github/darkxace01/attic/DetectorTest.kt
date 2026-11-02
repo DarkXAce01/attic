@@ -1,6 +1,7 @@
 package io.github.darkxace01.attic
 
-import io.github.darkxace01.attic.vision.PrintDetector
+import io.github.darkxace01.attic.vision.EdgeFit
+import io.github.darkxace01.attic.vision.EdgeSnap
 import io.github.darkxace01.attic.vision.Pt
 import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.Rectify
@@ -25,7 +26,7 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * Runs the real detector on synthetic camera frames: prints with photo-like content, turned and seen
+ * Runs the print finder on synthetic camera frames: prints with photo-like content, turned and seen
  * in perspective, on tables and album pages, with blur and sensor noise. Overlays of what was found are
  * written to app/build/detector/ for eyeballing.
  */
@@ -81,9 +82,8 @@ class DetectorTest {
         Imgproc.GaussianBlur(scene, camera, Size(3.0, 3.0), 0.8)
         addNoise(camera, 6.0)
 
-        val detector = PrintDetector()
-        val rough = detector.detect(camera).single()
-        val refined = detector.refine(camera, rough)
+        val rough = PrintNetTest.net.detect(camera).single()
+        val refined = EdgeSnap.snap(camera, rough, EdgeFit.diagonal(rough) * 0.012f)
         val err = refined.maxCornerShift(truth)
         assertTrue("refined corner error ${"%.2f".format(err)}px (rough ${"%.2f".format(rough.maxCornerShift(truth))}px)", err < 1.5f)
 
@@ -98,7 +98,7 @@ class DetectorTest {
         val truth = place(scene, photo(500, 700, true), Pt(480f, 640f), angleDeg = -5f)
         // The live preview runs on a small frame; simulate an outline that's off by ~1.5%.
         val guess = truth.map { Pt(it.x + 9f, it.y - 7f) }
-        val refined = PrintDetector().refine(scene, guess)
+        val refined = EdgeSnap.snap(scene, guess, EdgeFit.diagonal(guess) * 0.012f)
         val err = refined.maxCornerShift(truth)
         assertTrue("corner error ${"%.2f".format(err)}px", err < 1.5f)
     }
@@ -110,17 +110,7 @@ class DetectorTest {
         Imgproc.GaussianBlur(scene, camera, Size(3.0, 3.0), 0.8)
         addNoise(camera, 6.0)
 
-        val detector = PrintDetector()
-        val seen = mutableListOf<Triple<String, Quad, Float?>>()
-        if (System.getProperty("attic.explain") == name) {
-            detector.trace = { s, q, sc -> seen += Triple(s, q, sc) }
-            io.github.darkxace01.attic.vision.Candidates.why = { q, w -> println("why ${q.points.joinToString { "(%.0f,%.0f)".format(it.x, it.y) }}: $w") }
-        }
-        val found = detector.detect(camera)
-        io.github.darkxace01.attic.vision.Candidates.why = null
-        seen.filter { it.third != null && it.first.startsWith("resolved").not() }.sortedByDescending { it.third }.take(15).forEach { (src, q, sc) ->
-            println("cand ${"%.3f".format(sc)} ${src.take(60)} ${q.points.joinToString { "(%.0f,%.0f)".format(it.x, it.y) }}")
-        }
+        val found = PrintNetTest.net.detect(camera)
         writeOverlay(name, camera, truths, found)
 
         assertEquals("$name: number of prints found", truths.size, found.size)

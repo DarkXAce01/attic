@@ -24,3 +24,6 @@ Thumbs.db
 # Real album photos for testing the detector: private, never commit
 imgs/
 *:Zone.Identifier
+
+# Python bytecode from ml/
+__pycache__/

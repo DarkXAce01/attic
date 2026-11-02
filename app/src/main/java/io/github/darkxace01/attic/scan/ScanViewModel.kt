@@ -29,7 +29,9 @@ import io.github.darkxace01.attic.data.Library
 import io.github.darkxace01.attic.library
 import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.FrameTransform
-import io.github.darkxace01.attic.vision.PrintDetector
+import io.github.darkxace01.attic.vision.EdgeFit
+import io.github.darkxace01.attic.vision.EdgeSnap
+import io.github.darkxace01.attic.vision.PrintNet
 import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.QuadTracker
 import io.github.darkxace01.attic.vision.Rectify
@@ -80,7 +82,7 @@ data class ScanUiState(
 
 class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Analyzer {
     private val library: Library = app.library
-    private val detector = PrintDetector()
+    private val detector = PrintNet(app.assets.open("printnet.onnx").use { it.readBytes() })
     private val tracker = QuadTracker()
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private val captureExecutor = Executors.newSingleThreadExecutor()
@@ -288,7 +290,9 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             // Pressed the shutter with nothing tracked: look for prints in the photo itself.
             val rough = normQuads.map { it.scale(w, h) }.ifEmpty { detector.detect(full) }
             val prints = rough.map { q ->
-                val refined = detector.refine(full, q)
+                // The preview outline is good to about a pixel of the analysis frame; settle each side on
+                // the real edge in the full photo, searching no further than that.
+                val refined = EdgeSnap.snap(full, q, (EdgeFit.diagonal(q) * 0.012f).coerceAtLeast(4f))
                 val flat = Rectify.warp(full, refined)
                 Library.NewPrint(flat, refined, Rectify.sharpness(flat))
             }

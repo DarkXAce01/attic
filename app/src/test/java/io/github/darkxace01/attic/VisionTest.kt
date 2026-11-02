@@ -1,6 +1,5 @@
 package io.github.darkxace01.attic
 
-import io.github.darkxace01.attic.vision.Candidates
 import io.github.darkxace01.attic.vision.Pt
 import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.QuadTracker
@@ -47,76 +46,6 @@ class VisionTest {
     fun skewedShapesAreRejected() {
         assertTrue(rect(0f, 0f, 10f, 10f).isReasonable())
         assertFalse(Quad(Pt(0f, 0f), Pt(100f, 0f), Pt(160f, 10f), Pt(0f, 12f)).isReasonable())
-    }
-
-    @Test
-    fun doubleEdgeContoursBecomeOnePrint() {
-        val outer = rect(0f, 0f, 101f, 101f)
-        val inner = rect(1f, 1f, 99f, 99f)
-        val result = Candidates.resolve(listOf(inner, outer))
-        assertEquals(1, result.size)
-        assertTrue(result[0].tl.x in 0f..1f)
-    }
-
-    @Test
-    fun albumPageIsDroppedAndItsPrintsKept() {
-        val page = rect(0f, 0f, 400f, 300f)
-        val left = rect(20f, 20f, 160f, 120f)
-        val right = rect(220f, 20f, 160f, 120f)
-        val result = Candidates.resolve(listOf(page, left, right))
-        assertEquals(setOf(left, right), result.toSet())
-    }
-
-    @Test
-    fun bordersAndThingsInsideAPhotoDontBecomeExtraPrints() {
-        val print = rect(0f, 0f, 200f, 240f)
-        val imageArea = rect(12f, 12f, 176f, 176f)
-        val windowInPhoto = rect(40f, 40f, 30f, 30f)
-        val result = Candidates.resolve(listOf(print, imageArea, windowInPhoto))
-        assertEquals(listOf(print), result)
-    }
-
-    @Test
-    fun twoRoughOutlinesOfOneImageAreaDontMakeAPage() {
-        val print = rect(0f, 0f, 200f, 240f)
-        val imageArea = rect(12f, 12f, 176f, 176f)
-        val roughImageArea = rect(14f, 10f, 174f, 180f)
-        val result = Candidates.resolve(listOf(print, imageArea, roughImageArea))
-        assertEquals(listOf(print), result)
-    }
-
-    @Test
-    fun aPhotoWithRectanglesInItsPictureStaysOnePrint() {
-        val print = rect(0f, 0f, 300f, 400f)
-        val door = rect(40f, 120f, 60f, 100f)
-        val window = rect(180f, 60f, 70f, 60f)
-        // The caller looked between them and saw picture, not plain page.
-        val result = Candidates.resolveScored(listOf(print, door, window).map { Candidates.Scored(it, 1f) }) { _, _ -> false }
-        assertEquals(listOf(print), result)
-    }
-
-    private fun seg(x1: Float, y1: Float, x2: Float, y2: Float) = io.github.darkxace01.attic.vision.LineRects.Segment(Pt(x1, y1), Pt(x2, y2))
-
-    @Test
-    fun aPrintWithABrokenEdgeIsStillARectangle() {
-        // Glare has wiped out half the top edge.
-        val segments = listOf(
-            seg(100f, 100f, 180f, 100f), seg(240f, 100f, 300f, 100f),
-            seg(300f, 100f, 300f, 240f), seg(300f, 240f, 100f, 240f), seg(100f, 240f, 100f, 100f),
-        )
-        val found = io.github.darkxace01.attic.vision.LineRects.find(segments, minSide = 50f, maxSide = 600f)
-        assertTrue(found.isNotEmpty())
-        assertTrue(found[0].quad.iou(rect(100f, 100f, 200f, 140f)) > 0.97f)
-    }
-
-    @Test
-    fun linesThatOnlyCrossDontMakeAPrint() {
-        // Two long lines each way crossing like a noughts-and-crosses grid: no corners anywhere.
-        val segments = listOf(
-            seg(0f, 100f, 400f, 100f), seg(0f, 260f, 400f, 260f),
-            seg(100f, 0f, 100f, 400f), seg(280f, 0f, 280f, 400f),
-        )
-        assertTrue(io.github.darkxace01.attic.vision.LineRects.find(segments, minSide = 50f, maxSide = 600f).isEmpty())
     }
 
     private fun jitter(q: Quad, r: kotlin.random.Random, amount: Float) =

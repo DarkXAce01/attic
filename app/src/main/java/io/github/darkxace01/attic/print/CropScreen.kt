@@ -45,7 +45,7 @@ import io.github.darkxace01.attic.ui.QuietButton
 import io.github.darkxace01.attic.ui.TopBar
 import io.github.darkxace01.attic.ui.theme.Palette
 import io.github.darkxace01.attic.vision.EdgeFit
-import io.github.darkxace01.attic.vision.PrintDetector
+import io.github.darkxace01.attic.vision.EdgeSnap
 import io.github.darkxace01.attic.vision.Pt
 import io.github.darkxace01.attic.vision.Quad
 import kotlinx.coroutines.Dispatchers
@@ -112,7 +112,7 @@ fun CropScreen(printId: Long, onDone: () -> Unit) {
                 scope.launch {
                     val snapped = withContext(Dispatchers.Default) {
                         val fullQuad = q.scale(1f / o.scale, 1f / o.scale)
-                        PrintDetector().snapEdges(o.full, fullQuad, (EdgeFit.diagonal(fullQuad) * 0.02f).coerceAtLeast(6f))
+                        EdgeSnap.snap(o.full, fullQuad, (EdgeFit.diagonal(fullQuad) * 0.02f).coerceAtLeast(6f))
                     }
                     quad = snapped.scale(o.scale, o.scale)
                 }

@@ -1,6 +1,6 @@
 package io.github.darkxace01.attic
 
-import io.github.darkxace01.attic.vision.PrintDetector
+import io.github.darkxace01.attic.vision.PrintNet
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.BeforeClass
@@ -9,7 +9,7 @@ import java.io.File
 import kotlin.math.hypot
 
 /**
- * Runs the detector over many random scenes (album pages, tables, patterns, glare, sleeves) and scores it
+ * Runs the print finder over many random scenes (album pages, tables, patterns, glare, sleeves) and scores it
  * like a person would: was every print found, with nothing extra, tight to its edges? Failures are
  * written to app/build/detector/bench/ and the summary to app/build/detector/benchmark.txt.
  */
@@ -26,7 +26,7 @@ class DetectorBenchmark {
     fun randomScenes() {
         assumeTrue("run with -Pbenchmark", System.getProperty("attic.benchmark") == "true")
         val out = File("build/detector/bench").apply { deleteRecursively(); mkdirs() }
-        val detector = PrintDetector()
+        val detector = PrintNet(File("src/main/assets/printnet.onnx").readBytes())
         val seed = (System.getProperty("attic.seed") ?: "1000").toInt()
         var prints = 0
         var found = 0

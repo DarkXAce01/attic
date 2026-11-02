@@ -45,12 +45,10 @@ android {
     testOptions {
         unitTests.all {
             it.maxHeapSize = "1g"
-            // The detector benchmark is heavy; run it on purpose with ./gradlew testDebugUnitTest -Pbenchmark
+            // The print-finder benchmark is heavy; run it on purpose with ./gradlew testDebugUnitTest -Pbenchmark
             it.systemProperty("attic.benchmark", project.hasProperty("benchmark").toString())
             it.systemProperty("attic.seed", (project.findProperty("seed") ?: "1000").toString())
-            project.findProperty("debugScene")?.let { s -> it.systemProperty("attic.debugScene", s.toString()) }
             project.findProperty("explain")?.let { s -> it.systemProperty("attic.explain", s.toString()) }
-            project.findProperty("zoom")?.let { s -> it.systemProperty("attic.zoom", s.toString()) }
         }
     }
 }
