@@ -1,5 +1,7 @@
 package io.github.darkxace01.attic
 
+import io.github.darkxace01.attic.vision.EdgeFit
+import io.github.darkxace01.attic.vision.EdgeSnap
 import io.github.darkxace01.attic.vision.PrintNet
 import io.github.darkxace01.attic.vision.Pt
 import io.github.darkxace01.attic.vision.Quad
@@ -110,7 +112,9 @@ class RealPhotos {
                 val ids = tracks.map { it.id }.toSet()
                 if (allLocked && ids == lockedIds) {
                     if (captured == null && now - lockedSince >= 900) {
-                        captured = "frame $i: " + score(movedTruth, tracks.map { it.shown.scale(w, h) })
+                        // As the app does: the frozen outlines, fitted to the real edges of the photo.
+                        val shot = tracks.map { t -> t.shown.scale(w, h).let { q -> EdgeSnap.snap(moved, q, EdgeFit.diagonal(q) * 0.012f) } }
+                        captured = "frame $i: " + score(movedTruth, shot)
                     }
                 } else {
                     lockedSince = now

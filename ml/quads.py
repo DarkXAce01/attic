@@ -113,36 +113,36 @@ def filled_quad(region, lo=0.85, hi=1.15):
 def find(maps, min_area_frac=0.004):
     """maps: 3 x H x W probabilities. Returns print quads (H x W pixel coordinates).
 
-    Every patch of print paper that is already one clean four-sided shape is one print. Patches that
-    aren't (prints touching each other) are split between their cores: every pixel goes to the nearest
-    core. Outlines are fitted to each print's own pixels and kept only if they're filled four-sided
-    shapes."""
+    Each patch of print paper holding two or more cores is split between them (every pixel goes to the
+    nearest core) when every piece is a clean four-sided shape: prints touching, or stacked so closely
+    that together they look like one rectangle. Otherwise the patch is one print if it is a clean
+    four-sided shape itself."""
     pr, core = maps[0], maps[1]
     h, w = pr.shape
     min_area = min_area_frac * h * w
     paper = (pr > 0.5).astype(np.uint8)
     cores = (core > 0.5).astype(np.uint8)
     n, comp = cv2.connectedComponents(paper, connectivity=4)
-    labels = None
+    _, labels = cv2.distanceTransformWithLabels(1 - cores, cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_CCOMP) if cores.any() else (None, None)
     out = []
     for c in range(1, n):
         patch = (comp == c).astype(np.uint8)
         if patch.sum() < min_area:
             continue
-        q = filled_quad(patch, 0.9, 1.1)
-        if q is not None:
-            out.append(refine(q, pr))
-            continue
-        if labels is None:
-            if not cores.any():
-                break
-            _, labels = cv2.distanceTransformWithLabels(1 - cores, cv2.DIST_L2, 5, labelType=cv2.DIST_LABEL_CCOMP)
-        for k in np.unique(labels[(patch > 0) & (cores > 0)]):
-            if ((labels == k) & (cores > 0)).sum() < min_area * CORE * CORE:
-                continue
-            q = filled_quad((patch & (labels == k)).astype(np.uint8))
-            if q is not None:
-                out.append(refine(q, pr))
+        whole = filled_quad(patch, 0.9, 1.1)
+        pieces = []
+        if labels is not None:
+            ks = [k for k in np.unique(labels[(patch > 0) & (cores > 0)])
+                  if ((labels == k) & (cores > 0) & (patch > 0)).sum() >= min_area * CORE * CORE]
+            if len(ks) >= 2:
+                pieces = [filled_quad((patch & (labels == k)).astype(np.uint8)) for k in ks]
+        # Several cores: one print per core where its piece is a clean four-sided shape. If some pieces
+        # aren't and the whole patch is, the cores were fragments of one print.
+        good = [q for q in pieces if q is not None]
+        if whole is not None and (not pieces or len(good) < len(pieces)):
+            out.append(refine(whole, pr))
+        else:
+            out += [refine(q, pr) for q in good]
     return out
 
 

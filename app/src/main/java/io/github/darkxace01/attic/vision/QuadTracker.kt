@@ -23,7 +23,7 @@ class QuadTracker(
     private val keepMissing: Int = 8,
     private val historySize: Int = 9,
     /** Corner spread (median distance from the median corner) under which a print counts as still. */
-    private val stillSpread: Float = 0.006f,
+    private val stillSpread: Float = 0.008f,
     /** Share of recent detections that must agree on one outline before it can lock. */
     private val lockAgreement: Float = 0.6f,
     /** How far a locked print's outline may drift before it unlocks. */
@@ -165,7 +165,7 @@ class QuadTracker(
         private const val WINDOW = 10
 
         /** A detected corner this close to the agreed one agrees with it. */
-        private const val SAME_OUTLINE = 0.01f
+        private const val SAME_OUTLINE = 0.015f
 
         fun medianQuad(qs: Collection<Quad>): Quad {
             fun med(values: List<Float>): Float = values.sorted().let { s ->

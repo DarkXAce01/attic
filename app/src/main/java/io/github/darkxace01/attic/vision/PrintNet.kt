@@ -70,10 +70,10 @@ class PrintNet(model: ByteArray) {
         const val CORE = 0.6f
 
         /**
-         * Outlines from the maps, in map pixels. A patch of print paper that is one clean four-sided shape
-         * is one print. Patches that aren't (prints touching) are split between their cores, every pixel
-         * going to the nearest core. Outlines are fitted to each print's own pixels and kept only if they
-         * are filled four-sided shapes.
+         * Outlines from the maps, in map pixels. A patch of print paper holding two or more cores is split
+         * between them (every pixel to the nearest core): prints touching, or stacked so closely they look
+         * like one rectangle together. Each piece that is a clean four-sided shape is a print. If some
+         * pieces aren't and the whole patch is, the cores were fragments of one print.
          */
         fun quads(maps: Array<FloatArray>, minAreaShare: Float = 0.004f): List<Quad> {
             val print = maps[0]
@@ -85,24 +85,24 @@ class PrintNet(model: ByteArray) {
             paper.release()
             val comp = IntArray(W * H).also { compMat.get(0, 0, it) }
             compMat.release()
-            var nearest: IntArray? = null
+            val labels = if (core.any { it > 0.5f }) nearestCore(core) else null
             val out = mutableListOf<Quad>()
             for (c in 1 until n) {
                 val patch = BooleanArray(W * H) { comp[it] == c }
                 if (patch.count { it } < minArea) continue
                 val whole = filledQuad(patch, 0.9f, 1.1f)
-                if (whole != null) {
-                    out += refine(whole, print)
-                    continue
+                var pieces = emptyList<Quad?>()
+                if (labels != null) {
+                    val coreSize = HashMap<Int, Int>()
+                    for (i in 0 until W * H) if (patch[i] && core[i] > 0.5f) coreSize.merge(labels[i], 1, Int::plus)
+                    val ks = coreSize.filter { it.value >= minArea * CORE * CORE }.keys
+                    if (ks.size >= 2) pieces = ks.map { k -> filledQuad(BooleanArray(W * H) { patch[it] && labels[it] == k }, 0.85f, 1.15f) }
                 }
-                val labels = nearest ?: nearestCore(core).also { nearest = it }
-                val coreSize = HashMap<Int, Int>()
-                for (i in 0 until W * H) if (patch[i] && core[i] > 0.5f) coreSize.merge(labels[i], 1, Int::plus)
-                for ((k, size) in coreSize) {
-                    if (size < minArea * CORE * CORE) continue
-                    val q = filledQuad(BooleanArray(W * H) { patch[it] && labels[it] == k }, 0.85f, 1.15f) ?: continue
-                    out += refine(q, print)
-                }
+                // Several cores: one print per core where its piece is a clean four-sided shape. If some
+                // pieces aren't and the whole patch is, the cores were fragments of one print.
+                val good = pieces.filterNotNull()
+                if (whole != null && (pieces.isEmpty() || good.size < pieces.size)) out += refine(whole, print)
+                else good.forEach { out += refine(it, print) }
             }
             return out.filter { inside(it, 1.5f) && it.isReasonable(60f, 120f) }.sortedBy { it.center.y * W + it.center.x }
         }
