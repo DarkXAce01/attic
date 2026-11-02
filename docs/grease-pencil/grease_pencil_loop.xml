@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Grease Pencil signature loop, as an Android vector drawable.
+    Drop it into res/drawable/ and use it in app icons (place it round the main object),
+    splash screens or anywhere a static loop is needed. For a notification icon, change the
+    stroke color to #FFFFFFFF (Android tints notification icons itself).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="60dp"
+    android:height="64dp"
+    android:viewportWidth="60"
+    android:viewportHeight="64">
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#D4432A"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M20,7.5C37,3 53,9 55,26C57,44 46,60 28,61C12,62 2,50 4,32C5.5,19 13,11 26,8.5" />
+</vector>

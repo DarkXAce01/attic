@@ -11,3 +11,5 @@
   only for "ready" and the main action), sentence-case labels, no mono micro-labels, no 01/02 numbering, no
   hairline/ruler decoration, no gradients or glass. Photos carry the colour.
 - No INTERNET permission, ever.
+- The app is by Grease Pencil Studio: `docs/grease-pencil/` (signature kit, voice guide) and PLAN.md §4.
+  Functionality first; the design phase (album world, signature, red accent) comes after.

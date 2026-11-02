@@ -173,6 +173,32 @@ not on the app's own screens.
 
 ---
 
+### Grease Pencil Studio (decided Nov 2026)
+
+Attic ships under the developer name **Grease Pencil Studio**. The studio's signature kit is in
+`docs/grease-pencil/`; follow its four rules and its voice guide:
+- the red pencil loop in the app icon;
+- the loop draws itself in at **one** moment in the app. For Attic, that's a print settling into its album
+  (it fits the signature motion above);
+- Settings ends with the studio lockup and a promise line: `ATTIC · NO INTERNET · NO ADS · NO ACCOUNT`;
+- the pencil red (`#D4432A`, `#E5553A` on dark) is the accent and replaces today's accent.
+
+The kit uses Instrument Serif and Geist Mono for the *studio logo*. Those stay inside the logo; Attic's own
+screens keep the rules above (no mono micro-labels).
+
+### The album world
+
+The albums are real objects: books and albums that float in a space of their own, with weight, paper,
+spines and covers. Opening one plays a small book-opening animation, and its pages turn. It has to feel
+premium and look made by someone who knows art, never like a template. This is the design phase's main
+work (with D. Rebuilt albums, 3D book and Tilt light).
+
+**Order of work:** first build and perfect the functionality, then the design phase (the album world,
+the Grease Pencil signature and a full UX pass). Until then, keep screens plain and correct rather than
+half-styled.
+
+---
+
 ## 5. Tech stack
 
 **Native Kotlin + Jetpack Compose, Android first**, the same toolchain as Sweepy (`~/projects/swipe`).
