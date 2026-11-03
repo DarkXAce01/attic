@@ -38,6 +38,7 @@ import io.github.darkxace01.attic.albums.AlbumsScreen
 import io.github.darkxace01.attic.print.CropScreen
 import io.github.darkxace01.attic.print.PrintScreen
 import io.github.darkxace01.attic.scan.ScanScreen
+import io.github.darkxace01.attic.settings.SettingsScreen
 import io.github.darkxace01.attic.scan.ScanViewModel
 import io.github.darkxace01.attic.ui.AlbumPickerSheet
 import io.github.darkxace01.attic.ui.PrimaryButton
@@ -52,6 +53,7 @@ private sealed interface Route {
         var showing: Long = id
     }
     data class Crop(val id: Long) : Route
+    data object Settings : Route
 }
 
 @Composable
@@ -86,7 +88,10 @@ fun AtticApp() {
                     onOpenAlbum = { go(Route.Album(it)) },
                     onPickAlbum = { pickingAlbum = true },
                 )
-                Route.Albums -> Box(Modifier.statusBarsPadding()) { AlbumsScreen(onOpen = { go(Route.Album(it)) }) }
+                Route.Albums -> Box(Modifier.statusBarsPadding()) {
+                    AlbumsScreen(onOpen = { go(Route.Album(it)) }, onSettings = { go(Route.Settings) })
+                }
+                Route.Settings -> Box(Modifier.statusBarsPadding()) { SettingsScreen(onBack = ::back) }
                 is Route.Album -> Box(Modifier.statusBarsPadding()) {
                     AlbumScreen(
                         top.id,

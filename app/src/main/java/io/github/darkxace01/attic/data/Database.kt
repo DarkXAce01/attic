@@ -67,10 +67,13 @@ data class PrintEntity(
     val version: Int = 1,
     val galleryUri: String? = null,
     val exportedVersion: Int = 0,
+    /** The [version] last written to the backup folder; 0 if never. */
+    @ColumnInfo(defaultValue = "0") val backedUpVersion: Int = 0,
 ) {
     val date: PhotoDate? get() = photoDate(dateFrom, dateTo, dateLabel)
     val cropQuad: Quad get() = parseQuad(quad)
     val inGallery: Boolean get() = galleryUri != null && exportedVersion == version
+    val backedUp: Boolean get() = backedUpVersion == version
     fun file(root: File) = File(File(root, scanDir), fileName)
 }
 
@@ -91,7 +94,7 @@ data class AlbumSummary(
     val coverEnhance: Int?,
 )
 
-data class LibraryCounts(val total: Int, val inGallery: Int)
+data class LibraryCounts(val total: Int, val inGallery: Int, val backedUp: Int = 0, val onlyInAttic: Int = 0)
 
 @Dao
 interface AtticDao {
@@ -125,8 +128,19 @@ interface AtticDao {
     @Query("SELECT place FROM print WHERE place IS NOT NULL GROUP BY place ORDER BY MAX(createdAt) DESC LIMIT 12") fun recentPlaces(): Flow<List<String>>
     @Query("SELECT COALESCE(MAX(page), 0) FROM print WHERE albumId = :albumId") fun lastPage(albumId: Long): Int
     @Query("SELECT DISTINCT scanDir FROM print") fun knownScanDirs(): List<String>
-    @Query("SELECT COUNT(*) AS total, SUM(CASE WHEN galleryUri IS NOT NULL AND exportedVersion = version THEN 1 ELSE 0 END) AS inGallery FROM print")
+    @Query(
+        """
+        SELECT COUNT(*) AS total,
+            COALESCE(SUM(CASE WHEN galleryUri IS NOT NULL AND exportedVersion = version THEN 1 ELSE 0 END), 0) AS inGallery,
+            COALESCE(SUM(CASE WHEN backedUpVersion = version THEN 1 ELSE 0 END), 0) AS backedUp,
+            COALESCE(SUM(CASE WHEN (galleryUri IS NULL OR exportedVersion != version) AND backedUpVersion != version THEN 1 ELSE 0 END), 0) AS onlyInAttic
+        FROM print
+        """,
+    )
     fun counts(): Flow<LibraryCounts>
+    @Query("UPDATE print SET backedUpVersion = :version WHERE id = :id") fun markBackedUp(id: Long, version: Int)
+    @Query("SELECT * FROM album WHERE title = :title AND createdAt = :createdAt") fun albumMatching(title: String, createdAt: Long): AlbumEntity?
+    @Query("SELECT * FROM print WHERE scanDir = :scanDir AND fileName = :fileName") fun printAt(scanDir: String, fileName: String): PrintEntity?
 
     @Query("SELECT * FROM person WHERE name = :name COLLATE NOCASE") fun personNamed(name: String): PersonEntity?
     @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertPerson(person: PersonEntity): Long
@@ -151,7 +165,7 @@ interface AtticDao {
 
 @Database(
     entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -159,7 +173,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -172,6 +186,13 @@ abstract class AtticDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE print_new RENAME TO print")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_print_albumId` ON `print` (`albumId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_print_dateFrom` ON `print` (`dateFrom`)")
+            }
+        }
+
+        /** Backups to a folder: which version of each print the backup has. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `print` ADD COLUMN `backedUpVersion` INTEGER NOT NULL DEFAULT 0")
             }
         }
 

@@ -2,6 +2,7 @@ package io.github.darkxace01.attic
 
 import android.app.Application
 import android.util.Log
+import io.github.darkxace01.attic.data.Backup
 import io.github.darkxace01.attic.data.Library
 import io.github.darkxace01.attic.vision.EdgeFit
 import io.github.darkxace01.attic.vision.EdgeSnap
@@ -12,6 +13,7 @@ import org.opencv.android.OpenCVLoader
 
 class AtticApplication : Application() {
     val library by lazy { Library(this) }
+    val backup by lazy { Backup(this, library) }
 
     /** The print finder, shared by the camera and the crop screen. Loaded once, it's thread-safe. */
     val printNet by lazy { PrintNet(assets.open("printnet.onnx").use { it.readBytes() }) }
@@ -23,6 +25,8 @@ class AtticApplication : Application() {
 }
 
 val android.content.Context.library: Library get() = (applicationContext as AtticApplication).library
+
+val android.content.Context.backup: Backup get() = (applicationContext as AtticApplication).backup
 
 val android.content.Context.printNet: PrintNet get() = (applicationContext as AtticApplication).printNet
 

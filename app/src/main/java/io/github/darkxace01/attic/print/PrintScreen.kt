@@ -329,7 +329,7 @@ private fun FullImage(file: java.io.File, version: Int, modifier: Modifier) {
 
 /** Original, natural or strong, as one quiet segmented row. */
 @Composable
-private fun LookChoice(level: Int, onChoose: (Int) -> Unit) {
+internal fun LookChoice(level: Int, onChoose: (Int) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()

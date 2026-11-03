@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import io.github.darkxace01.attic.data.AlbumSummary
 import io.github.darkxace01.attic.data.LibraryCounts
+import io.github.darkxace01.attic.backup
 import io.github.darkxace01.attic.library
 import io.github.darkxace01.attic.ui.QuietButton
 import io.github.darkxace01.attic.ui.TextSheet
@@ -48,17 +50,23 @@ import java.io.File
 
 /** Albums as objects: big covers you want to open. Above them, whether everything is safe. */
 @Composable
-fun AlbumsScreen(onOpen: (Long) -> Unit) {
+fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
     val library = LocalContext.current.library
     val albums by remember { library.albums() }.collectAsStateWithLifecycle(emptyList())
     val counts by remember { library.counts() }.collectAsStateWithLifecycle(LibraryCounts(0, 0))
     val scope = rememberCoroutineScope()
     var creating by remember { mutableStateOf(false) }
     var exporting by remember { mutableStateOf<String?>(null) }
+    val backup = LocalContext.current.backup
+    val backupProgress by backup.progress.collectAsStateWithLifecycle()
+    val backupFolder = remember(backupProgress) { backup.folder }
+    // While a backup runs, the line says how far it is.
+    val working = exporting ?: (backupProgress as? io.github.darkxace01.attic.data.Backup.Progress.Working)?.let { "${it.what}… ${it.done} of ${it.total}" }
 
     Column(Modifier.fillMaxSize()) {
         TopBar("Albums", onBack = null) {
             QuietButton("New album", onClick = { creating = true }, color = Palette.Accent)
+            QuietButton("Settings", onClick = onSettings)
         }
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -67,13 +75,18 @@ fun AlbumsScreen(onOpen: (Long) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             item(span = { GridItemSpan(2) }) {
-                SafetyLine(counts, exporting) {
-                    scope.launch {
-                        exporting = "Saving to your gallery…"
-                        library.exportAll { done, total -> exporting = "Saving to your gallery… $done of $total" }
-                        exporting = null
-                    }
-                }
+                SafetyLine(
+                    counts, working, hasBackup = backupFolder != null,
+                    onExport = {
+                        scope.launch {
+                            exporting = "Saving to your gallery…"
+                            library.exportAll { done, total -> exporting = "Saving to your gallery… $done of $total" }
+                            exporting = null
+                        }
+                    },
+                    onBackUp = { scope.launch { backup.backUp() } },
+                    onSetUpBackup = onSettings,
+                )
             }
             if (albums.isEmpty()) {
                 item(span = { GridItemSpan(2) }) {
@@ -104,10 +117,32 @@ fun AlbumsScreen(onOpen: (Long) -> Unit) {
     }
 }
 
-/** One sentence on whether everything has a second copy, with the fix next to it. */
+/**
+ * One sentence on how safe the photos are, with the fix next to it. A photo is safe once it's in the
+ * backup folder (off this phone, if the folder is); the gallery copy is on the same phone, but apps like
+ * Google Photos can back it up.
+ */
 @Composable
-private fun SafetyLine(counts: LibraryCounts, exporting: String?, onExport: () -> Unit) {
-    val missing = counts.total - counts.inGallery
+private fun SafetyLine(
+    counts: LibraryCounts,
+    working: String?,
+    hasBackup: Boolean,
+    onExport: () -> Unit,
+    onBackUp: () -> Unit,
+    onSetUpBackup: () -> Unit,
+) {
+    val notInGallery = counts.total - counts.inGallery
+    val notBacked = counts.total - counts.backedUp
+    fun photos(n: Int) = if (n == 1) "1 photo" else "$n photos"
+    val (line, action) = when {
+        working != null -> working to null
+        counts.total == 0 -> "Scanned photos are kept here and in your gallery." to null
+        counts.onlyInAttic > 0 -> "${photos(counts.onlyInAttic)} only in Attic, with no other copy." to ("Save to gallery" to onExport)
+        !hasBackup -> "All ${photos(counts.total)} are in your gallery too. A backup folder keeps another copy." to ("Set up backup" to onSetUpBackup)
+        notBacked > 0 -> "${photos(notBacked)} not in your backup yet." to ("Back up" to onBackUp)
+        notInGallery > 0 -> "All ${photos(counts.total)} are backed up; ${photos(notInGallery)} not in your gallery." to ("Save to gallery" to onExport)
+        else -> "All ${photos(counts.total)} are in your gallery and backed up." to null
+    }
     Row(
         Modifier
             .fillMaxWidth()
@@ -117,20 +152,14 @@ private fun SafetyLine(counts: LibraryCounts, exporting: String?, onExport: () -
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            when {
-                exporting != null -> exporting
-                counts.total == 0 -> "Scanned photos are kept here and in your gallery."
-                missing == 0 -> "All ${counts.total} photos are also in your gallery."
-                missing == 1 -> "1 photo is only in Attic."
-                else -> "$missing photos are only in Attic."
-            },
+            line,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (missing > 0 && exporting == null) Palette.Ink else Palette.Muted,
+            color = if (action != null) Palette.Ink else Palette.Muted,
             modifier = Modifier
                 .weight(1f)
                 .padding(vertical = 10.dp),
         )
-        if (missing > 0 && exporting == null) QuietButton("Save to gallery", onClick = onExport, color = Palette.Accent)
+        if (action != null) QuietButton(action.first, onClick = action.second, color = Palette.Accent)
     }
 }
 

@@ -40,6 +40,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {
@@ -77,6 +78,7 @@ dependencies {
     implementation(libs.opencv)
     implementation(libs.coil.compose)
     implementation(libs.androidx.exifinterface)
+    implementation(libs.androidx.documentfile)
 
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

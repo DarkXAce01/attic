@@ -4,6 +4,7 @@ kotlin = "2.4.21"
 ksp = "2.3.12"
 room = "2.8.5"
 exifinterface = "1.4.2"
+documentfile = "1.1.0"
 composeBom = "2026.09.00"
 activityCompose = "1.13.0"
 coreKtx = "1.19.1"
@@ -33,6 +34,7 @@ opencv = { module = "org.opencv:opencv", version.ref = "opencv" }
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
 androidx-exifinterface = { module = "androidx.exifinterface:exifinterface", version.ref = "exifinterface" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 junit = { module = "junit:junit", version.ref = "junit" }

@@ -102,7 +102,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private val captureExecutor = Executors.newSingleThreadExecutor()
 
-    private val _state = MutableStateFlow(ScanUiState())
+    private val _state = MutableStateFlow(ScanUiState(autoCapture = library.settings.now.autoCapture, glareFree = library.settings.now.glareFree))
     val state: StateFlow<ScanUiState> = _state
 
     private val scanningAlbumId = MutableStateFlow<Long?>(null)
@@ -205,7 +205,10 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             .onFailure { e -> _state.update { it.copy(error = "Camera unavailable: ${e.message}") } }
     }
 
-    fun setAutoCapture(on: Boolean) = _state.update { it.copy(autoCapture = on) }
+    fun setAutoCapture(on: Boolean) {
+        library.settings.update { it.copy(autoCapture = on) }
+        _state.update { it.copy(autoCapture = on) }
+    }
 
     /** While something covers the camera (the page details sheet), nothing is taken. */
     @Volatile private var paused = false
@@ -214,6 +217,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
 
     /** Turning glare-free off in the middle of a page drops the shots taken so far. */
     fun setGlareFree(on: Boolean) {
+        library.settings.update { it.copy(glareFree = on) }
         _state.update { it.copy(glareFree = on, sweep = null) }
         if (!on) analysisExecutor.execute { sweep = null; sweepTaking = false }
     }
@@ -476,7 +480,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         val soft = prints.count { it.sharpness < SOFT_SHARPNESS }
         prints.forEach { it.image.release() }
         // New prints go straight into the gallery too, so they're safe the moment they're scanned.
-        saved.forEach { library.export(it.id) }
+        if (library.settings.now.saveToGallery) saved.forEach { library.export(it.id) }
         return Stored(saved, thumbs, soft)
     }
 
@@ -510,7 +514,8 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         var flat = Rectify.warp(frame, quad, maxSide = 320)
         look(flat)
         // Saved prints are shown the way they were kept: enhanced.
-        if (enhance) flat = Enhance.apply(flat, Enhance.NATURAL).also { flat.release() }
+        val level = library.settings.now.newScanLook
+        if (enhance && level != Enhance.OFF) flat = Enhance.apply(flat, level).also { flat.release() }
         val bmp = Bitmap.createBitmap(flat.cols(), flat.rows(), Bitmap.Config.ARGB_8888)
         Utils.matToBitmap(flat, bmp)
         flat.release()

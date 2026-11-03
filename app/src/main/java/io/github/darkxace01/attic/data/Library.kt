@@ -40,7 +40,8 @@ import java.util.Locale
  */
 class Library(private val context: Context) {
     val db = AtticDatabase.open(context)
-    private val dao = db.dao()
+    internal val dao = db.dao()
+    val settings = Settings(context)
     val root = File(context.filesDir, "scans").apply { mkdirs() }
     private val prefs = context.getSharedPreferences("library", Context.MODE_PRIVATE)
 
@@ -157,7 +158,7 @@ class Library(private val context: Context) {
             val e = PrintEntity(
                 albumId = album.id, scanDir = dirName, fileName = name, page = page, position = i + 1,
                 width = p.image.cols(), height = p.image.rows(), sharpness = p.sharpness,
-                quad = p.quad.encode(), createdAt = now,
+                quad = p.quad.encode(), createdAt = now, enhance = settings.now.newScanLook,
             )
             renderEnhanced(e, p.image)
             e.copy(id = dao.insertPrint(e))
@@ -367,10 +368,20 @@ class Library(private val context: Context) {
     private fun exportNow(p: PrintEntity) {
         val album = dao.album(p.albumId)
         val date = p.date ?: album?.date
-        val people = dao.peopleInNow(p.id)
-
         val tmp = File(context.cacheDir, "export.jpg")
-        val bmp = BitmapFactory.decodeFile(displayFile(p).path) ?: return
+        if (!writeJpeg(p, tmp)) return
+        galleryWrite(p, tmp, album, date)
+    }
+
+    /**
+     * [p] as it looks in Attic, as a high-quality JPEG with its date, people, place and caption in the EXIF,
+     * so any photo app sorts and searches it properly.
+     */
+    internal fun writeJpeg(p: PrintEntity, tmp: File): Boolean {
+        val album = dao.album(p.albumId)
+        val date = p.date ?: album?.date
+        val people = dao.peopleInNow(p.id)
+        val bmp = BitmapFactory.decodeFile(displayFile(p).path) ?: return false
         tmp.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 97, it) }
         bmp.recycle()
 
@@ -386,7 +397,10 @@ class Library(private val context: Context) {
         if (people.isNotEmpty()) exif.setAttribute(ExifInterface.TAG_USER_COMMENT, "People: ${people.joinToString(", ")}")
         exif.setAttribute(ExifInterface.TAG_SOFTWARE, "Attic")
         exif.saveAttributes()
+        return true
+    }
 
+    private fun galleryWrite(p: PrintEntity, tmp: File, album: AlbumEntity?, date: PhotoDate?) {
         val resolver = context.contentResolver
         val taken = date?.representative?.atTime(12, 0)?.atZone(ZoneId.systemDefault())?.toInstant()?.toEpochMilli()
         // Overwrite the existing gallery copy when there is one, so backup apps don't see duplicates.
