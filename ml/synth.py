@@ -26,6 +26,7 @@ CORE = 0.6                   # a print's core is the print shrunk to this about 
 # the environment for a dataset block that needs more of them (make_dataset.py).
 LOOSE = float(os.environ.get("ATTIC_LOOSE", "0.15"))
 BACKS = float(os.environ.get("ATTIC_BACKS", "0.3"))
+ON_TABLE = float(os.environ.get("ATTIC_ON_TABLE", "0.5"))  # loose prints with no page under them
 
 PHOTO_DIR = os.path.expanduser("~/.cache/attic-ml/data/photos")
 
@@ -330,6 +331,14 @@ def draw_page(rng, photos, canvas, page_quad, prints_out):
     page_col = np.float32(rand_colour(rng, "page"))
     page = texture(rng, int(ph), int(pw), page_col, rng.uniform(1, 6))
     kind, slots = layout_slots(rng, pw, ph)
+    if kind == "loose" and rng.random() < ON_TABLE:
+        # No page: the print lies straight on the table, so a pale card on a table is a print too,
+        # not just an empty page.
+        ys, xs = int(y0), int(x0)
+        region = canvas[ys:ys + page.shape[0], xs:xs + page.shape[1]]
+        if region.shape == page.shape:
+            page = region.copy()
+            page_col = np.float32(page.reshape(-1, 3).mean(0))
     sleeve = kind == "grid" and rng.random() < 0.85
     for slot in slots:
         if sleeve:

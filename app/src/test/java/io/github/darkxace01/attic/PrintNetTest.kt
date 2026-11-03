@@ -105,12 +105,15 @@ class PrintNetTest {
             }
             val truth = sc.place(scene, back, io.github.darkxace01.attic.vision.Pt(480f, 640f), angleDeg = 8f * i - 10f, tilt = 0.05f)
             val shot = sc.camera(scene)
-            val q = net.detect(shot).maxByOrNull { it.area }
+            val all = net.detect(shot)
+            val q = all.maxByOrNull { it.area }
             val iou = q?.iou(truth) ?: 0f
+            println("  ${all.size} found, areas ${all.map { (it.area / truth.area * 100).toInt() }}% of the back, IoUs ${all.map { "%.2f".format(it.iou(truth)) }}")
             println("back on table ${table.`val`[0].toInt()}: IoU ${"%.3f".format(iou)}")
             if (iou >= 0.9f) found++
             shot.release()
         }
         println("backs found: $found of ${tables.size}")
+        assertTrue("backs found: $found of ${tables.size}", found >= 3)
     }
 }
