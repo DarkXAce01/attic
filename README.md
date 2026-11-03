@@ -26,6 +26,12 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - Scans go into the album you pick at the top of the scan screen, one capture per page
 
 **Keep**
+- Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their
+  decade's years; undated photos come last
+- Backup to a folder you pick (SD card, USB stick, a synced folder): photos with their details for anyone,
+  plus everything Attic needs to restore. Backing up again only adds what changed. Restore from it on a
+  new phone. The albums screen says how many photos have no other copy, with the fix next to it
+- Settings: the look new scans start with, saving to the gallery on or off, backup and restore
 - Page details: after each page, "Details" by the shutter gives the whole page its when, who and where
   in one sheet, with the previous page's answers one tap away. Scanning never waits for it; pages
   without details say so in the album, so you can do them later
@@ -57,6 +63,18 @@ source scripts/env.sh          # JDK, Android SDK and Gradle cache already on th
 ```
 
 The detector tests write overlays of what they found to `app/build/detector/`.
+
+**Release builds.** Signing reads `keystore.properties` at the project root (never committed); without it,
+release builds are unsigned, so anyone can build from source.
+
+```sh
+./gradlew bundleRelease                         # the Google Play bundle: app/build/outputs/bundle/release/
+./gradlew assembleRelease -Pabi=arm64-v8a       # one signed APK to install by hand (about 31 MB)
+```
+
+Release builds are shrunk with R8. The release app is `io.github.darkxace01.attic`, separate from the
+debug build (`….attic.debug`), so the two keep separate libraries. Play listing and privacy policy:
+`docs/play/`.
 
 ## Phase 0 test protocol
 

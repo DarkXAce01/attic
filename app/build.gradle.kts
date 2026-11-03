@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -14,13 +16,31 @@ android {
         // Android 10: scoped storage and MediaStore RELATIVE_PATH for saving prints to the gallery.
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0-spike"
+        versionCode = 2
+        versionName = "0.9.0"
 
         ndk {
-            // OpenCV ships native code for every ABI (~120 MB). Phones are arm64; the emulator is x86_64.
-            abiFilters += listOf("arm64-v8a", "x86_64")
+            // OpenCV ships native code for every ABI (~120 MB together). Most phones are arm64; some
+            // budget Android 10 phones are 32-bit ARM; the emulator is x86_64. Google Play splits the
+            // bundle so each phone downloads only its own, and Android Studio's Run builds only the
+            // connected phone's. -Pabi=arm64-v8a builds just one, for an APK to install by hand.
+            abiFilters += (project.findProperty("abi") as String?)?.split(",") ?: listOf("arm64-v8a", "armeabi-v7a", "x86_64")
         }
+    }
+
+    // Release signing reads keystore.properties at the project root (never committed). Without it,
+    // release builds are simply unsigned, so anyone can still build from source.
+    val keystoreFile = rootProject.file("keystore.properties")
+    val releaseSigning = if (keystoreFile.exists()) {
+        val keys = Properties().apply { keystoreFile.inputStream().use(::load) }
+        signingConfigs.create("release") {
+            storeFile = file(keys.getProperty("storeFile"))
+            storePassword = keys.getProperty("storePassword")
+            keyAlias = keys.getProperty("keyAlias")
+            keyPassword = keys.getProperty("keyPassword")
+        }
+    } else {
+        null
     }
 
     buildTypes {
@@ -28,7 +48,9 @@ android {
             applicationIdSuffix = ".debug"
         }
         release {
-            isMinifyEnabled = false
+            signingConfig = releaseSigning
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
