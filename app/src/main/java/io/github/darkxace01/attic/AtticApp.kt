@@ -39,6 +39,7 @@ import io.github.darkxace01.attic.print.CropScreen
 import io.github.darkxace01.attic.print.PrintScreen
 import io.github.darkxace01.attic.scan.ScanScreen
 import io.github.darkxace01.attic.settings.SettingsScreen
+import io.github.darkxace01.attic.timeline.TimelineScreen
 import io.github.darkxace01.attic.scan.ScanViewModel
 import io.github.darkxace01.attic.ui.AlbumPickerSheet
 import io.github.darkxace01.attic.ui.PrimaryButton
@@ -47,6 +48,7 @@ import io.github.darkxace01.attic.ui.theme.Palette
 private sealed interface Route {
     data object Scan : Route
     data object Albums : Route
+    data object Timeline : Route
     data class Album(val id: Long) : Route
     data class Print(val id: Long) : Route {
         /** The photo swiped to, so coming back from fixing a crop returns to it. */
@@ -91,6 +93,7 @@ fun AtticApp() {
                 Route.Albums -> Box(Modifier.statusBarsPadding()) {
                     AlbumsScreen(onOpen = { go(Route.Album(it)) }, onSettings = { go(Route.Settings) })
                 }
+                Route.Timeline -> Box(Modifier.statusBarsPadding()) { TimelineScreen(onOpenPrint = { go(Route.Print(it)) }) }
                 Route.Settings -> Box(Modifier.statusBarsPadding()) { SettingsScreen(onBack = ::back) }
                 is Route.Album -> Box(Modifier.statusBarsPadding()) {
                     AlbumScreen(
@@ -106,8 +109,8 @@ fun AtticApp() {
                 is Route.Crop -> Box(Modifier.statusBarsPadding()) { CropScreen(top.id, onDone = ::back) }
             }
         }
-        if (top == Route.Scan || top == Route.Albums) {
-            TabBar(scanSelected = top == Route.Scan, onScan = { tab(Route.Scan) }, onAlbums = { tab(Route.Albums) })
+        if (top == Route.Scan || top == Route.Albums || top == Route.Timeline) {
+            TabBar(top, onTab = ::tab)
         } else {
             Spacer(Modifier.navigationBarsPadding())
         }
@@ -127,7 +130,7 @@ fun AtticApp() {
 }
 
 @Composable
-private fun TabBar(scanSelected: Boolean, onScan: () -> Unit, onAlbums: () -> Unit) {
+private fun TabBar(current: Route, onTab: (Route) -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -136,8 +139,9 @@ private fun TabBar(scanSelected: Boolean, onScan: () -> Unit, onAlbums: () -> Un
             .height(56.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        TabItem("Scan", scanSelected, onScan, Modifier.weight(1f))
-        TabItem("Albums", !scanSelected, onAlbums, Modifier.weight(1f))
+        for ((label, route) in listOf("Scan" to Route.Scan, "Albums" to Route.Albums, "Timeline" to Route.Timeline)) {
+            TabItem(label, current == route, { onTab(route) }, Modifier.weight(1f))
+        }
     }
 }
 

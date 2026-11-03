@@ -178,7 +178,7 @@ private fun PageHeader(albumId: Long, page: Int, versions: List<Int>, onClick: (
 }
 
 @Composable
-private fun PrintTile(p: PrintEntity, file: java.io.File, onClick: () -> Unit) {
+internal fun PrintTile(p: PrintEntity, file: java.io.File, onClick: () -> Unit) {
     Box(
         Modifier
             .aspectRatio(1f)

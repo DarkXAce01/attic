@@ -14,6 +14,7 @@ import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.Rectify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import org.opencv.android.Utils
@@ -54,6 +55,12 @@ class Library(private val context: Context) {
     fun peopleIn(printId: Long): Flow<List<String>> = dao.peopleIn(printId)
     fun allPeople(): Flow<List<String>> = dao.allPeople()
     fun counts(): Flow<LibraryCounts> = dao.counts()
+
+    /** The whole library on one timeline: see [Timeline]. */
+    fun timeline(): Flow<List<Timeline.Row>> =
+        kotlinx.coroutines.flow.combine(dao.allPrintsFlow(), dao.albumsFlow()) { prints, albums ->
+            Timeline.rows(prints, albums.associate { it.id to it.date })
+        }.flowOn(Dispatchers.Default)
 
     /** The file to show and export: the enhanced version when there is one. */
     fun displayFile(p: PrintEntity): File = enhancedFile(p, p.enhance).takeIf { it.exists() } ?: p.file(root)
