@@ -87,6 +87,12 @@ data class ScanUiState(
     val sweep: SweepUi? = null,
     /** A print in view looks like it has glare on it. */
     val glareSeen: Boolean = false,
+    /** Taking the back of this print: the next capture is its back. */
+    val backFor: Long? = null,
+    /** The prints saved by the last capture, for "Add the back" when it was one loose print. */
+    val lastSavedIds: List<Long> = emptyList(),
+    /** The back was just saved. */
+    val justSavedBack: Boolean = false,
     /** The page saved last, for adding its details: album and page number, page 0 before any. */
     val lastAlbumId: Long = 0,
     val lastPage: Int = 0,
@@ -219,6 +225,21 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         library.settings.update { it.copy(autoCapture = on) }
         _state.update { it.copy(autoCapture = on) }
     }
+
+    /** The next capture is the back of print [id]. */
+    fun scanBackOf(id: Long) {
+        _state.update { it.copy(backFor = id, error = null) }
+        // Wait until what's in view isn't the front any more (the print was turned over), then take it.
+        viewModelScope.launch {
+            val front = library.printNow(id)?.hashList.orEmpty()
+            analysisExecutor.execute {
+                capturedHashes = front
+                armed = front.isEmpty()
+            }
+        }
+    }
+
+    fun cancelBack() = _state.update { it.copy(backFor = null) }
 
     /** While something covers the camera (the page details sheet), nothing is taken. */
     @Volatile private var paused = false
@@ -378,6 +399,17 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     private fun captureNow() {
         if (_state.value.saving || sweepTaking) return
         if (sweep != null) { finishSweep(); return }
+        _state.value.backFor?.let { id ->
+            val q = tracker.visible.maxByOrNull { it.shown.area }?.shown
+            armed = false
+            capturedHashes = tracker.visible.mapNotNull { hashCache[it.id] }
+            _state.update { it.copy(saving = true) }
+            takeShot(
+                onShot = { jpeg, frame -> viewModelScope.launch(Dispatchers.Default) { processBack(jpeg, frame, q, id) } },
+                onError = { _state.update { it.copy(saving = false) } },
+            )
+            return
+        }
         val visible = tracker.visible.sortedWith(compareBy({ (it.shown.center.y * 8).toInt() }, { it.shown.center.x }))
         val quads = visible.map { it.shown }
         armed = false
@@ -492,6 +524,43 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         store(prints) { library.saveCapture(jpeg, frame, it) }
     })
 
+    /** The back of print [id]: the print in view (the biggest one), flattened and kept with it. */
+    private suspend fun processBack(jpeg: ByteArray, frame: FrameTransform, normQuad: Quad?, id: Long) {
+        val result = runCatching {
+            val full = decodeUpright(jpeg, frame)
+            val w = full.cols().toFloat(); val h = full.rows().toFloat()
+            val rough = normQuad?.scale(w, h) ?: detector.detect(full).maxByOrNull { it.area }
+            if (rough == null) {
+                full.release()
+                return@runCatching false
+            }
+            val flat = Rectify.warp(full, detector.finalOutline(full, rough))
+            full.release()
+            library.saveBack(id, flat, jpeg)
+            flat.release()
+            true
+        }
+        val saved = result.getOrDefault(false)
+        _state.update {
+            it.copy(
+                saving = false,
+                backFor = if (saved) null else it.backFor,
+                justSavedBack = saved,
+                error = when {
+                    result.isFailure -> "Couldn't save the back: ${result.exceptionOrNull()?.message}"
+                    !saved -> "Couldn't find the photo's edges. Put it on something darker and try again."
+                    else -> null
+                },
+            )
+        }
+        if (saved) {
+            delay(2500)
+            _state.update { it.copy(justSavedBack = false) }
+        } else {
+            armed = true
+        }
+    }
+
     private class Stored(val saved: List<io.github.darkxace01.attic.data.PrintEntity>, val thumbs: List<ImageBitmap>, val soft: Int, val twins: Int)
 
     /** Saves [prints] with [save], puts them in the gallery and releases them. */
@@ -516,6 +585,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
                     lastSaved = r.thumbs,
                     error = if (r.saved.isEmpty()) "No photos found in that shot" else null,
                     lastAlbumId = r.saved.firstOrNull()?.albumId ?: it.lastAlbumId,
+                    lastSavedIds = r.saved.map { p -> p.id },
                     lastPage = r.saved.firstOrNull()?.page ?: it.lastPage,
                 )
             }

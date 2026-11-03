@@ -71,6 +71,8 @@ data class PrintEntity(
     @ColumnInfo(defaultValue = "0") val backedUpVersion: Int = 0,
     /** [io.github.darkxace01.attic.vision.PrintHash] of the crop turned 0, 90, 180 and 270 degrees, comma-separated. */
     val hashes: String? = null,
+    /** The flattened back of the print (handwriting, a studio stamp), in the capture folder; null if none. */
+    val backFile: String? = null,
 ) {
     val date: PhotoDate? get() = photoDate(dateFrom, dateTo, dateLabel)
     val cropQuad: Quad get() = parseQuad(quad)
@@ -173,7 +175,7 @@ interface AtticDao {
 
 @Database(
     entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -181,7 +183,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -208,6 +210,13 @@ abstract class AtticDatabase : RoomDatabase() {
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `print` ADD COLUMN `hashes` TEXT")
+            }
+        }
+
+        /** The backs of prints. */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `print` ADD COLUMN `backFile` TEXT")
             }
         }
 

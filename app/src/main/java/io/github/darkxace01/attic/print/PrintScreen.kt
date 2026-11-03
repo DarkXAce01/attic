@@ -82,7 +82,14 @@ private enum class Editing { None, Date, People, Place, Caption }
  * [onShowing] is told which photo is on screen.
  */
 @Composable
-fun PrintScreen(startId: Long, onShowing: (Long) -> Unit, onBack: () -> Unit, onFixCrop: (Long) -> Unit, onOpenPrint: (Long) -> Unit) {
+fun PrintScreen(
+    startId: Long,
+    onShowing: (Long) -> Unit,
+    onBack: () -> Unit,
+    onFixCrop: (Long) -> Unit,
+    onOpenPrint: (Long) -> Unit,
+    onScanBack: (Long) -> Unit,
+) {
     val library = LocalContext.current.library
     val start by remember(startId) { library.print(startId) }.collectAsStateWithLifecycle(null)
     val albumId = start?.albumId ?: return
@@ -110,6 +117,7 @@ fun PrintScreen(startId: Long, onShowing: (Long) -> Unit, onBack: () -> Unit, on
             onBack = onBack,
             onFixCrop = onFixCrop,
             onOpenPrint = onOpenPrint,
+            onScanBack = onScanBack,
             // Deleting a photo shows the next one, or goes back once the album is empty.
             onDeleted = { if (ids.size <= 1) onBack() },
         )
@@ -124,6 +132,7 @@ private fun PrintPage(
     onBack: () -> Unit,
     onFixCrop: (Long) -> Unit,
     onOpenPrint: (Long) -> Unit,
+    onScanBack: (Long) -> Unit,
     onDeleted: () -> Unit,
 ) {
     val library = LocalContext.current.library
@@ -150,11 +159,13 @@ private fun PrintPage(
             val note = if (busy) "Saving…" else position
             if (note != null) Text(note, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
         }
+        val back = library.backFile(p)
+        var showBack by remember(p.id) { mutableStateOf(false) }
         ZoomableImage(
             p,
             onZoomed = onZoomed,
-            file = library.displayFile(p),
-            before = library.originalFile(p).takeIf { p.enhance != Enhance.OFF },
+            file = if (showBack && back != null) back else library.displayFile(p),
+            before = library.originalFile(p).takeIf { p.enhance != Enhance.OFF && !(showBack && back != null) },
             modifier = Modifier.fillMaxWidth().weight(1f),
         )
 
@@ -208,6 +219,11 @@ private fun PrintPage(
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 QuietButton("Fix crop", onClick = { onFixCrop(printId) })
                 QuietButton("Rotate", onClick = { work { library.rotate(printId) } })
+                when {
+                    back == null -> QuietButton("Add the back", onClick = { onScanBack(printId) })
+                    showBack -> QuietButton("Front", onClick = { showBack = false })
+                    else -> QuietButton("Back", onClick = { showBack = true })
+                }
                 Spacer(Modifier.weight(1f))
                 QuietButton("Delete", onClick = { confirmDelete = true }, color = Palette.Warning)
             }

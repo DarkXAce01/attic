@@ -53,6 +53,7 @@ class Library(private val context: Context) {
     fun album(id: Long): Flow<AlbumEntity?> = dao.albumFlow(id)
     fun printsIn(albumId: Long): Flow<List<PrintEntity>> = dao.printsIn(albumId)
     fun print(id: Long): Flow<PrintEntity?> = dao.printFlow(id)
+    suspend fun printNow(id: Long): PrintEntity? = io { dao.print(id) }
     fun peopleIn(printId: Long): Flow<List<String>> = dao.peopleIn(printId)
     fun allPeople(): Flow<List<String>> = dao.allPeople()
     fun counts(): Flow<LibraryCounts> = dao.counts()
@@ -68,6 +69,34 @@ class Library(private val context: Context) {
 
     /** The plain crop, for comparing against the enhanced one. */
     fun originalFile(p: PrintEntity): File = p.file(root)
+
+    /** The flattened back of [p], if it has one. */
+    fun backFile(p: PrintEntity): File? = p.backFile?.let { File(File(root, p.scanDir), it) }?.takeIf { it.exists() }
+
+    /**
+     * Keeps [flat] as the back of print [id], with the camera photo it came from next to it. Replaces an
+     * earlier back.
+     */
+    suspend fun saveBack(id: Long, flat: Mat, photoJpeg: ByteArray) = io {
+        val p = dao.print(id) ?: return@io
+        val n = p.fileName.removePrefix("print_").removeSuffix(".png")
+        val dir = File(root, p.scanDir)
+        writePng(flat, File(dir, "back_$n.png"))
+        File(dir, "back_${n}.jpg").writeBytes(photoJpeg)
+        dao.updatePrint(p.copy(backFile = "back_$n.png", version = p.version + 1))
+    }
+
+    suspend fun removeBack(id: Long) = io {
+        val p = dao.print(id) ?: return@io
+        backFiles(p).forEach { it.delete() }
+        dao.updatePrint(p.copy(backFile = null, version = p.version + 1))
+    }
+
+    private fun backFiles(p: PrintEntity): List<File> {
+        val n = p.fileName.removePrefix("print_").removeSuffix(".png")
+        val dir = File(root, p.scanDir)
+        return listOf(File(dir, "back_$n.png"), File(dir, "back_$n.jpg"))
+    }
 
     /** The album's cover: its first print, the way it's shown everywhere else. */
     fun coverFile(a: AlbumSummary): File? {
@@ -385,6 +414,7 @@ class Library(private val context: Context) {
         p.file(root).delete()
         derivedFiles(p).forEach { it.delete() }
         sweepFile(p).delete()
+        backFiles(p).forEach { it.delete() }
         dao.untagAll(p.id)
         dao.deletePrint(p.id)
         val dir = File(root, p.scanDir)

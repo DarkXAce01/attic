@@ -106,10 +106,21 @@ class Backup(private val context: Context, private val library: Library) {
                 val dir = photoDirs[album] ?: (photos.createDirectory(album) ?: error("Couldn't make a folder in the backup")).also { photoDirs[album] = it }
                 // One listing per album folder: asking the folder for each file is slow on big albums.
                 val have = inFolder.getOrPut(album) { dir.children() }[name]
+                if (p.backFile != null) wanted.getValue(album) += name.removeSuffix(".jpg") + " - back.jpg"
                 if (have != null && p.backedUp) return@forEachIndexed
                 if (!library.writeJpeg(p, tmp)) return@forEachIndexed
                 have?.delete()
                 copyIn(tmp, dir, name, "image/jpeg")
+                // The back, next to it.
+                library.backFile(p)?.let { back ->
+                    val backName = name.removeSuffix(".jpg") + " - back.jpg"
+                    wanted.getValue(album) += backName
+                    val bmp = android.graphics.BitmapFactory.decodeFile(back.path) ?: return@let
+                    tmp.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 95, it) }
+                    bmp.recycle()
+                    inFolder[album]?.get(backName)?.delete()
+                    copyIn(tmp, dir, backName, "image/jpeg")
+                }
             }
             tmp.delete()
             // Photos of prints that were deleted, moved or renamed in Attic.
@@ -184,6 +195,7 @@ class Backup(private val context: Context, private val library: Library) {
                             dateFrom = p.optLongOrNull("dateFrom"), dateTo = p.optLongOrNull("dateTo"), dateLabel = p.optStringOrNull("dateLabel"),
                             place = p.optStringOrNull("place"), caption = p.optStringOrNull("caption"),
                             createdAt = p.getLong("createdAt"), version = version, backedUpVersion = version,
+                            backFile = p.optStringOrNull("backFile")?.takeIf { File(local, it).exists() },
                         ),
                     )
                     val people = p.optJSONArray("people") ?: JSONArray()
@@ -225,6 +237,7 @@ class Backup(private val context: Context, private val library: Library) {
                         .putOpt("dateFrom", p.dateFrom).putOpt("dateTo", p.dateTo).putOpt("dateLabel", p.dateLabel)
                         .putOpt("place", p.place).putOpt("caption", p.caption)
                         .put("createdAt", p.createdAt).put("version", p.version)
+                        .putOpt("backFile", p.backFile)
                         .put("people", JSONArray(dao.peopleInNow(p.id))),
                 )
             }

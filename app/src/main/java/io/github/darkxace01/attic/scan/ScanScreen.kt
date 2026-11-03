@@ -58,6 +58,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.darkxace01.attic.ui.PageSheet
+import io.github.darkxace01.attic.ui.QuietButton
 import io.github.darkxace01.attic.ui.theme.Palette
 
 @Composable
@@ -162,6 +163,13 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 10.dp),
         )
 
+        // One loose print just saved: its back can come next. Taking a back: a way out.
+        when {
+            state.backFor != null -> QuietButton("Not now", onClick = vm::cancelBack, modifier = Modifier.padding(start = 8.dp))
+            state.lastSavedIds.size == 1 && state.sweep == null && !state.saving && !state.justSavedBack ->
+                QuietButton("Add the back of this photo", onClick = { vm.scanBackOf(state.lastSavedIds.single()) }, modifier = Modifier.padding(start = 8.dp))
+        }
+
         PreviewStrip(state)
 
         Box(
@@ -202,7 +210,9 @@ private fun statusLine(s: ScanUiState): String {
     val sweep = s.sweep
     return when {
         s.error != null -> s.error
-        s.saving -> if (s.glareFree) "Removing glare…" else "Saving…"
+        s.saving -> if (s.backFor != null) "Saving the back…" else if (s.glareFree) "Removing glare…" else "Saving…"
+        s.justSavedBack -> "Added the back."
+        s.backFor != null -> if (n == 0) "Turn the photo over and put it in view." else "Hold still to take the back."
         sweep != null -> when (sweep.hint) {
             SweepHint.MoveLeft -> "Shot ${sweep.taken} of ${sweep.of}. Move the phone a little to the left, then hold."
             SweepHint.MoveRight -> "Shot ${sweep.taken} of ${sweep.of}. Now a little to the right, then hold."

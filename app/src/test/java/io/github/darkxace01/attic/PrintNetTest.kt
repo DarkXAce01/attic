@@ -89,4 +89,28 @@ class PrintNetTest {
         assertTrue(n > 15)
         assertTrue(after / n >= before / n - 0.002)
     }
+
+    /** The back of a print: plain paper, a few pen strokes, on a table. Its outline must still be found. */
+    @Test
+    fun theBackOfAPrintIsFound() {
+        val sc = Scenes(21)
+        var found = 0
+        val tables = listOf(org.opencv.core.Scalar(40.0, 34.0, 30.0, 255.0), org.opencv.core.Scalar(120.0, 85.0, 60.0, 255.0), org.opencv.core.Scalar(150.0, 150.0, 150.0, 255.0), org.opencv.core.Scalar(200.0, 195.0, 185.0, 255.0))
+        for ((i, table) in tables.withIndex()) {
+            val scene = sc.background(960, 1280, table, grain = 8.0)
+            val back = org.opencv.core.Mat(420, 600, org.opencv.core.CvType.CV_8UC4, org.opencv.core.Scalar(236.0, 233.0, 225.0, 255.0))
+            repeat(6) { k ->
+                val y = 60.0 + k * 22
+                Imgproc.line(back, org.opencv.core.Point(60.0, y), org.opencv.core.Point(60.0 + sc.rnd.nextDouble(120.0, 380.0), y + sc.rnd.nextDouble(-4.0, 4.0)), org.opencv.core.Scalar(60.0, 60.0, 140.0, 255.0), 2)
+            }
+            val truth = sc.place(scene, back, io.github.darkxace01.attic.vision.Pt(480f, 640f), angleDeg = 8f * i - 10f, tilt = 0.05f)
+            val shot = sc.camera(scene)
+            val q = net.detect(shot).maxByOrNull { it.area }
+            val iou = q?.iou(truth) ?: 0f
+            println("back on table ${table.`val`[0].toInt()}: IoU ${"%.3f".format(iou)}")
+            if (iou >= 0.9f) found++
+            shot.release()
+        }
+        println("backs found: $found of ${tables.size}")
+    }
 }

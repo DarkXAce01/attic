@@ -22,6 +22,10 @@ cv2.setNumThreads(1)
 OUT_W, OUT_H = 288, 384      # what the model sees: the camera's upright 3:4 frame
 SS = 1.5                     # pages are drawn bigger and scaled down, like a real camera
 CORE = 0.6                   # a print's core is the print shrunk to this about its centre
+# Share of pages that are one or two big loose prints, and how many of those show their back. Set from
+# the environment for a dataset block that needs more of them (make_dataset.py).
+LOOSE = float(os.environ.get("ATTIC_LOOSE", "0.15"))
+BACKS = float(os.environ.get("ATTIC_BACKS", "0.3"))
 
 PHOTO_DIR = os.path.expanduser("~/.cache/attic-ml/data/photos")
 
@@ -140,8 +144,11 @@ def scale(quad, s):
 
 # ---------------------------------------------------------------- prints
 
-def make_print(rng, photos, w, h):
-    """A photo print w x h pixels (BGR float): picture, maybe a white border, an old-print look."""
+def make_print(rng, photos, w, h, back=False):
+    """A photo print w x h pixels (BGR float): picture, maybe a white border, an old-print look. With
+    [back], the back of one instead: plain paper, handwriting, a lab's printing."""
+    if back:
+        return back_of_print(rng, photos, w, h)
     src = photos.any(rng, small=max(w, h) < 280)
     sh, sw = src.shape[:2]
     # Crop the photo to the print's aspect.
@@ -190,6 +197,48 @@ def make_print(rng, photos, w, h):
     return np.clip(pic, 0, 255)
 
 
+def back_of_print(rng, photos, w, h):
+    """The back of a print: off-white paper, maybe the photo lab's name printed across it, handwriting,
+    a stamp, and a faint show-through of the picture on the other side."""
+    paper = np.float32([rng.uniform(205, 248)] * 3) - np.float32([rng.uniform(0, 25), rng.uniform(0, 10), 0])
+    pic = texture(rng, h, w, paper, rng.uniform(0.5, 3))
+    if rng.random() < 0.5:  # the picture faintly through the paper
+        through = cv2.cvtColor(cv2.resize(photos.any(rng, small=True), (w, h)), cv2.COLOR_BGR2GRAY).astype(np.float32)
+        through = cv2.GaussianBlur(through, (0, 0), max(1.0, min(w, h) / 60))
+        pic = pic - ((255 - through) / 255 * rng.uniform(4, 18))[..., None]
+    if rng.random() < 0.45:  # the paper maker's name, printed in rows across the back
+        word = rng.choice(["KODAK PAPER", "FUJICOLOR", "AGFA", "Konica", "This paper manufactured by Kodak", "NOBLE PAPER"])
+        ink = np.float32([rng.uniform(120, 200)] * 3) - np.float32([0, rng.uniform(0, 30), rng.uniform(0, 40)])
+        layer = np.zeros((h, w), np.uint8)
+        fs = max(0.25, h / rng.uniform(350, 700))
+        step = int(max(10, fs * 60))
+        for yy in range(-h, 2 * h, step):
+            cv2.putText(layer, ("  " + word) * 8, (int(-rng.uniform(0, 80)), yy), cv2.FONT_HERSHEY_SIMPLEX, fs, 255, 1, cv2.LINE_AA)
+        if rng.random() < 0.6:
+            m = cv2.getRotationMatrix2D((w / 2, h / 2), rng.choice([-30, -20, 20, 30]), 1.0)
+            layer = cv2.warpAffine(layer, m, (w, h))
+        a = (layer.astype(np.float32) / 255 * rng.uniform(0.3, 0.8))[..., None]
+        pic = pic * (1 - a) + ink * a
+    ink = rng.choice([(150, 60, 30), (40, 40, 40), (110, 110, 110), (60, 40, 150)])  # blue, black, pencil, red-ish
+    lines = rng.randint(0, 5)
+    for k in range(lines):  # handwriting: wobbly strokes along a few lines
+        y = h * (0.15 + 0.15 * k + rng.uniform(-0.03, 0.03))
+        x = w * rng.uniform(0.08, 0.2)
+        end = w * rng.uniform(0.35, 0.9)
+        pts = []
+        while x < end:
+            pts.append((x, y + rng.uniform(-1, 1) * h * 0.02))
+            x += rng.uniform(2, 7) * max(1, w / 300)
+        if len(pts) > 1:
+            cv2.polylines(pic, [np.round(np.float32(pts) * 8).astype(np.int32)], False, ink, max(1, int(min(w, h) / 200)), cv2.LINE_AA, shift=3)
+    if rng.random() < 0.25:  # a studio or lab stamp
+        cx, cy = w * rng.uniform(0.3, 0.7), h * rng.uniform(0.4, 0.8)
+        sw_, sh_ = w * rng.uniform(0.2, 0.35), h * rng.uniform(0.1, 0.2)
+        col = (rng.uniform(80, 160), rng.uniform(40, 90), rng.uniform(90, 160))
+        cv2.rectangle(pic, (int(cx - sw_ / 2), int(cy - sh_ / 2)), (int(cx + sw_ / 2), int(cy + sh_ / 2)), col, max(1, int(min(w, h) / 150)))
+    return np.clip(pic, 0, 255)
+
+
 def graphic(rng, w, h):
     """A flat, cartoon-like picture: a gradient with discs and blocks."""
     top, bottom = np.float32(rand_colour(rng, "bg")), np.float32(rand_colour(rng, "bg"))
@@ -230,7 +279,7 @@ def shapes_inside(rng, photos, pic):
 def layout_slots(rng, pw, ph):
     """Pocket rectangles on a page pw x ph."""
     kind = rng.random()
-    if kind < 0.15:  # one or two big prints, loose on a table or a plain page
+    if kind < LOOSE:  # one or two big prints, loose on a table or a plain page
         n = 1 if rng.random() < 0.7 else 2
         slots = []
         for _ in range(20):
@@ -243,8 +292,8 @@ def layout_slots(rng, pw, ph):
             q = rotate(rect(rng.uniform(0, pw - w), rng.uniform(0, ph - h), w, h), rng.uniform(-10, 10))
             if all(not overlaps(q, s_) for s_ in slots):
                 slots.append(q)
-        return "free", slots
-    if kind < 0.8:  # sleeve grid
+        return "loose", slots
+    if kind < LOOSE + 0.65:  # sleeve grid
         rows, cols = rng.choice([(3, 1), (2, 1), (1, 1), (2, 2), (3, 2), (2, 3), (1, 2), (4, 2), (3, 3)])
         mx, my = pw * rng.uniform(0.03, 0.1), ph * rng.uniform(0.03, 0.08)
         gx, gy = pw * rng.uniform(0.015, 0.06), ph * rng.uniform(0.012, 0.05)
@@ -305,7 +354,8 @@ def draw_page(rng, photos, canvas, page_quad, prints_out):
             w = np.linalg.norm(q[1] - q[0]); h = np.linalg.norm(q[3] - q[0])
         if rng.random() < 0.06:
             continue  # an empty pocket
-        pr = make_print(rng, photos, max(8, int(w)), max(8, int(h)))
+        # Loose prints are often turned over, to read or scan what's written on the back.
+        pr = make_print(rng, photos, max(8, int(w)), max(8, int(h)), back=rng.random() < (BACKS if kind == "loose" else 0.02))
         if rng.random() < 0.5:  # a soft shadow under the print
             sh_q = q + np.float32([rng.uniform(-3, 3), rng.uniform(0, 4)])
             ph_, pw_ = page.shape[:2]
@@ -319,7 +369,7 @@ def draw_page(rng, photos, canvas, page_quad, prints_out):
                 a = rng.uniform(0.2, 0.6)
                 roi[:] = roi * (1 - a) + shadow * a
         fill_quad(page, q, pr)
-        if not sleeve and kind == "free" and rng.random() < 0.3:  # photo corners
+        if not sleeve and kind == "free" and rng.random() < 0.3:  # photo corners (not on loose prints)
             for c in q:
                 tri = np.float32([c, c + (q.mean(0) - c) * np.float32([0.12, 0]), c + (q.mean(0) - c) * np.float32([0, 0.12])])
                 cv2.fillConvexPoly(page, np.round(tri * 8).astype(np.int32), (20, 20, 20), cv2.LINE_AA, shift=3)
