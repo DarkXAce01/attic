@@ -210,7 +210,12 @@ private fun statusLine(s: ScanUiState): String {
             SweepHint.KeepInView -> "Keep every photo in view."
         }
         s.justSavedSoft > 0 -> if (s.justSavedSoft == 1) "1 photo came out soft. Hold steadier and scan again." else "${s.justSavedSoft} photos came out soft. Hold steadier and scan again."
-        s.justSaved > 0 -> if (s.justSaved == 1) "Saved 1 photo to page ${s.albumPages}" else "Saved ${s.justSaved} photos to page ${s.albumPages}"
+        s.justSaved > 0 -> (if (s.justSaved == 1) "Saved 1 photo to page ${s.albumPages}." else "Saved ${s.justSaved} photos to page ${s.albumPages}.") +
+            when (s.justSavedTwins) {
+                0 -> ""
+                1 -> if (s.justSaved == 1) " It looks like one you already have." else " 1 looks like one you already have."
+                else -> " ${s.justSavedTwins} look like ones you already have."
+            }
         s.waitingForNext -> "Done. Turn the page or move to the next photo."
         n == 0 -> if (s.glareFree) "Point at a page. You'll take it from a few angles." else "Point at a photo or an album page."
         s.glareSeen && !s.glareFree && s.readyProgress == 0f -> "Found $photos. There's glare; try Glare-free."

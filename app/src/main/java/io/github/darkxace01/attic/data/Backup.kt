@@ -192,6 +192,7 @@ class Backup(private val context: Context, private val library: Library) {
                 }
             }
             library.renderMissing()
+            library.fillMissingHashes()
             restored
         }.onSuccess { n ->
             _progress.value = Progress.Done(

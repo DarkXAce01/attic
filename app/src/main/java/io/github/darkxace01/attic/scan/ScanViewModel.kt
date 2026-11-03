@@ -32,6 +32,7 @@ import io.github.darkxace01.attic.printNet
 import io.github.darkxace01.attic.vision.Deglare
 import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.FrameTransform
+import io.github.darkxace01.attic.vision.PrintHash
 import io.github.darkxace01.attic.vision.PrintNet
 import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.QuadTracker
@@ -71,6 +72,8 @@ data class ScanUiState(
     val justSaved: Int = 0,
     /** How many of the last capture's prints look soft enough to be worth retaking. */
     val justSavedSoft: Int = 0,
+    /** How many of the last capture's prints look like ones already in the library. */
+    val justSavedTwins: Int = 0,
     /** The album scans go into, and how far into it we are. */
     val albumId: Long = 0,
     val albumTitle: String = "",
@@ -112,6 +115,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             library.importLooseScans()
             scanningAlbumId.value = library.scanningAlbum().id
             library.renderMissing()
+            library.fillMissingHashes()
         }
         viewModelScope.launch {
             combine(scanningAlbumId.filterNotNull(), library.albums()) { id, list -> list.firstOrNull { it.id == id } }
@@ -156,6 +160,12 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     private var sweepStartedAt = 0L
     private var sweepTaking = false
     private val glareCache = HashMap<Long, Boolean>()
+
+    // Hands-free: what each print in view shows (see PrintHash), and what the last capture showed. The
+    // camera re-arms when the page's content changes, so turning to a page with the same layout counts,
+    // and a hand passing over the page doesn't.
+    private val hashCache = HashMap<Long, Long>()
+    private var capturedHashes: List<Long> = emptyList()
 
     fun bind(provider: ProcessCameraProvider, owner: LifecycleOwner, previewView: PreviewView) {
         val ratio43 = AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
@@ -239,11 +249,15 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         // while it's moving, so the strip doesn't churn.
         previewCache.keys.retainAll(tracks.map { it.id }.toSet())
         glareCache.keys.retainAll(tracks.map { it.id }.toSet())
+        hashCache.keys.retainAll(tracks.map { it.id }.toSet())
         val previews = tracks.map { t ->
             val cached = previewCache[t.id]
             val stale = cached == null || cached.second.locked != t.locked || (!t.locked && now - cached.first > 700)
             if (stale) {
-                val p = LivePreview(t.id, previewOf(frame, t.shown.scale(w, h)) { flat -> glareCache[t.id] = Deglare.glareShare(flat) > GLARE_SHARE }, t.locked)
+                val p = LivePreview(t.id, previewOf(frame, t.shown.scale(w, h)) { flat ->
+                    glareCache[t.id] = Deglare.glareShare(flat) > GLARE_SHARE
+                    hashCache[t.id] = PrintHash.of(flat)
+                }, t.locked)
                 previewCache[t.id] = now to p
                 p
             } else {
@@ -258,8 +272,14 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         } else {
             emptySince = 0L
         }
-        if (!armed && ((emptySince != 0L && now - emptySince > 600) || (tracks.isNotEmpty() && tracks.all { it.bornAt > lastCaptureAt }))) {
-            armed = true
+        if (!armed) {
+            if (capturedHashes.isNotEmpty()) {
+                // Judged on a still page, so a page mid-turn or a hand in the way never counts.
+                val nowHashes = tracks.mapNotNull { hashCache[it.id] }
+                if (tracks.isNotEmpty() && tracks.all { it.locked } && nowHashes.size == tracks.size && PrintHash.isNewPage(nowHashes, capturedHashes)) armed = true
+            } else if ((emptySince != 0L && now - emptySince > 600) || (tracks.isNotEmpty() && tracks.all { it.bornAt > lastCaptureAt })) {
+                armed = true
+            }
         }
 
         val allLocked = tracks.isNotEmpty() && tracks.all { it.locked }
@@ -361,6 +381,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         val visible = tracker.visible.sortedWith(compareBy({ (it.shown.center.y * 8).toInt() }, { it.shown.center.x }))
         val quads = visible.map { it.shown }
         armed = false
+        capturedHashes = visible.mapNotNull { hashCache[it.id] }
         if (_state.value.glareFree && quads.isNotEmpty()) {
             sweepTaking = true
             takeShot(
@@ -471,7 +492,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         store(prints) { library.saveCapture(jpeg, frame, it) }
     })
 
-    private class Stored(val saved: List<io.github.darkxace01.attic.data.PrintEntity>, val thumbs: List<ImageBitmap>, val soft: Int)
+    private class Stored(val saved: List<io.github.darkxace01.attic.data.PrintEntity>, val thumbs: List<ImageBitmap>, val soft: Int, val twins: Int)
 
     /** Saves [prints] with [save], puts them in the gallery and releases them. */
     private suspend fun store(prints: List<Library.NewPrint>, save: suspend (List<Library.NewPrint>) -> List<io.github.darkxace01.attic.data.PrintEntity>): Stored {
@@ -481,7 +502,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         prints.forEach { it.image.release() }
         // New prints go straight into the gallery too, so they're safe the moment they're scanned.
         if (library.settings.now.saveToGallery) saved.forEach { library.export(it.id) }
-        return Stored(saved, thumbs, soft)
+        return Stored(saved, thumbs, soft, library.countWithTwins(saved))
     }
 
     private suspend fun report(result: Result<Stored>) {
@@ -491,14 +512,15 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
                     saving = false,
                     justSaved = r.saved.size,
                     justSavedSoft = r.soft,
+                    justSavedTwins = r.twins,
                     lastSaved = r.thumbs,
                     error = if (r.saved.isEmpty()) "No photos found in that shot" else null,
                     lastAlbumId = r.saved.firstOrNull()?.albumId ?: it.lastAlbumId,
                     lastPage = r.saved.firstOrNull()?.page ?: it.lastPage,
                 )
             }
-            delay(if (r.soft > 0) 4000 else 2500)
-            _state.update { if (it.lastSaved === r.thumbs) it.copy(justSaved = 0, justSavedSoft = 0, lastSaved = emptyList()) else it }
+            delay(if (r.soft > 0 || r.twins > 0) 4000 else 2500)
+            _state.update { if (it.lastSaved === r.thumbs) it.copy(justSaved = 0, justSavedSoft = 0, justSavedTwins = 0, lastSaved = emptyList()) else it }
         }.onFailure { e ->
             armed = true
             _state.update { it.copy(saving = false, error = "Couldn't save: ${e.message}") }

@@ -9,6 +9,7 @@ import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
 import io.github.darkxace01.attic.vision.Deglare
 import io.github.darkxace01.attic.vision.Enhance
+import io.github.darkxace01.attic.vision.PrintHash
 import io.github.darkxace01.attic.vision.FrameTransform
 import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.Rectify
@@ -168,7 +169,8 @@ class Library(private val context: Context) {
                 quad = p.quad.encode(), createdAt = now, enhance = settings.now.newScanLook,
             )
             renderEnhanced(e, p.image)
-            e.copy(id = dao.insertPrint(e))
+            val withHash = e.copy(hashes = PrintHash.allTurns(p.image).joinToString(","))
+            withHash.copy(id = dao.insertPrint(withHash))
         }
     }
 
@@ -260,6 +262,40 @@ class Library(private val context: Context) {
         if (flat == null) src.release()
     }
 
+    // ---- prints scanned twice ----
+
+    /**
+     * Other prints that show the same picture as [p], in any orientation: most likely the same print
+     * scanned twice. Prints from the same capture never count (two copies on one page are deliberate).
+     */
+    suspend fun twinsOf(p: PrintEntity): List<PrintEntity> = io { twinsOfNow(p, dao.printsWithHashes()) }
+
+    private fun twinsOfNow(p: PrintEntity, all: List<PrintEntity>): List<PrintEntity> {
+        val mine = p.hashList
+        if (mine.isEmpty()) return emptyList()
+        return all.filter { o ->
+            o.id != p.id && o.scanDir != p.scanDir && o.hashList.firstOrNull()?.let { h -> mine.any { PrintHash.same(it, h) } } == true
+        }
+    }
+
+    /** Where [p] is, for telling people: "page 3 of Nani's album". */
+    suspend fun whereIs(p: PrintEntity): String = io { "page ${p.page} of ${dao.album(p.albumId)?.title ?: "an album"}" }
+
+    /** Of [saved], how many have a twin elsewhere in the library. */
+    suspend fun countWithTwins(saved: List<PrintEntity>): Int = io {
+        val all = dao.printsWithHashes()
+        saved.count { twinsOfNow(it, all).isNotEmpty() }
+    }
+
+    /** Fingerprints for prints saved before they existed. */
+    suspend fun fillMissingHashes() = io {
+        for (p in dao.printsWithoutHashes()) {
+            val img = readPng(p.file(root)) ?: continue
+            dao.setHashes(p.id, PrintHash.allTurns(img).joinToString(","))
+            img.release()
+        }
+    }
+
     /** Fills in enhanced files that are missing (prints from before enhancement, or an interrupted save). */
     suspend fun renderMissing() = io {
         dao.allPrints().filter { it.enhance != Enhance.OFF && !enhancedFile(it, it.enhance).exists() && it.file(root).exists() }
@@ -301,9 +337,10 @@ class Library(private val context: Context) {
             sharpness = Rectify.sharpness(flat), version = p.version + 1,
         )
         renderEnhanced(updated, flat)
+        val rehashed = updated.copy(hashes = PrintHash.allTurns(flat).joinToString(","))
         flat.release()
         original.release()
-        dao.updatePrint(updated)
+        dao.updatePrint(rehashed)
     }
 
     /** Turns the print a quarter turn clockwise by rotating its corners, so it's remade from the original. */

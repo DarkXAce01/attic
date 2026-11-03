@@ -60,6 +60,9 @@ class RealPhotos {
         var total = 0
         var found = 0
         var extra = 0
+        // Fingerprints (PrintHash): each print from the still frame, and again from a shaken, noisy frame.
+        val allHashes = mutableListOf<Long>()
+        var hashSame = 0
         for ((name, label) in labels(labelFile).toSortedMap()) {
             val bgr = Imgcodecs.imread(File("../imgs/$name.jpg").path)
             if (bgr.empty()) continue
@@ -89,6 +92,27 @@ class RealPhotos {
             total += truth.size
             found += sc.substringBefore("/").toInt()
             extra += sc.substringAfter("+").toInt()
+
+            run {
+                val flats = truth.map { t -> io.github.darkxace01.attic.vision.Rectify.warp(live, t, maxSide = 320) }
+                val m = Imgproc.getRotationMatrix2D(org.opencv.core.Point(live.cols() / 2.0, live.rows() / 2.0), 1.5, 1.0)
+                m.put(0, 2, m.get(0, 2)[0] + 9.0)
+                val shaken = Mat().also { Imgproc.warpAffine(live, it, m, live.size(), Imgproc.INTER_LINEAR, Core.BORDER_REFLECT) }
+                Core.multiply(shaken, org.opencv.core.Scalar(0.85, 0.85, 0.85, 1.0), shaken)
+                val m0 = m.get(0, 0)[0]; val m1 = m.get(0, 1)[0]; val m2 = m.get(0, 2)[0]
+                val m3 = m.get(1, 0)[0]; val m4 = m.get(1, 1)[0]; val m5 = m.get(1, 2)[0]
+                truth.forEachIndexed { k, t ->
+                    // Where the preview outline would be: the true one moved with the frame, off by a pixel or two.
+                    val moved = t.map { p -> Pt((m0 * p.x + m1 * p.y + m2).toFloat() + 2f, (m3 * p.x + m4 * p.y + m5).toFloat() - 1f) }
+                    val again = io.github.darkxace01.attic.vision.Rectify.warp(shaken, moved, maxSide = 320)
+                    val a = io.github.darkxace01.attic.vision.PrintHash.of(flats[k])
+                    hashSame = maxOf(hashSame, io.github.darkxace01.attic.vision.PrintHash.distance(a, io.github.darkxace01.attic.vision.PrintHash.of(again)))
+                    allHashes += a
+                    again.release()
+                }
+                flats.forEach { it.release() }
+                listOf(shaken, m).forEach { it.release() }
+            }
 
             // A held phone: slow drift and a little shake, at about 8 frames a second through the tracker.
             val tracker = QuadTracker()
@@ -138,5 +162,8 @@ class RealPhotos {
             listOf(bgr, rgba, live).forEach { it.release() }
         }
         println("total: $found/$total found, $extra extra")
+        var hashOther = 64
+        for (a in allHashes.indices) for (b in allHashes.indices) if (a < b) hashOther = minOf(hashOther, io.github.darkxace01.attic.vision.PrintHash.distance(allHashes[a], allHashes[b]))
+        println("fingerprints: same print, other frame: at most $hashSame bits apart; different prints: at least $hashOther")
     }
 }

@@ -69,11 +69,14 @@ data class PrintEntity(
     val exportedVersion: Int = 0,
     /** The [version] last written to the backup folder; 0 if never. */
     @ColumnInfo(defaultValue = "0") val backedUpVersion: Int = 0,
+    /** [io.github.darkxace01.attic.vision.PrintHash] of the crop turned 0, 90, 180 and 270 degrees, comma-separated. */
+    val hashes: String? = null,
 ) {
     val date: PhotoDate? get() = photoDate(dateFrom, dateTo, dateLabel)
     val cropQuad: Quad get() = parseQuad(quad)
     val inGallery: Boolean get() = galleryUri != null && exportedVersion == version
     val backedUp: Boolean get() = backedUpVersion == version
+    val hashList: List<Long> get() = hashes?.split(",")?.mapNotNull { it.toLongOrNull() }.orEmpty()
     fun file(root: File) = File(File(root, scanDir), fileName)
 }
 
@@ -141,6 +144,9 @@ interface AtticDao {
     )
     fun counts(): Flow<LibraryCounts>
     @Query("UPDATE print SET backedUpVersion = :version WHERE id = :id") fun markBackedUp(id: Long, version: Int)
+    @Query("UPDATE print SET hashes = :hashes WHERE id = :id") fun setHashes(id: Long, hashes: String)
+    @Query("SELECT * FROM print WHERE hashes IS NOT NULL") fun printsWithHashes(): List<PrintEntity>
+    @Query("SELECT * FROM print WHERE hashes IS NULL") fun printsWithoutHashes(): List<PrintEntity>
     @Query("SELECT * FROM album WHERE title = :title AND createdAt = :createdAt") fun albumMatching(title: String, createdAt: Long): AlbumEntity?
     @Query("SELECT * FROM print WHERE scanDir = :scanDir AND fileName = :fileName") fun printAt(scanDir: String, fileName: String): PrintEntity?
 
@@ -167,7 +173,7 @@ interface AtticDao {
 
 @Database(
     entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -175,7 +181,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -195,6 +201,13 @@ abstract class AtticDatabase : RoomDatabase() {
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `print` ADD COLUMN `backedUpVersion` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** Fingerprints for finding prints scanned twice. Filled in for older prints on the next start. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `print` ADD COLUMN `hashes` TEXT")
             }
         }
 

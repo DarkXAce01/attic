@@ -104,7 +104,7 @@ fun AtticApp() {
                     )
                 }
                 is Route.Print -> Box(Modifier.statusBarsPadding()) {
-                    PrintScreen(top.showing, onShowing = { top.showing = it }, onBack = ::back, onFixCrop = { go(Route.Crop(it)) })
+                    PrintScreen(top.showing, onShowing = { top.showing = it }, onBack = ::back, onFixCrop = { go(Route.Crop(it)) }, onOpenPrint = { go(Route.Print(it)) })
                 }
                 is Route.Crop -> Box(Modifier.statusBarsPadding()) { CropScreen(top.id, onDone = ::back) }
             }

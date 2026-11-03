@@ -18,6 +18,11 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - Full-resolution capture: the network takes a second, close look at each print in the full photo so
   no sliver of album page is left at the edges, its sides are fitted to the real edges (sub-pixel), then
   it's flattened. Soft (blurry) shots are flagged right away
+- Hands-free: put the phone on a stand over the album and just turn pages. After a capture Attic waits
+  until the page in view shows different photos (not just a different layout), then takes it. A hand
+  passing over the page doesn't count
+- Prints scanned twice are caught: right after the capture ("1 looks like one you already have") and on
+  the photo, with a way to jump to the other copy. Works whichever way up the print was scanned
 - Glare-free mode for glossy prints and plastic sleeves: take the page once, then move the phone a
   little left and a little right when asked. Attic takes a shot each time you hold still, lines the
   shots up, and wherever one has a reflection it uses another shot where that spot is clear. The rest

@@ -39,6 +39,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -81,7 +82,7 @@ private enum class Editing { None, Date, People, Place, Caption }
  * [onShowing] is told which photo is on screen.
  */
 @Composable
-fun PrintScreen(startId: Long, onShowing: (Long) -> Unit, onBack: () -> Unit, onFixCrop: (Long) -> Unit) {
+fun PrintScreen(startId: Long, onShowing: (Long) -> Unit, onBack: () -> Unit, onFixCrop: (Long) -> Unit, onOpenPrint: (Long) -> Unit) {
     val library = LocalContext.current.library
     val start by remember(startId) { library.print(startId) }.collectAsStateWithLifecycle(null)
     val albumId = start?.albumId ?: return
@@ -108,6 +109,7 @@ fun PrintScreen(startId: Long, onShowing: (Long) -> Unit, onBack: () -> Unit, on
             onZoomed = { if (pager.currentPage == i) zoomed = it },
             onBack = onBack,
             onFixCrop = onFixCrop,
+            onOpenPrint = onOpenPrint,
             // Deleting a photo shows the next one, or goes back once the album is empty.
             onDeleted = { if (ids.size <= 1) onBack() },
         )
@@ -121,6 +123,7 @@ private fun PrintPage(
     onZoomed: (Boolean) -> Unit,
     onBack: () -> Unit,
     onFixCrop: (Long) -> Unit,
+    onOpenPrint: (Long) -> Unit,
     onDeleted: () -> Unit,
 ) {
     val library = LocalContext.current.library
@@ -185,6 +188,22 @@ private fun PrintPage(
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (p.sharpness < SOFT_SHARPNESS) Palette.Warning else Palette.Muted,
             )
+            // Most likely the same print scanned twice.
+            val twin by produceState<Pair<Long, String>?>(null, p.id, p.version) {
+                value = library.twinsOf(p).firstOrNull()?.let { it.id to library.whereIs(it) }
+            }
+            twin?.let { (id, where) ->
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Looks like the photo on $where.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Palette.Ink,
+                        modifier = Modifier.weight(1f),
+                    )
+                    QuietButton("Show", onClick = { onOpenPrint(id) })
+                }
+            }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 QuietButton("Fix crop", onClick = { onFixCrop(printId) })
