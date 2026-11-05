@@ -15,6 +15,8 @@ data class Prefs(
     val glareFree: Boolean = false,
     /** Each shot waits on a check of its outlines before it's saved, like a document scanner. */
     val checkEachShot: Boolean = true,
+    /** Dust, specks and hairs painted out of the Natural and Strong looks (Original stays exactly as scanned). */
+    val cleanDust: Boolean = true,
 )
 
 class Settings(context: Context) {
@@ -29,6 +31,7 @@ class Settings(context: Context) {
         autoCapture = sp.getBoolean("autoCapture", true),
         glareFree = sp.getBoolean("glareFree", false),
         checkEachShot = sp.getBoolean("checkEachShot", true),
+        cleanDust = sp.getBoolean("cleanDust", true),
     )
 
     fun update(change: (Prefs) -> Prefs) {
@@ -39,6 +42,7 @@ class Settings(context: Context) {
             .putBoolean("autoCapture", p.autoCapture)
             .putBoolean("glareFree", p.glareFree)
             .putBoolean("checkEachShot", p.checkEachShot)
+            .putBoolean("cleanDust", p.cleanDust)
             .apply()
         _prefs.value = p
     }

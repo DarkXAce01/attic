@@ -141,6 +141,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             library.fillMissingHashes()
             library.readMissingStamps()
             library.findMissingFaces()
+            library.upgradeLooks()
         }
         viewModelScope.launch {
             combine(scanningAlbumId.filterNotNull(), library.albums()) { id, list -> list.firstOrNull { it.id == id } }

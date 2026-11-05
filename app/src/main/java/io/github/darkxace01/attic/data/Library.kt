@@ -10,6 +10,7 @@ import androidx.exifinterface.media.ExifInterface
 import io.github.darkxace01.attic.vision.Deglare
 import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.Faces
+import io.github.darkxace01.attic.vision.Dust
 import io.github.darkxace01.attic.vision.FaceGroups
 import io.github.darkxace01.attic.vision.DateStamp
 import io.github.darkxace01.attic.vision.PrintHash
@@ -327,10 +328,41 @@ class Library(private val context: Context) {
     private fun renderEnhanced(p: PrintEntity, flat: Mat?) {
         if (p.enhance == Enhance.OFF) return
         val src = flat ?: readPng(p.file(root)) ?: return
-        val out = Enhance.apply(src, p.enhance)
+        val out = if (settings.now.cleanDust) {
+            // Faces stay exactly as they are: the light in someone's eye is a speck too.
+            val faceBoxes = synchronized(faceLock) { runCatching { faces.find(src, Faces.RGBA) }.getOrElse { emptyList() } }
+                .map { f ->
+                    val gw = (f.right - f.left) * 0.25f; val gh = (f.bottom - f.top) * 0.25f
+                    floatArrayOf(f.left - gw, f.top - gh, f.right + gw, f.bottom + gh)
+                }
+            val clean = Dust.clean(src, faceBoxes)
+            Enhance.apply(clean.image, p.enhance).also { clean.image.release() }
+        } else {
+            Enhance.apply(src, p.enhance)
+        }
         writePng(out, enhancedFile(p, p.enhance))
         out.release()
         if (flat == null) src.release()
+    }
+
+    /**
+     * Redoes every print's look, after dust cleaning was switched on or off. Each one changes, so its
+     * gallery copy and backup are redone too.
+     */
+    suspend fun rerenderAll() = io {
+        for (p in dao.allPrints()) {
+            if (p.enhance == Enhance.OFF) continue
+            renderEnhanced(p, null)
+            dao.updatePrint(p.copy(version = p.version + 1))
+            if (settings.now.saveToGallery || p.galleryUri != null) exportNow(dao.print(p.id) ?: continue)
+        }
+    }
+
+    /** Once, after an update that changes how looks are made (dust cleaning): redoes the prints from before. */
+    suspend fun upgradeLooks() {
+        if (prefs.getInt("looksVersion", 1) >= LOOKS_VERSION) return
+        rerenderAll()
+        prefs.edit().putInt("looksVersion", LOOKS_VERSION).apply()
     }
 
     // ---- prints scanned twice ----
@@ -864,3 +896,6 @@ class Library(private val context: Context) {
 
 /** The longest side of a page's backdrop: sharp on a phone, small on disk. */
 private const val PAGE_SIDE = 1800
+
+/** Bumped when the way looks are made changes, so prints from before are redone once. */
+private const val LOOKS_VERSION = 2

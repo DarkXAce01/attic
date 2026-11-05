@@ -28,9 +28,12 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   shots up, and wherever one has a reflection it uses another shot where that spot is clear. The rest
   of the print comes from the first shot unchanged, so nothing gets soft. Fixing the crop later redoes
   the merge. In normal mode Attic says when it sees glare
-- Check mode, like a document scanner: each shot shows the outlines Attic found on the photo, and you
-  can drag a corner or a whole side (with a magnifier under your finger), snap one to the edges, add
-  one it missed or remove one, then save or retake. On the scan screen as Check, and in Settings
+- Check, like a document scanner (on by default): each shot shows the outlines Attic found on the photo,
+  and you can drag a corner or a whole side (with a magnifier under your finger), snap one to the
+  edges, add one it missed or remove one, then save or retake. Glare-free pages are checked on the
+  first shot and the changes carried over to the others. Switch it on the scan screen or in Settings
+- The camera fills the screen with the album, the modes and what's happening floating over it; the
+  album so far sits bottom left as a little pile of its last prints
 - Scans go into the album you pick at the top of the scan screen, one capture per page
 - Date stamps: the orange date many film cameras printed in the corner ('87 7 14) is read from every
   print, whichever way up it was scanned, and fills in the date when the photo has none. A stamp that
@@ -45,12 +48,24 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   its exact spot and tilt, clean and flat. Pages turn over on their spine. Tap a print to open it
 - Pencil red (Grease Pencil Studio's colour) is the one accent
 
+**People**
+- Faces are found on every photo on the phone (YuNet and SFace from the OpenCV model zoo), and shown
+  under Who. Tap one to say who it is; once someone is named Attic suggests them on other photos
+- People tab: the same unnamed face across several photos comes up as one group to name at once
+  (tap any that don't belong), then everyone named, most photographed first
+- A person's page: every photo of them, oldest first, with how old they were in each once you add
+  when they were born ("1952" is enough)
+
 **Remember**
 - Stories: record a spoken memory on any photo; play it back from the photo. Long-press to delete
 - Story sessions: "Tell its stories" on an album shows its photos one at a time, big, while the phone
   listens. Whatever is said while a photo is up becomes its story; photos nobody talked about get none.
   Made for sitting with a grandparent
 - Stories are in backups (and next to each photo in Photos/ as an m4a anyone can play)
+
+**Share**
+- Share a photo, or a whole album, through the share sheet: copies carry their date, people, place and
+  caption. Attic sends nothing itself
 
 **Keep**
 - Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their
@@ -73,6 +88,9 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - Every print also goes into `Pictures/Attic/<album>` as a high-quality JPEG with its real date,
   people, place and caption written into the EXIF, so Google Photos and Immich sort it correctly.
   Edits update the gallery copy in place
+- Dust, specks, hairs and small scratches are painted out of the Natural and Strong looks: only small or
+  thin things that stand out well above how busy the picture is around them, never on a face. Original
+  stays exactly as scanned. A switch in Settings
 - Originals are never modified; all edits are redone from them
 
 ## Build and run on your phone

@@ -89,6 +89,15 @@ fun SettingsScreen(onBack: () -> Unit) {
                 prefs.checkEachShot,
             ) { on -> library.settings.update { it.copy(checkEachShot = on) } }
 
+            Toggle(
+                "Clean up dust and hairs",
+                "Specks, hairs and small scratches are painted out of the Natural and Strong looks. Faces are left alone, and Original stays exactly as scanned. Changing this redoes every photo.",
+                prefs.cleanDust,
+            ) { on ->
+                library.settings.update { it.copy(cleanDust = on) }
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch { library.rerenderAll() }
+            }
+
             Heading("Backup")
             BackupSection(backup, library.counts())
 
