@@ -187,6 +187,7 @@ private fun PrintPage(
             ) { editing = Editing.Date }
             StampLine(p) { d -> work { library.setDate(printId, d) } }
             DetailRow("Who", people.joinToString(", ").ifEmpty { null }, "Add people") { editing = Editing.People }
+            io.github.darkxace01.attic.people.FacesRow(p)
             DetailRow("Where", p.place, "Add a place") { editing = Editing.Place }
             DetailRow("Caption", p.caption, "Add a caption") { editing = Editing.Caption }
             StoriesSection(p)

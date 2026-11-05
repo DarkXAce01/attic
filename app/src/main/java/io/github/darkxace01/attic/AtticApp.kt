@@ -40,6 +40,8 @@ import io.github.darkxace01.attic.print.PrintScreen
 import io.github.darkxace01.attic.scan.ScanScreen
 import io.github.darkxace01.attic.settings.SettingsScreen
 import io.github.darkxace01.attic.stories.SessionScreen
+import io.github.darkxace01.attic.people.PeopleScreen
+import io.github.darkxace01.attic.people.PersonScreen
 import io.github.darkxace01.attic.timeline.TimelineScreen
 import io.github.darkxace01.attic.scan.ScanViewModel
 import io.github.darkxace01.attic.ui.AlbumPickerSheet
@@ -57,6 +59,8 @@ private sealed interface Route {
     }
     data class Crop(val id: Long) : Route
     data class Session(val albumId: Long) : Route
+    data object People : Route
+    data class Person(val id: Long) : Route
     data object Settings : Route
 }
 
@@ -113,9 +117,11 @@ fun AtticApp() {
                 }
                 is Route.Crop -> Box(Modifier.statusBarsPadding()) { CropScreen(top.id, onDone = ::back) }
                 is Route.Session -> Box(Modifier.statusBarsPadding()) { SessionScreen(top.albumId, onDone = ::back) }
+                Route.People -> Box(Modifier.statusBarsPadding()) { PeopleScreen(onOpenPerson = { go(Route.Person(it)) }) }
+                is Route.Person -> Box(Modifier.statusBarsPadding()) { PersonScreen(top.id, onBack = ::back, onOpenPrint = { go(Route.Print(it)) }) }
             }
         }
-        if (top == Route.Scan || top == Route.Albums || top == Route.Timeline) {
+        if (top == Route.Scan || top == Route.Albums || top == Route.People || top == Route.Timeline) {
             TabBar(top, onTab = ::tab)
         } else {
             Spacer(Modifier.navigationBarsPadding())
@@ -145,7 +151,7 @@ private fun TabBar(current: Route, onTab: (Route) -> Unit) {
             .height(56.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        for ((label, route) in listOf("Scan" to Route.Scan, "Albums" to Route.Albums, "Timeline" to Route.Timeline)) {
+        for ((label, route) in listOf("Scan" to Route.Scan, "Albums" to Route.Albums, "People" to Route.People, "Timeline" to Route.Timeline)) {
             TabItem(label, current == route, { onTab(route) }, Modifier.weight(1f))
         }
     }

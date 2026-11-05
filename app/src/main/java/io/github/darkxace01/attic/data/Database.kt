@@ -75,6 +75,8 @@ data class PrintEntity(
     val backFile: String? = null,
     /** What the camera's date stamp on the print reads ('87 7 14): "" if it has none, null if not read yet. */
     val stamp: String? = null,
+    /** The [quad] the print's faces were found with; null or different: not looked for yet (or recropped since). */
+    val facesQuad: String? = null,
 ) {
     val date: PhotoDate? get() = photoDate(dateFrom, dateTo, dateLabel)
     /** The dates the stamp can mean: one, two when it reads both ways, none without a stamp. */
@@ -87,7 +89,43 @@ data class PrintEntity(
 }
 
 @Entity(tableName = "person", indices = [Index(value = ["name"], unique = true)])
-data class PersonEntity(@PrimaryKey(autoGenerate = true) val id: Long = 0, val name: String)
+data class PersonEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    /** When they were born, as loosely as it's known ("1952", "spring 1952"): photos then show their age. */
+    val bornFrom: Long? = null,
+    val bornTo: Long? = null,
+    val bornLabel: String? = null,
+) {
+    val born: PhotoDate? get() = photoDate(bornFrom, bornTo, bornLabel)
+}
+
+/**
+ * A face found on a print: its box (0..1 of the print as shown), its fingerprint ([io.github.darkxace01.attic.vision.FaceGroups])
+ * and who it is, once someone says. [ignored]: not a face, or nobody to name.
+ */
+@Entity(tableName = "face", indices = [Index("printId"), Index("personId")])
+data class FaceEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val printId: Long,
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float,
+    val score: Float,
+    val vec: ByteArray,
+    val personId: Long? = null,
+    @ColumnInfo(defaultValue = "0") val ignored: Boolean = false,
+) {
+    override fun equals(other: Any?) = other is FaceEntity && other.id == id && other.personId == personId && other.ignored == ignored &&
+        other.printId == printId && other.left == left && other.top == top
+    override fun hashCode() = id.hashCode()
+}
+
+/** A person with how many photos they're in and a face to show for them. */
+data class PersonSummary(val id: Long, val name: String, val count: Int, val faceId: Long?, val bornFrom: Long?, val bornTo: Long?, val bornLabel: String?) {
+    val born: PhotoDate? get() = photoDate(bornFrom, bornTo, bornLabel)
+}
 
 /** A spoken memory about a print: an audio file in the print's capture folder. */
 @Entity(tableName = "story", indices = [Index("printId")])
@@ -185,6 +223,41 @@ interface AtticDao {
     @Query("SELECT p.name FROM person p LEFT JOIN print_person pp ON pp.personId = p.id GROUP BY p.id ORDER BY COUNT(pp.printId) DESC, p.name")
     fun allPeople(): Flow<List<String>>
 
+    @Insert fun insertFace(face: FaceEntity): Long
+    @Update fun updateFace(face: FaceEntity)
+    @Query("DELETE FROM face WHERE printId = :printId") fun deleteFacesOf(printId: Long)
+    @Query("SELECT * FROM face WHERE printId = :printId ORDER BY left") fun facesOf(printId: Long): Flow<List<FaceEntity>>
+    @Query("SELECT * FROM face WHERE printId = :printId ORDER BY left") fun facesOfNow(printId: Long): List<FaceEntity>
+    @Query("SELECT * FROM face WHERE id = :id") fun face(id: Long): FaceEntity?
+    @Query("SELECT * FROM face WHERE ignored = 0") fun allFacesNow(): List<FaceEntity>
+    @Query("SELECT * FROM face WHERE ignored = 0") fun allFaces(): Flow<List<FaceEntity>>
+    @Query("SELECT * FROM print WHERE facesQuad IS NULL OR facesQuad != quad") fun printsWithoutFaces(): List<PrintEntity>
+    @Query("UPDATE print SET facesQuad = :quad WHERE id = :id") fun setFacesQuad(id: Long, quad: String)
+    @Query("UPDATE face SET personId = NULL WHERE personId = :personId AND printId = :printId") fun unnameFacesOn(printId: Long, personId: Long)
+
+    @Query("SELECT * FROM person WHERE id = :id") fun person(id: Long): PersonEntity?
+    @Query("SELECT * FROM person WHERE id = :id") fun personFlow(id: Long): Flow<PersonEntity?>
+    @Update fun updatePerson(person: PersonEntity)
+    @Query("SELECT * FROM person") fun peopleNow(): List<PersonEntity>
+    @Query(
+        """
+        SELECT p.id, p.name, p.bornFrom, p.bornTo, p.bornLabel,
+            (SELECT COUNT(*) FROM print_person pp WHERE pp.personId = p.id) AS count,
+            (SELECT f.id FROM face f WHERE f.personId = p.id ORDER BY (f.right - f.left) * (f.bottom - f.top) * f.score DESC LIMIT 1) AS faceId
+        FROM person p ORDER BY count DESC, p.name
+        """,
+    )
+    fun personSummaries(): Flow<List<PersonSummary>>
+    @Query("SELECT pr.* FROM print pr JOIN print_person pp ON pp.printId = pr.id WHERE pp.personId = :personId ORDER BY pr.dateFrom IS NULL, pr.dateFrom, pr.createdAt")
+    fun printsOf(personId: Long): Flow<List<PrintEntity>>
+    @Query("SELECT personId FROM print_person WHERE printId = :printId") fun personIdsOn(printId: Long): List<Long>
+    @Query("DELETE FROM print_person WHERE printId = :printId AND personId = :personId") fun untag(printId: Long, personId: Long)
+    @Query("INSERT OR IGNORE INTO print_person (printId, personId) SELECT printId, :to FROM print_person WHERE personId = :from") fun copyTags(from: Long, to: Long)
+    @Query("DELETE FROM print_person WHERE personId = :personId") fun untagPerson(personId: Long)
+    @Query("DELETE FROM person WHERE id = :id") fun deletePersonRow(id: Long)
+    @Transaction fun retag(from: Long, to: Long) { copyTags(from, to); untagPerson(from) }
+    @Transaction fun deletePerson(id: Long) { untagPerson(id); deletePersonRow(id) }
+
     @Transaction
     fun setPeople(printId: Long, names: List<String>) {
         untagAll(printId)
@@ -192,12 +265,15 @@ interface AtticDao {
             val id = personNamed(name)?.id ?: insertPerson(PersonEntity(name = name))
             tag(PrintPersonEntity(printId, id))
         }
+        // A name taken off the photo comes off its face too.
+        val kept = personIdsOn(printId).toSet()
+        facesOfNow(printId).filter { it.personId != null && it.personId !in kept }.forEach { updateFace(it.copy(personId = null)) }
     }
 }
 
 @Database(
-    entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class],
-    version = 7,
+    entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class, FaceEntity::class],
+    version = 8,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -205,7 +281,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -255,6 +331,23 @@ abstract class AtticDatabase : RoomDatabase() {
                         "`file` TEXT NOT NULL, `durationMs` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_story_printId` ON `story` (`printId`)")
+            }
+        }
+
+        /** Faces, and when people were born. */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `print` ADD COLUMN `facesQuad` TEXT")
+                db.execSQL("ALTER TABLE `person` ADD COLUMN `bornFrom` INTEGER")
+                db.execSQL("ALTER TABLE `person` ADD COLUMN `bornTo` INTEGER")
+                db.execSQL("ALTER TABLE `person` ADD COLUMN `bornLabel` TEXT")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `face` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `printId` INTEGER NOT NULL, " +
+                        "`left` REAL NOT NULL, `top` REAL NOT NULL, `right` REAL NOT NULL, `bottom` REAL NOT NULL, `score` REAL NOT NULL, " +
+                        "`vec` BLOB NOT NULL, `personId` INTEGER, `ignored` INTEGER NOT NULL DEFAULT 0)",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_face_printId` ON `face` (`printId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_face_personId` ON `face` (`personId`)")
             }
         }
 

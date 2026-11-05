@@ -210,6 +210,7 @@ class Backup(private val context: Context, private val library: Library) {
                     )
                     val people = p.optJSONArray("people") ?: JSONArray()
                     dao.setPeople(id, List(people.length()) { people.getString(it) })
+                    restoreFaces(id, p.getString("quad"), p.optJSONArray("faces"))
                     val stories = p.optJSONArray("stories") ?: JSONArray()
                     for (k in 0 until stories.length()) {
                         val st = stories.getJSONObject(k)
@@ -219,8 +220,18 @@ class Backup(private val context: Context, private val library: Library) {
                     restored++
                 }
             }
+            val people = json.optJSONArray("people") ?: JSONArray()
+            for (k in 0 until people.length()) {
+                val pe = people.getJSONObject(k)
+                val name = pe.getString("name")
+                val known = dao.personNamed(name) ?: PersonEntity(name = name).let { it.copy(id = dao.insertPerson(it)) }
+                if (known.bornLabel == null) {
+                    dao.updatePerson(known.copy(bornFrom = pe.optLongOrNull("bornFrom"), bornTo = pe.optLongOrNull("bornTo"), bornLabel = pe.optStringOrNull("bornLabel")))
+                }
+            }
             library.renderMissing()
             library.fillMissingHashes()
+            library.findMissingFaces()
             restored
         }.onSuccess { n ->
             _progress.value = Progress.Done(
@@ -255,6 +266,7 @@ class Backup(private val context: Context, private val library: Library) {
                         .put("createdAt", p.createdAt).put("version", p.version)
                         .putOpt("backFile", p.backFile)
                         .put("people", JSONArray(dao.peopleInNow(p.id)))
+                        .put("faces", facesOf(p))
                         .put(
                             "stories",
                             JSONArray(library.storiesNow(p.id).map { s -> JSONObject().put("file", s.file).put("durationMs", s.durationMs).put("createdAt", s.createdAt) }),
@@ -268,7 +280,44 @@ class Backup(private val context: Context, private val library: Library) {
                     .put("prints", ps),
             )
         }
+        val people = JSONArray(
+            dao.peopleNow().filter { it.bornLabel != null }.map { pe ->
+                JSONObject().put("name", pe.name).putOpt("bornFrom", pe.bornFrom).putOpt("bornTo", pe.bornTo).putOpt("bornLabel", pe.bornLabel)
+            },
+        )
         return JSONObject().put("format", FORMAT).put("formatVersion", 1).put("savedAt", System.currentTimeMillis()).put("albums", arr)
+            .put("people", people)
+    }
+
+    /** A print's faces, fingerprints and who they are, so names survive a restore without finding them again. */
+    private fun facesOf(p: PrintEntity): JSONArray {
+        if (p.facesQuad != p.quad) return JSONArray()
+        val names = dao.peopleNow().associate { it.id to it.name }
+        return JSONArray(
+            dao.facesOfNow(p.id).map { f ->
+                JSONObject().put("left", f.left.toDouble()).put("top", f.top.toDouble()).put("right", f.right.toDouble()).put("bottom", f.bottom.toDouble())
+                    .put("score", f.score.toDouble()).put("vec", android.util.Base64.encodeToString(f.vec, android.util.Base64.NO_WRAP))
+                    .putOpt("person", f.personId?.let(names::get)).put("ignored", f.ignored)
+            },
+        )
+    }
+
+    /** Puts back the faces saved with print [id]; the print's faces then count as found. */
+    private fun restoreFaces(id: Long, quad: String, faces: JSONArray?) {
+        if (faces == null) return
+        for (k in 0 until faces.length()) {
+            val f = faces.getJSONObject(k)
+            val person = f.optStringOrNull("person")?.let { name -> dao.personNamed(name)?.id ?: dao.insertPerson(PersonEntity(name = name)) }
+            dao.insertFace(
+                FaceEntity(
+                    printId = id, left = f.getDouble("left").toFloat(), top = f.getDouble("top").toFloat(),
+                    right = f.getDouble("right").toFloat(), bottom = f.getDouble("bottom").toFloat(), score = f.getDouble("score").toFloat(),
+                    vec = android.util.Base64.decode(f.getString("vec"), android.util.Base64.NO_WRAP), personId = person,
+                    ignored = f.optBoolean("ignored"),
+                ),
+            )
+        }
+        dao.setFacesQuad(id, quad)
     }
 
     private fun DocumentFile.dir(name: String): DocumentFile =

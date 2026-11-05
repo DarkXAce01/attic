@@ -9,6 +9,8 @@ import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
 import io.github.darkxace01.attic.vision.Deglare
 import io.github.darkxace01.attic.vision.Enhance
+import io.github.darkxace01.attic.vision.Faces
+import io.github.darkxace01.attic.vision.FaceGroups
 import io.github.darkxace01.attic.vision.DateStamp
 import io.github.darkxace01.attic.vision.PrintHash
 import io.github.darkxace01.attic.vision.FrameTransform
@@ -16,6 +18,7 @@ import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.Rectify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -483,6 +486,7 @@ class Library(private val context: Context) {
         backFiles(p).forEach { it.delete() }
         dao.storiesOfNow(p.id).forEach { storyFile(p, it).delete(); dao.deleteStory(it.id) }
         dao.untagAll(p.id)
+        dao.deleteFacesOf(p.id)
         dao.deletePrint(p.id)
         val dir = File(root, p.scanDir)
         if (dir.listFiles().orEmpty().none { it.name.startsWith("print_") }) dir.deleteRecursively()
@@ -676,6 +680,165 @@ class Library(private val context: Context) {
         .put("cropWidth", cropWidth).put("cropHeight", cropHeight)
         .put("rotation", rotation)
         .toString()
+
+    // ---- faces and people ----
+
+    /** The face finder and matcher, loaded the first time they're needed (the models are copied out of the APK once). */
+    private val faces by lazy {
+        fun model(name: String): String {
+            val f = File(context.noBackupFilesDir, "models/$name")
+            if (!f.exists() || f.length() == 0L) {
+                f.parentFile?.mkdirs()
+                context.assets.open(name).use { input -> f.outputStream().use { input.copyTo(it) } }
+            }
+            return f.path
+        }
+        Faces(model("faces_detect.onnx"), model("faces_recognise.onnx"))
+    }
+    private val faceLock = Any()
+
+    fun facesOf(printId: Long): Flow<List<FaceEntity>> = dao.facesOf(printId)
+    fun allFaces(): Flow<List<FaceEntity>> = dao.allFaces()
+    /** Each album's own date, for photos that have none. */
+    fun albumsWithDates(): Flow<Map<Long, PhotoDate>> = dao.albumsFlow().map { list -> list.mapNotNull { a -> a.date?.let { a.id to it } }.toMap() }
+    fun people(): Flow<List<PersonSummary>> = dao.personSummaries()
+    fun person(id: Long): Flow<PersonEntity?> = dao.personFlow(id)
+    fun printsOf(personId: Long): Flow<List<PrintEntity>> = dao.printsOf(personId)
+
+    /**
+     * Finds the faces on every print that hasn't been looked at, or was recropped or turned since. A face
+     * that was named keeps its name through a recrop: the new face most like it gets it.
+     */
+    suspend fun findMissingFaces() = io {
+        for (p in dao.printsWithoutFaces()) findFacesNow(p)
+    }
+
+    private fun findFacesNow(p: PrintEntity) = synchronized(faceLock) {
+        val img = readPng(p.file(root)) ?: return@synchronized
+        val found = runCatching { faces.find(img, Faces.RGBA) }.getOrElse { emptyList() }
+        img.release()
+        val old = dao.facesOfNow(p.id)
+        dao.deleteFacesOf(p.id)
+        for (f in found) {
+            val was = old.maxByOrNull { FaceGroups.cosine(f.vec, FaceGroups.fromBytes(it.vec)) }
+                ?.takeIf { FaceGroups.cosine(f.vec, FaceGroups.fromBytes(it.vec)) > 0.6f }
+            dao.insertFace(
+                FaceEntity(
+                    printId = p.id, left = f.left, top = f.top, right = f.right, bottom = f.bottom, score = f.score,
+                    vec = FaceGroups.toBytes(f.vec), personId = was?.personId, ignored = was?.ignored ?: false,
+                ),
+            )
+        }
+        File(context.cacheDir, "faces").listFiles()?.filter { f -> old.any { f.name == "${it.id}.jpg" } }?.forEach { it.delete() }
+        dao.setFacesQuad(p.id, p.quad)
+    }
+
+    /**
+     * A small square picture of [face] (a bit of hair and chin around it), made the first time it's asked
+     * for. Null if the print is gone.
+     */
+    suspend fun faceThumb(face: FaceEntity): File? = io {
+        val out = File(context.cacheDir, "faces/${face.id}.jpg")
+        if (out.exists()) return@io out
+        val p = dao.print(face.printId) ?: return@io null
+        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        val src = displayFile(p)
+        BitmapFactory.decodeFile(src.path, opts)
+        val w = opts.outWidth; val h = opts.outHeight
+        if (w <= 0 || h <= 0) return@io null
+        val cx = (face.left + face.right) / 2 * w
+        val cy = (face.top + face.bottom) / 2 * h
+        val side = kotlin.math.max((face.right - face.left) * w, (face.bottom - face.top) * h) * 1.7f
+        val l = (cx - side / 2).toInt().coerceIn(0, w - 1)
+        val t = (cy - side / 2).toInt().coerceIn(0, h - 1)
+        val r = (cx + side / 2).toInt().coerceIn(l + 1, w)
+        val b = (cy + side / 2).toInt().coerceIn(t + 1, h)
+        val region = android.graphics.BitmapRegionDecoder.newInstance(src.path)
+        val sample = Integer.highestOneBit(((r - l) / 240).coerceAtLeast(1))
+        val bmp = region?.decodeRegion(android.graphics.Rect(l, t, r, b), BitmapFactory.Options().apply { inSampleSize = sample })
+        region?.recycle()
+        bmp ?: return@io null
+        out.parentFile?.mkdirs()
+        out.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        bmp.recycle()
+        out
+    }
+
+    /** Says who [faceIds] are: the person called [name] (made if new), and tags their photos with them. */
+    suspend fun nameFaces(faceIds: List<Long>, name: String) = io {
+        val clean = name.trim()
+        if (clean.isEmpty()) return@io
+        db.runInTransaction {
+            val personId = dao.personNamed(clean)?.id ?: dao.insertPerson(PersonEntity(name = clean))
+            for (id in faceIds) {
+                val f = dao.face(id) ?: continue
+                // Someone else's name on this face before: it comes off the photo too, unless another face there has it.
+                val before = f.personId
+                dao.updateFace(f.copy(personId = personId, ignored = false))
+                if (before != null && before != personId && dao.facesOfNow(f.printId).none { it.personId == before }) {
+                    dao.untag(f.printId, before)
+                }
+                dao.tag(PrintPersonEntity(f.printId, personId))
+                dao.print(f.printId)?.let { dao.updatePrint(it.copy(version = it.version + 1)) }
+            }
+        }
+    }
+
+    /** Not a face, or nobody anyone will name: it stops being asked about. */
+    suspend fun ignoreFace(faceId: Long) = io {
+        val f = dao.face(faceId) ?: return@io
+        dao.updateFace(f.copy(ignored = true, personId = null))
+        if (f.personId != null && dao.facesOfNow(f.printId).none { it.personId == f.personId }) {
+            dao.untag(f.printId, f.personId)
+            dao.print(f.printId)?.let { dao.updatePrint(it.copy(version = it.version + 1)) }
+        }
+    }
+
+    /** Unnamed faces that look like the same person, two or more, the biggest groups first. */
+    class FaceGroup(val faces: List<FaceEntity>, val suggestion: PersonEntity?)
+
+    suspend fun unnamedGroups(): List<FaceGroup> = io {
+        val all = dao.allFacesNow()
+        val named = all.filter { it.personId != null }.groupBy({ it.personId!! }, { FaceGroups.fromBytes(it.vec) })
+        val people = dao.peopleNow().associateBy { it.id }
+        val unnamed = all.filter { it.personId == null }
+        val byId = unnamed.associateBy { it.id }
+        FaceGroups.groups(unnamed.map { FaceGroups.Face(it.id, it.printId, FaceGroups.fromBytes(it.vec)) })
+            .filter { it.size >= 2 }
+            .map { g ->
+                val mean = FloatArray(g[0].vec.size)
+                g.forEach { f -> val n = kotlin.math.sqrt(f.vec.sumOf { (it * it).toDouble() }).toFloat(); for (k in mean.indices) mean[k] += f.vec[k] / n }
+                FaceGroup(g.map { byId.getValue(it.id) }, FaceGroups.suggest(mean, named)?.let { people[it.first] })
+            }
+    }
+
+    /** Who an unnamed face most likely is, among the people already named. */
+    suspend fun suggestFor(face: FaceEntity): PersonEntity? = io {
+        val named = dao.allFacesNow().filter { it.personId != null && it.id != face.id }.groupBy({ it.personId!! }, { FaceGroups.fromBytes(it.vec) })
+        FaceGroups.suggest(FaceGroups.fromBytes(face.vec), named)?.let { dao.person(it.first) }
+    }
+
+    suspend fun setBorn(personId: Long, date: PhotoDate?) = io {
+        val p = dao.person(personId) ?: return@io
+        dao.updatePerson(p.copy(bornFrom = date?.from?.toEpochDay(), bornTo = date?.to?.toEpochDay(), bornLabel = date?.label))
+    }
+
+    suspend fun renamePerson(personId: Long, name: String) = io {
+        val clean = name.trim()
+        val p = dao.person(personId) ?: return@io
+        if (clean.isEmpty() || clean == p.name) return@io
+        val other = dao.personNamed(clean)
+        if (other != null && other.id != personId) {
+            // Two names for one person: fold this one into the other.
+            db.runInTransaction {
+                dao.allFacesNow().filter { it.personId == personId }.forEach { dao.updateFace(it.copy(personId = other.id)) }
+                dao.retag(personId, other.id)
+                dao.deletePerson(personId)
+            }
+        } else {
+            dao.updatePerson(p.copy(name = clean))
+        }
+    }
 
     private fun readPng(file: File): Mat? {
         val bgr = Imgcodecs.imread(file.path)
