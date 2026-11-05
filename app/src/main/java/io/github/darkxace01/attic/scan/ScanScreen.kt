@@ -60,6 +60,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.darkxace01.attic.ui.PageSheet
 import io.github.darkxace01.attic.ui.QuietButton
 import io.github.darkxace01.attic.ui.theme.Palette
+import androidx.compose.ui.graphics.StrokeCap
+import io.github.darkxace01.attic.library
+import coil3.compose.AsyncImage
+import androidx.compose.foundation.layout.widthIn
 
 @Composable
 fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -> Unit) {
@@ -78,68 +82,20 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
         flash.animateTo(0f, tween(260))
     }
 
-    Box(Modifier.fillMaxSize()) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(Palette.Ground)
-            .statusBarsPadding(),
-    ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Which album the next page goes into. Tap to switch or start a new one.
-            Column(
-                Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onPickAlbum),
-            ) {
-                Text(
-                    state.albumTitle.ifEmpty { " " } + "  ▾",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = Palette.Ink,
-                    maxLines = 1,
-                )
-                Text(
-                    if (state.albumPages == 0) "Ready for the first page" else "Next is page ${state.albumPages + 1}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Palette.Muted,
-                )
-            }
-            // Check: each shot waits for its outlines to be checked. Glare-free: each page from a few angles.
-            ModeChip("Check", state.checkEachShot) { vm.setCheckEachShot(!state.checkEachShot) }
-            ModeChip("Glare-free", state.glareFree) { vm.setGlareFree(!state.glareFree) }
-            Spacer(Modifier.width(4.dp))
-            Text("Auto", style = MaterialTheme.typography.labelLarge, color = Palette.Muted)
-            Spacer(Modifier.width(10.dp))
-            Switch(
-                checked = state.autoCapture,
-                onCheckedChange = vm::setAutoCapture,
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = Palette.Accent,
-                    checkedThumbColor = Palette.OnAccent,
-                    uncheckedTrackColor = Palette.SurfaceHigh,
-                    uncheckedThumbColor = Palette.Muted,
-                    uncheckedBorderColor = Palette.SurfaceHigh,
-                ),
-            )
-        }
-
+    Box(Modifier.fillMaxSize().background(Palette.Ground)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        // The camera, edge to edge, with what you need floating over it.
         Box(
             Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            contentAlignment = Alignment.Center,
+            contentAlignment = Alignment.TopCenter,
         ) {
             Box(
                 Modifier
                     .aspectRatio(3f / 4f, matchHeightConstraintsFirst = true)
-                    .fillMaxHeight(),
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)),
             ) {
                 CameraPreview(vm, Modifier.fillMaxSize())
                 Outlines(state.outlines, Modifier.fillMaxSize())
@@ -147,20 +103,33 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
                     Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = flash.value)))
                 }
             }
-        }
 
-        Text(
-            text = statusLine(state),
-            style = MaterialTheme.typography.bodyLarge,
-            color = if (state.error != null) Palette.Warning else Palette.Ink,
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 10.dp),
-        )
+            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp)) {
+                // Which album the next page goes into. Tap to switch or start a new one.
+                AlbumPill(state, onPickAlbum)
+                Spacer(Modifier.height(8.dp))
+                // Check: each shot's outlines are checked before saving. Glare-free: each page from a few
+                // angles. Auto: takes the shot by itself once you hold still.
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ModeChip("Auto", state.autoCapture) { vm.setAutoCapture(!state.autoCapture) }
+                    ModeChip("Check", state.checkEachShot) { vm.setCheckEachShot(!state.checkEachShot) }
+                    ModeChip("Glare-free", state.glareFree) { vm.setGlareFree(!state.glareFree) }
+                }
+            }
 
-        // One loose print just saved: its back can come next. Taking a back: a way out.
-        when {
-            state.backFor != null -> QuietButton("Not now", onClick = vm::cancelBack, modifier = Modifier.padding(start = 8.dp))
-            state.lastSavedIds.size == 1 && state.sweep == null && !state.saving && !state.justSavedBack ->
-                QuietButton("Add the back of this photo", onClick = { vm.scanBackOf(state.lastSavedIds.single()) }, modifier = Modifier.padding(start = 8.dp))
+            // What's happening, over the bottom of the camera.
+            Column(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp, start = 16.dp, end = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                StatusPill(statusLine(state), warning = state.error != null, ready = state.outlines.isNotEmpty() && state.outlines.all { it.locked })
+                // One loose print just saved: its back can come next. Taking a back: a way out.
+                when {
+                    state.backFor != null -> FloatingAction("Not now", vm::cancelBack)
+                    state.lastSavedIds.size == 1 && state.sweep == null && !state.saving && !state.justSavedBack ->
+                        FloatingAction("Add the back of this photo") { vm.scanBackOf(state.lastSavedIds.single()) }
+                }
+            }
         }
 
         PreviewStrip(state)
@@ -168,22 +137,23 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(112.dp)
+                .height(104.dp)
                 .padding(horizontal = 20.dp),
         ) {
-            PrintsButton(state.albumPrints, { onOpenAlbum(state.albumId) }, Modifier.align(Alignment.CenterStart))
+            AlbumStack(state.albumId, state.albumPrints, { onOpenAlbum(state.albumId) }, Modifier.align(Alignment.CenterStart))
             // When, who and where for the page just saved. Never in the way: scanning goes on without it.
             if (state.lastPage > 0 && state.sweep == null) {
                 Column(
                     Modifier
                         .align(Alignment.CenterEnd)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Palette.Surface)
                         .clickable { pageSheet = state.lastAlbumId to state.lastPage }
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     horizontalAlignment = Alignment.End,
                 ) {
-                    Text("Details", style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
-                    Text("page ${state.lastPage}", style = MaterialTheme.typography.labelMedium, color = Palette.Muted)
+                    Text("Details", style = MaterialTheme.typography.titleSmall, color = Palette.Ink)
+                    Text("Page ${state.lastPage}", style = MaterialTheme.typography.labelMedium, color = Palette.Muted)
                 }
             }
             Shutter(
@@ -200,18 +170,88 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
     }
 }
 
-/** A mode that's on or off: quiet when off, filled when on. */
+/** The album being scanned into, as a chip over the camera: its name and the page coming next. */
+@Composable
+private fun AlbumPill(state: ScanUiState, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(OVER_CAMERA)
+            .clickable(onClick = onClick)
+            .padding(start = 12.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
+            Text(
+                state.albumTitle.ifEmpty { " " },
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 240.dp),
+            )
+            Text(
+                if (state.albumPages == 0) "Ready for the first page" else "Next is page ${state.albumPages + 1}",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White.copy(alpha = 0.7f),
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        Text("Change", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.7f))
+    }
+}
+
+/** The status line, floating over the camera; the dot goes red when every photo in view is locked. */
+@Composable
+private fun StatusPill(text: String, warning: Boolean, ready: Boolean) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(50))
+            .background(OVER_CAMERA)
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(if (warning) Palette.Warning else if (ready) Palette.Accent else Color.White.copy(alpha = 0.5f)),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = Color.White)
+    }
+}
+
+@Composable
+private fun FloatingAction(text: String, onClick: () -> Unit) {
+    Spacer(Modifier.height(8.dp))
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        color = Color.White,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(OVER_CAMERA)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    )
+}
+
+/** Dark enough to read white on over any picture, without hiding it. */
+private val OVER_CAMERA = Color.Black.copy(alpha = 0.55f)
+
+/** A mode that's on or off: white when on, see-through when off. */
 @Composable
 private fun ModeChip(text: String, on: Boolean, onClick: () -> Unit) {
     Text(
         text,
         style = MaterialTheme.typography.labelLarge,
-        color = if (on) Palette.Ink else Palette.Muted,
+        color = if (on) Palette.Ground else Color.White.copy(alpha = 0.8f),
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(if (on) Palette.SurfaceHigh else Color.Transparent)
+            .background(if (on) Color.White else OVER_CAMERA)
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
     )
 }
 
@@ -267,7 +307,6 @@ private fun CameraPreview(vm: ScanViewModel, modifier: Modifier) {
 @Composable
 private fun Outlines(outlines: List<Outline>, modifier: Modifier) {
     Canvas(modifier) {
-        val stroke = Stroke(width = 2.5.dp.toPx())
         for (o in outlines) {
             val pts = o.quad.points.map { Offset(it.x * size.width, it.y * size.height) }
             val path = Path().apply {
@@ -275,11 +314,23 @@ private fun Outlines(outlines: List<Outline>, modifier: Modifier) {
                 for (p in pts.drop(1)) lineTo(p.x, p.y)
                 close()
             }
-            if (o.locked) {
-                drawPath(path, Palette.Accent.copy(alpha = 0.14f))
-                drawPath(path, Palette.Accent, style = stroke)
-            } else {
-                drawPath(path, Color.White.copy(alpha = 0.8f), style = stroke)
+            val ink = if (o.locked) Palette.Accent else Color.White
+            if (o.locked) drawPath(path, Palette.Accent.copy(alpha = 0.14f))
+            drawPath(path, ink.copy(alpha = if (o.locked) 0.9f else 0.55f), style = Stroke(width = 1.5.dp.toPx()))
+            // Heavy corners, like the marks on a cutting mat: where the print will be cut.
+            val tick = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
+            for (k in 0 until 4) {
+                val c = pts[k]
+                val next = pts[(k + 1) % 4]
+                val prev = pts[(k + 3) % 4]
+                val len = 18.dp.toPx()
+                fun toward(p: Offset): Offset {
+                    val d = p - c
+                    val n = d.getDistance().coerceAtLeast(1f)
+                    return c + d * (minOf(len, n / 3) / n)
+                }
+                drawLine(ink, c, toward(next), tick.width, StrokeCap.Round)
+                drawLine(ink, c, toward(prev), tick.width, StrokeCap.Round)
             }
         }
     }
@@ -359,15 +410,46 @@ private fun Shutter(enabled: Boolean, ready: Boolean, progress: Float, onClick: 
     }
 }
 
+/**
+ * The album so far, as its last few prints in a little loose pile. Tap to open the album. The whole
+ * pile and the count under it are one big target.
+ */
 @Composable
-private fun PrintsButton(count: Int, onClick: () -> Unit, modifier: Modifier) {
+private fun AlbumStack(albumId: Long, count: Int, onClick: () -> Unit, modifier: Modifier) {
+    val library = LocalContext.current.library
+    val prints by remember(albumId) { library.printsIn(albumId) }.collectAsStateWithLifecycle(emptyList())
+    val last = prints.takeLast(3)
     Column(
         modifier
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(enabled = albumId != 0L, onClick = onClick)
+            .padding(6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("$count", style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
-        Text(if (count == 1) "photo" else "photos", style = MaterialTheme.typography.labelMedium, color = Palette.Muted)
+        Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
+            if (last.isEmpty()) {
+                Box(Modifier.size(44.dp, 52.dp).clip(RoundedCornerShape(4.dp)).background(Palette.SurfaceHigh))
+            }
+            last.forEachIndexed { i, p ->
+                // Newest on top and straight; older ones turned a little underneath.
+                val turn = (last.size - 1 - i) * if (i % 2 == 0) -9f else 8f
+                AsyncImage(
+                    model = coil3.request.ImageRequest.Builder(LocalContext.current)
+                        .data(library.displayFile(p))
+                        .memoryCacheKey("${p.id}#${p.version}#thumb")
+                        .size(160)
+                        .build(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(42.dp, 52.dp)
+                        .graphicsLayer { rotationZ = turn; shadowElevation = 4.dp.toPx() }
+                        .background(Color(0xFFF4F1EA))
+                        .padding(2.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(if (count == 1) "1 photo" else "$count photos", style = MaterialTheme.typography.labelMedium, color = Palette.Muted)
     }
 }

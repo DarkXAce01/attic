@@ -14,7 +14,7 @@ data class Prefs(
     val autoCapture: Boolean = true,
     val glareFree: Boolean = false,
     /** Each shot waits on a check of its outlines before it's saved, like a document scanner. */
-    val checkEachShot: Boolean = false,
+    val checkEachShot: Boolean = true,
 )
 
 class Settings(context: Context) {
@@ -28,7 +28,7 @@ class Settings(context: Context) {
         saveToGallery = sp.getBoolean("saveToGallery", true),
         autoCapture = sp.getBoolean("autoCapture", true),
         glareFree = sp.getBoolean("glareFree", false),
-        checkEachShot = sp.getBoolean("checkEachShot", false),
+        checkEachShot = sp.getBoolean("checkEachShot", true),
     )
 
     fun update(change: (Prefs) -> Prefs) {

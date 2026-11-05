@@ -106,7 +106,7 @@ data class ScanUiState(
     val lastAlbumId: Long = 0,
     val lastPage: Int = 0,
     /** Check each shot's outlines before saving it. */
-    val checkEachShot: Boolean = false,
+    val checkEachShot: Boolean = true,
     /** A shot being checked. */
     val review: ReviewUi? = null,
     val error: String? = null,
@@ -145,6 +145,9 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             combine(scanningAlbumId.filterNotNull(), library.albums()) { id, list -> list.firstOrNull { it.id == id } }
                 .collect { a ->
                     if (a != null) _state.update { it.copy(albumId = a.id, albumTitle = a.title, albumPages = a.pages, albumPrints = a.count) }
+                    // The album scans were going into is gone (deleted): fall back to another, or a new one,
+                    // rather than keep pointing at nothing.
+                    else refreshAlbum()
                 }
         }
     }
