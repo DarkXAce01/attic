@@ -34,6 +34,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.withFrameNanos
+import io.github.darkxace01.attic.world.AlbumWorld
+import io.github.darkxace01.attic.world.Island
+import io.github.darkxace01.attic.world.WorldAlbum
+import io.github.darkxace01.attic.world.loadIsland
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import io.github.darkxace01.attic.data.AlbumSummary
@@ -63,44 +71,54 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
     // While a backup runs, the line says how far it is.
     val working = exporting ?: (backupProgress as? io.github.darkxace01.attic.data.Backup.Progress.Working)?.let { "${it.what}… ${it.done} of ${it.total}" }
 
-    Column(Modifier.fillMaxSize()) {
-        TopBar("Albums", onBack = null) {
-            QuietButton("New album", onClick = { creating = true }, color = Palette.Accent)
-            QuietButton("Settings", onClick = onSettings)
-        }
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            item(span = { GridItemSpan(2) }) {
-                SafetyLine(
-                    counts, working, hasBackup = backupFolder != null,
-                    onExport = {
-                        scope.launch {
-                            exporting = "Saving to your gallery…"
-                            library.exportAll { done, total -> exporting = "Saving to your gallery… $done of $total" }
-                            exporting = null
-                        }
-                    },
-                    onBackUp = { scope.launch { backup.backUp() } },
-                    onSetUpBackup = onSettings,
-                )
-            }
-            if (albums.isEmpty()) {
-                item(span = { GridItemSpan(2) }) {
-                    Text(
-                        "No albums yet. Scan your first page and it'll start one.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Palette.Muted,
-                        modifier = Modifier.padding(4.dp),
-                    )
-                }
-            }
-            items(albums, key = { it.id }) { a -> AlbumCover(a, library.coverFile(a)) { onOpen(a.id) } }
+    // One clock for the whole world: every island, every mote of dust.
+    val clock = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(Unit) {
+        val start = withFrameNanos { it }
+        while (true) withFrameNanos { clock.floatValue = (it - start) / 1e9f }
+    }
+    // Islands are built once per album (and again when it changes), off the main thread.
+    val cache = remember { HashMap<Pair<Long, Int>, Island>() }
+    val islands by produceState(emptyList<WorldAlbum>(), albums) {
+        value = albums.mapIndexed { i, a ->
+            val island = cache.getOrPut(a.id to a.count) { loadIsland(library, a, i) }
+            WorldAlbum(island, a.title, albumLine(a))
         }
     }
+
+    AlbumWorld(
+        islands,
+        time = { clock.floatValue },
+        onOpen = onOpen,
+        header = {
+            Column(Modifier.padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Albums", style = MaterialTheme.typography.titleLarge, color = Palette.Ink, modifier = Modifier.weight(1f))
+                    QuietButton("New album", onClick = { creating = true }, color = Palette.Accent)
+                    QuietButton("Settings", onClick = onSettings)
+                }
+                Spacer(Modifier.height(8.dp))
+                Box(Modifier.padding(end = 8.dp)) {
+                    SafetyLine(
+                        counts, working, hasBackup = backupFolder != null,
+                        onExport = {
+                            scope.launch {
+                                exporting = "Saving to your gallery…"
+                                library.exportAll { done, total -> exporting = "Saving to your gallery… $done of $total" }
+                                exporting = null
+                            }
+                        },
+                        onBackUp = { scope.launch { backup.backUp() } },
+                        onSetUpBackup = onSettings,
+                    )
+                }
+                if (albums.isEmpty()) {
+                    Spacer(Modifier.height(24.dp))
+                    Text("No albums yet. Scan your first page and it'll start one.", style = MaterialTheme.typography.bodyLarge, color = Palette.Muted)
+                }
+            }
+        },
+    )
 
     if (creating) {
         TextSheet(

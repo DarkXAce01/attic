@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -66,8 +67,10 @@ android {
     }
 
     testOptions {
+        // Screens are rendered on the computer (Robolectric + Roborazzi) to check the design.
+        unitTests.isIncludeAndroidResources = true
         unitTests.all {
-            it.maxHeapSize = "1g"
+            it.maxHeapSize = "1536m"
             // The print-finder benchmark is heavy; run it on purpose with ./gradlew testDebugUnitTest -Pbenchmark
             it.systemProperty("attic.benchmark", project.hasProperty("benchmark").toString())
             it.systemProperty("attic.seed", (project.findProperty("seed") ?: "1000").toString())
@@ -110,4 +113,12 @@ dependencies {
     testImplementation(libs.junit)
     // Desktop build of OpenCV so the detector runs in unit tests on synthetic album pages.
     testImplementation(libs.opencv.desktop)
+    // Screenshots of screens with made-up albums, to look at the design: ./gradlew recordRoborazziDebug
+    testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.junit.rule)
+    testImplementation(platform(libs.compose.bom))
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
 }

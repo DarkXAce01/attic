@@ -19,9 +19,9 @@ object Palette {
     val SurfaceHigh = Color(0xFF262626)
     val Ink = Color(0xFFF2F2F2)
     val Muted = Color(0xFF9E9E9E)
-    val Accent = Color(0xFFFFC940)
-    val OnAccent = Color(0xFF1A1400)
-    val Warning = Color(0xFFFF8A65)
+    val Accent = Color(0xFFE5553A)
+    val OnAccent = Color(0xFF1C0904)
+    val Warning = Color(0xFFF2B8B5)
 }
 
 private val Figures = "tnum"

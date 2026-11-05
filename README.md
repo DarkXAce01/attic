@@ -36,6 +36,15 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   print, whichever way up it was scanned, and fills in the date when the photo has none. A stamp that
   reads two ways (3 5 '88) asks which day it is. Prints already in Attic are read in the background
 
+**The attic** (design phase, first pass)
+- Albums float as small islands in a dark attic, one beam of light and dust drifting through it. Each
+  is a book: a cloth binding coloured from its own photos, the cover photo set into it, paper and print
+  edges layered underneath like rock, a few of its photos drifting around it, a pencil-red ribbon
+- Tap one and it comes up to you and falls open
+- Inside, every page is rebuilt as it was: the photo of the page underneath, each print laid back in
+  its exact spot and tilt, clean and flat. Pages turn over on their spine. Tap a print to open it
+- Pencil red (Grease Pencil Studio's colour) is the one accent
+
 **Remember**
 - Stories: record a spoken memory on any photo; play it back from the photo. Long-press to delete
 - Story sessions: "Tell its stories" on an album shows its photos one at a time, big, while the phone
@@ -53,7 +62,7 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - Page details: after each page, "Details" by the shutter gives the whole page its when, who and where
   in one sheet, with the previous page's answers one tap away. Scanning never waits for it; pages
   without details say so in the album, so you can do them later
-- Albums, page by page. Swipe left and right through an album's photos. Album dates that undated
+- Albums, page by page (see The attic). Swipe left and right through an album's photos. Album dates that undated
   photos inherit
 - Dates the way people say them: "summer 87", "about 1985", "early 90s", "14/7/1998", "'98 7 14"
 - People (with suggestions from everyone you've tagged), place, caption

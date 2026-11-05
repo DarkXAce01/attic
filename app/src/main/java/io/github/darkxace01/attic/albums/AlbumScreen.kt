@@ -40,6 +40,17 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.ui.graphics.asImageBitmap
+import io.github.darkxace01.attic.vision.PageLayout
+import io.github.darkxace01.attic.world.PageModel
+import io.github.darkxace01.attic.world.PagePrint
+import io.github.darkxace01.attic.world.RebuiltPage
+import io.github.darkxace01.attic.world.ATTIC
+import io.github.darkxace01.attic.world.pageFlip
+import io.github.darkxace01.attic.world.pagePin
+import io.github.darkxace01.attic.world.pageShade
 import io.github.darkxace01.attic.data.Library
 import io.github.darkxace01.attic.data.PrintEntity
 import io.github.darkxace01.attic.library
@@ -68,7 +79,7 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
     val a = album ?: return
     val pages = prints.groupBy { it.page }.toSortedMap()
 
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().background(ATTIC)) {
         TopBar(a.title, onBack = onBack, onTitleClick = { renaming = true }) {
             QuietButton("Scan here", onClick = onScanHere, color = Palette.Accent)
             Box {
@@ -82,37 +93,46 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
             }
         }
 
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(104.dp),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(
-                    a.dateLabel ?: "Add a date for the whole album",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = if (a.dateLabel != null) Palette.Ink else Palette.Accent,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { dating = true }
-                        .padding(vertical = 6.dp),
-                )
-            }
-            if (prints.isEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(
-                        "Nothing here yet. Tap Scan here and point at the first page.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Palette.Muted,
-                    )
+        if (prints.isEmpty()) {
+            Text(
+                "Nothing here yet. Tap Scan here and point at the first page.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Palette.Muted,
+                modifier = Modifier.padding(20.dp),
+            )
+        } else {
+            val numbers = pages.keys.toList()
+            val pager = rememberPagerState { numbers.size }
+            HorizontalPager(pager, beyondViewportPageCount = 1, modifier = Modifier.fillMaxWidth().weight(1f)) { i ->
+                val number = numbers.getOrNull(i) ?: return@HorizontalPager
+                val onPage = pages[number].orEmpty()
+                val model by produceState<PageModel?>(null, number, onPage.map { it.id to it.version }) { value = pageModel(library, number, onPage) }
+                Box(Modifier.fillMaxSize().pagePin(pager, i)) {
+                    model?.let { m ->
+                        RebuiltPage(
+                            m, onOpenPrint,
+                            modifier = Modifier.fillMaxSize(),
+                            pageModifier = Modifier.pageFlip(pager, i),
+                            shade = { pageShade(pager, i) },
+                        ) { pp, mod ->
+                            val p = onPage.first { it.id == pp.id }
+                            AsyncImage(
+                                model = coil3.request.ImageRequest.Builder(LocalContext.current)
+                                    .data(pp.image)
+                                    .memoryCacheKey("${pp.image}#${p.version}")
+                                    .diskCacheKey("${pp.image}#${p.version}")
+                                    .build(),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = mod,
+                            )
+                        }
+                    }
                 }
             }
-            for ((page, onPage) in pages) {
-                item(span = { GridItemSpan(maxLineSpan) }, key = "page$page") {
-                    PageHeader(albumId, page, onPage.map { it.version }) { pageSheet = page }
-                }
-                items(onPage, key = { it.id }) { p -> PrintTile(p, library.displayFile(p)) { onOpenPrint(p.id) } }
+            val current = numbers.getOrElse(pager.currentPage) { numbers.first() }
+            Box(Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
+                PageHeader(albumId, current, numbers.size, pager.currentPage + 1, pages[current].orEmpty().map { it.version }) { pageSheet = current }
             }
         }
     }
@@ -152,7 +172,7 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
 
 /** "Page 4" and what the page is about, or a way to add it. Tap for the page's details. */
 @Composable
-private fun PageHeader(albumId: Long, page: Int, versions: List<Int>, onClick: () -> Unit) {
+private fun PageHeader(albumId: Long, page: Int, pageCount: Int, position: Int, versions: List<Int>, onClick: () -> Unit) {
     val library = LocalContext.current.library
     val details by produceState<Library.PageDetails?>(null, albumId, page, versions) { value = library.pageDetails(albumId, page) }
     val d = details
@@ -167,6 +187,7 @@ private fun PageHeader(albumId: Long, page: Int, versions: List<Int>, onClick: (
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("Page $page", style = MaterialTheme.typography.labelLarge, color = Palette.Ink)
+        if (pageCount > 1) Text(" of $pageCount", style = MaterialTheme.typography.labelLarge, color = Palette.Muted)
         Text(
             if (summary.isNullOrEmpty()) "Add when, who, where" else summary,
             style = MaterialTheme.typography.bodyMedium,
@@ -210,4 +231,41 @@ internal fun PrintTile(p: PrintEntity, file: java.io.File, onClick: () -> Unit) 
             )
         }
     }
+}
+
+/**
+ * A page as it was: when all its prints came from one photo, that photo is the page and each print sits
+ * where it was; otherwise the prints are laid out neatly on album paper.
+ */
+private suspend fun pageModel(library: Library, number: Int, prints: List<PrintEntity>): PageModel {
+    val dirs = prints.map { it.scanDir }.distinct()
+    if (dirs.size == 1) {
+        val bd = library.pageBackdrop(dirs[0])
+        val bmp = bd?.let { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { android.graphics.BitmapFactory.decodeFile(it.file.path) } }
+        if (bd != null && bmp != null) {
+            val quads = prints.map { it.cropQuad }
+            val frame = PageLayout.frame(quads, bd.fullWidth.toFloat(), bd.fullHeight.toFloat())
+            val k = bmp.width.toFloat() / bd.fullWidth
+            return PageModel(
+                number, bmp.asImageBitmap(),
+                PageLayout.Frame(frame.left * k, frame.top * k, frame.right * k, frame.bottom * k),
+                prints.map { PagePrint(it.id, library.displayFile(it), PageLayout.spot(it.cropQuad, frame)) },
+                aspect = frame.width / frame.height,
+            )
+        }
+    }
+    // Neatly, one or two to a row, each tilted a hair the way hands mount prints.
+    val cols = if (prints.size <= 2) 1 else 2
+    val rows = (prints.size + cols - 1) / cols
+    val aspect = 0.75f
+    val spots = prints.mapIndexed { i, p ->
+        val cw = 1f / cols; val ch = 1f / rows
+        val pa = p.width.toFloat() / p.height.coerceAtLeast(1)
+        // Fit the print in 80% of its cell, in page proportions.
+        var w = cw * 0.8f
+        var h = w * aspect / pa
+        if (h > ch * 0.8f) { h = ch * 0.8f; w = h * pa / aspect }
+        PageLayout.Spot(cw * (i % cols + 0.5f), ch * (i / cols + 0.5f), w, h, ((p.id * 37 % 7) - 3) * 0.4f)
+    }
+    return PageModel(number, null, null, prints.mapIndexed { i, p -> PagePrint(p.id, library.displayFile(p), spots[i]) }, aspect)
 }

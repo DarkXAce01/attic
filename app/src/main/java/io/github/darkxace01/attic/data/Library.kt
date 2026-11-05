@@ -103,6 +103,41 @@ class Library(private val context: Context) {
     }
 
     /** The album's cover: its first print, the way it's shown everywhere else. */
+    /** A page's photo, small, for drawing the page behind its prints: the file and the full photo's size. */
+    data class Backdrop(val file: File, val fullWidth: Int, val fullHeight: Int)
+
+    /**
+     * The upright photo a page was scanned from, at most [PAGE_SIDE] pixels long, made once and kept next to
+     * it (backups leave it out: it's made again from the original).
+     */
+    suspend fun pageBackdrop(scanDir: String): Backdrop? = io {
+        val dir = File(root, scanDir)
+        val small = File(dir, "page_small.jpg")
+        val meta = File(dir, "page_small.json")
+        if (small.exists() && meta.exists()) {
+            val j = runCatching { JSONObject(meta.readText()) }.getOrNull()
+            if (j != null) return@io Backdrop(small, j.getInt("width"), j.getInt("height"))
+        }
+        val full = loadUpright(dir, "original.jpg", "frame.json") ?: return@io null
+        val w = full.cols(); val h = full.rows()
+        val scale = PAGE_SIDE.toDouble() / maxOf(w, h)
+        val m = Mat()
+        org.opencv.imgproc.Imgproc.resize(full, m, org.opencv.core.Size(w * scale, h * scale), 0.0, 0.0, org.opencv.imgproc.Imgproc.INTER_AREA)
+        full.release()
+        val bmp = android.graphics.Bitmap.createBitmap(m.cols(), m.rows(), android.graphics.Bitmap.Config.ARGB_8888)
+        Utils.matToBitmap(m, bmp)
+        m.release()
+        small.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 88, it) }
+        bmp.recycle()
+        meta.writeText(JSONObject().put("width", w).put("height", h).toString())
+        Backdrop(small, w, h)
+    }
+
+    /** The first few photos of an album as shown (enhanced or not), for its island: cover first. */
+    suspend fun islandFiles(albumId: Long, n: Int = 4): List<File> = io {
+        dao.printsInNow(albumId).take(n).map(::displayFile).filter { it.exists() }
+    }
+
     fun coverFile(a: AlbumSummary): File? {
         val dir = a.coverDir ?: return null
         val name = a.coverFile ?: return null
@@ -642,3 +677,6 @@ class Library(private val context: Context) {
         dao.print(id)?.let { dao.updatePrint(change(it).copy(version = it.version + 1)) }
     }
 }
+
+/** The longest side of a page's backdrop: sharp on a phone, small on disk. */
+private const val PAGE_SIDE = 1800

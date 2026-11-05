@@ -297,7 +297,7 @@ class Backup(private val context: Context, private val library: Library) {
         private const val FORMAT = "attic-backup"
 
         /** Enhanced looks and old colour-fix files: made again from the crop, so not backed up. */
-        fun isDerived(name: String) = Regex("""^print_\d+_(e\d|fix)\.png$""").matches(name)
+        fun isDerived(name: String) = Regex("""^print_\d+_(e\d|fix)\.png$""").matches(name) || name.startsWith("page_small.")
 
         /** A folder or file name that works on any file system (SD cards are often FAT). */
         fun safeName(s: String) = s.replace(Regex("""[\\/:*?"<>|\u0000-\u001f]"""), " ").replace(Regex("\\s+"), " ").trim().trimEnd('.').ifEmpty { "Attic" }
