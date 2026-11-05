@@ -64,6 +64,7 @@ import io.github.darkxace01.attic.scan.SOFT_SHARPNESS
 import io.github.darkxace01.attic.ui.PeoplePicker
 import io.github.darkxace01.attic.ui.addTyped
 import io.github.darkxace01.attic.ui.DateSheet
+import io.github.darkxace01.attic.ui.StoriesSection
 import io.github.darkxace01.attic.ui.PrimaryButton
 import io.github.darkxace01.attic.ui.QuietButton
 import io.github.darkxace01.attic.ui.TextSheet
@@ -185,6 +186,7 @@ private fun PrintPage(
             DetailRow("Who", people.joinToString(", ").ifEmpty { null }, "Add people") { editing = Editing.People }
             DetailRow("Where", p.place, "Add a place") { editing = Editing.Place }
             DetailRow("Caption", p.caption, "Add a caption") { editing = Editing.Caption }
+            StoriesSection(p)
 
             Spacer(Modifier.height(14.dp))
             LookChoice(p.enhance) { level -> work { library.setEnhance(printId, level) } }

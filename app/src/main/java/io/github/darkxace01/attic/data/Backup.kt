@@ -107,6 +107,8 @@ class Backup(private val context: Context, private val library: Library) {
                 // One listing per album folder: asking the folder for each file is slow on big albums.
                 val have = inFolder.getOrPut(album) { dir.children() }[name]
                 if (p.backFile != null) wanted.getValue(album) += name.removeSuffix(".jpg") + " - back.jpg"
+                val stories = library.storiesNow(p.id)
+                stories.indices.forEach { k -> wanted.getValue(album) += name.removeSuffix(".jpg") + " - story ${k + 1}.m4a" }
                 if (have != null && p.backedUp) return@forEachIndexed
                 if (!library.writeJpeg(p, tmp)) return@forEachIndexed
                 have?.delete()
@@ -121,12 +123,20 @@ class Backup(private val context: Context, private val library: Library) {
                     inFolder[album]?.get(backName)?.delete()
                     copyIn(tmp, dir, backName, "image/jpeg")
                 }
+                // Its stories, as plain audio files anyone can play.
+                stories.forEachIndexed { k, st ->
+                    val file = library.storyFile(p, st)
+                    if (!file.exists()) return@forEachIndexed
+                    val storyName = name.removeSuffix(".jpg") + " - story ${k + 1}.m4a"
+                    inFolder[album]?.get(storyName)?.delete()
+                    copyIn(file, dir, storyName, "audio/mp4")
+                }
             }
             tmp.delete()
             // Photos of prints that were deleted, moved or renamed in Attic.
             for ((album, dir) in photoDirs) {
                 val keep = wanted[album].orEmpty()
-                for (f in dir.listFiles()) if (f.isFile && f.name?.endsWith(".jpg") == true && f.name !in keep) f.delete()
+                for (f in dir.listFiles()) if (f.isFile && (f.name?.endsWith(".jpg") == true || f.name?.endsWith(".m4a") == true) && f.name !in keep) f.delete()
                 if (keep.isEmpty() && dir.listFiles().isEmpty()) dir.delete()
             }
 
@@ -200,6 +210,12 @@ class Backup(private val context: Context, private val library: Library) {
                     )
                     val people = p.optJSONArray("people") ?: JSONArray()
                     dao.setPeople(id, List(people.length()) { people.getString(it) })
+                    val stories = p.optJSONArray("stories") ?: JSONArray()
+                    for (k in 0 until stories.length()) {
+                        val st = stories.getJSONObject(k)
+                        if (!File(local, st.getString("file")).exists()) continue
+                        dao.insertStory(StoryEntity(printId = id, file = st.getString("file"), durationMs = st.getLong("durationMs"), createdAt = st.getLong("createdAt")))
+                    }
                     restored++
                 }
             }
@@ -238,7 +254,11 @@ class Backup(private val context: Context, private val library: Library) {
                         .putOpt("place", p.place).putOpt("caption", p.caption)
                         .put("createdAt", p.createdAt).put("version", p.version)
                         .putOpt("backFile", p.backFile)
-                        .put("people", JSONArray(dao.peopleInNow(p.id))),
+                        .put("people", JSONArray(dao.peopleInNow(p.id)))
+                        .put(
+                            "stories",
+                            JSONArray(library.storiesNow(p.id).map { s -> JSONObject().put("file", s.file).put("durationMs", s.durationMs).put("createdAt", s.createdAt) }),
+                        ),
                 )
             }
             arr.put(
@@ -265,6 +285,7 @@ class Backup(private val context: Context, private val library: Library) {
     private fun mime(name: String) = when {
         name.endsWith(".jpg") -> "image/jpeg"
         name.endsWith(".png") -> "image/png"
+        name.endsWith(".m4a") -> "audio/mp4"
         else -> "application/octet-stream"
     }
 

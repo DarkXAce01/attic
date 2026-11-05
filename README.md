@@ -36,6 +36,13 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   print, whichever way up it was scanned, and fills in the date when the photo has none. A stamp that
   reads two ways (3 5 '88) asks which day it is. Prints already in Attic are read in the background
 
+**Remember**
+- Stories: record a spoken memory on any photo; play it back from the photo. Long-press to delete
+- Story sessions: "Tell its stories" on an album shows its photos one at a time, big, while the phone
+  listens. Whatever is said while a photo is up becomes its story; photos nobody talked about get none.
+  Made for sitting with a grandparent
+- Stories are in backups (and next to each photo in Photos/ as an m4a anyone can play)
+
 **Keep**
 - Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their
   decade's years; undated photos come last

@@ -89,6 +89,17 @@ data class PrintEntity(
 @Entity(tableName = "person", indices = [Index(value = ["name"], unique = true)])
 data class PersonEntity(@PrimaryKey(autoGenerate = true) val id: Long = 0, val name: String)
 
+/** A spoken memory about a print: an audio file in the print's capture folder. */
+@Entity(tableName = "story", indices = [Index("printId")])
+data class StoryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val printId: Long,
+    /** The m4a file's name in the print's capture folder. */
+    val file: String,
+    val durationMs: Long,
+    val createdAt: Long,
+)
+
 @Entity(tableName = "print_person", primaryKeys = ["printId", "personId"], indices = [Index("personId")])
 data class PrintPersonEntity(val printId: Long, val personId: Long)
 
@@ -154,6 +165,12 @@ interface AtticDao {
     @Query("SELECT * FROM print WHERE hashes IS NOT NULL") fun printsWithHashes(): List<PrintEntity>
     @Query("SELECT * FROM print WHERE hashes IS NULL") fun printsWithoutHashes(): List<PrintEntity>
     @Query("SELECT * FROM print WHERE stamp IS NULL") fun printsWithoutStamp(): List<PrintEntity>
+
+    @Insert fun insertStory(story: StoryEntity): Long
+    @Query("DELETE FROM story WHERE id = :id") fun deleteStory(id: Long)
+    @Query("SELECT * FROM story WHERE printId = :printId ORDER BY createdAt") fun storiesOf(printId: Long): Flow<List<StoryEntity>>
+    @Query("SELECT * FROM story WHERE printId = :printId ORDER BY createdAt") fun storiesOfNow(printId: Long): List<StoryEntity>
+    @Query("SELECT DISTINCT printId FROM story") fun printsWithStories(): Flow<List<Long>>
     @Query("SELECT * FROM album WHERE title = :title AND createdAt = :createdAt") fun albumMatching(title: String, createdAt: Long): AlbumEntity?
     @Query("SELECT * FROM print WHERE scanDir = :scanDir AND fileName = :fileName") fun printAt(scanDir: String, fileName: String): PrintEntity?
 
@@ -179,8 +196,8 @@ interface AtticDao {
 }
 
 @Database(
-    entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class],
-    version = 6,
+    entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class],
+    version = 7,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -188,7 +205,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -228,6 +245,16 @@ abstract class AtticDatabase : RoomDatabase() {
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `print` ADD COLUMN `stamp` TEXT")
+            }
+        }
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `story` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `printId` INTEGER NOT NULL, " +
+                        "`file` TEXT NOT NULL, `durationMs` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_story_printId` ON `story` (`printId`)")
             }
         }
 

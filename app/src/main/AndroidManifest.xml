@@ -3,6 +3,8 @@
 
     <uses-feature android:name="android.hardware.camera" android:required="true" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Stories: spoken memories about a photo, recorded and kept on the phone. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- No INTERNET permission: nothing ever leaves the phone. -->
 

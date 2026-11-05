@@ -446,11 +446,45 @@ class Library(private val context: Context) {
         derivedFiles(p).forEach { it.delete() }
         sweepFile(p).delete()
         backFiles(p).forEach { it.delete() }
+        dao.storiesOfNow(p.id).forEach { storyFile(p, it).delete(); dao.deleteStory(it.id) }
         dao.untagAll(p.id)
         dao.deletePrint(p.id)
         val dir = File(root, p.scanDir)
         if (dir.listFiles().orEmpty().none { it.name.startsWith("print_") }) dir.deleteRecursively()
     }
+
+    // ---- stories ----
+
+    fun stories(printId: Long): Flow<List<StoryEntity>> = dao.storiesOf(printId)
+
+    /** The prints that have at least one story, for marking them in albums. */
+    fun printsWithStories(): Flow<List<Long>> = dao.printsWithStories()
+
+    fun storyFile(p: PrintEntity, s: StoryEntity) = File(File(root, p.scanDir), s.file)
+
+    /** Keeps the recording in [audio] (moved, not copied) as a story about print [printId]. */
+    suspend fun addStory(printId: Long, audio: File, durationMs: Long): StoryEntity? = io {
+        val p = dao.print(printId) ?: return@io null
+        val now = System.currentTimeMillis()
+        val name = "story_${p.position}_$now.m4a"
+        val dest = File(File(root, p.scanDir), name)
+        if (!audio.renameTo(dest)) {
+            audio.copyTo(dest, overwrite = true)
+            audio.delete()
+        }
+        val s = StoryEntity(printId = printId, file = name, durationMs = durationMs, createdAt = now)
+        dao.updatePrint(p.copy(version = p.version + 1))
+        s.copy(id = dao.insertStory(s))
+    }
+
+    suspend fun deleteStory(s: StoryEntity) = io {
+        val p = dao.print(s.printId) ?: return@io
+        storyFile(p, s).delete()
+        dao.deleteStory(s.id)
+        dao.updatePrint(p.copy(version = p.version + 1))
+    }
+
+    internal fun storiesNow(printId: Long) = dao.storiesOfNow(printId)
 
     // ---- export ----
 
