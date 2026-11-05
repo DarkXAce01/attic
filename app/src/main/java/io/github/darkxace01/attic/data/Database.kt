@@ -73,8 +73,12 @@ data class PrintEntity(
     val hashes: String? = null,
     /** The flattened back of the print (handwriting, a studio stamp), in the capture folder; null if none. */
     val backFile: String? = null,
+    /** What the camera's date stamp on the print reads ('87 7 14): "" if it has none, null if not read yet. */
+    val stamp: String? = null,
 ) {
     val date: PhotoDate? get() = photoDate(dateFrom, dateTo, dateLabel)
+    /** The dates the stamp can mean: one, two when it reads both ways, none without a stamp. */
+    val stampDates: List<java.time.LocalDate> get() = stamp?.let(io.github.darkxace01.attic.vision.StampDate::read).orEmpty()
     val cropQuad: Quad get() = parseQuad(quad)
     val inGallery: Boolean get() = galleryUri != null && exportedVersion == version
     val backedUp: Boolean get() = backedUpVersion == version
@@ -149,6 +153,7 @@ interface AtticDao {
     @Query("UPDATE print SET hashes = :hashes WHERE id = :id") fun setHashes(id: Long, hashes: String)
     @Query("SELECT * FROM print WHERE hashes IS NOT NULL") fun printsWithHashes(): List<PrintEntity>
     @Query("SELECT * FROM print WHERE hashes IS NULL") fun printsWithoutHashes(): List<PrintEntity>
+    @Query("SELECT * FROM print WHERE stamp IS NULL") fun printsWithoutStamp(): List<PrintEntity>
     @Query("SELECT * FROM album WHERE title = :title AND createdAt = :createdAt") fun albumMatching(title: String, createdAt: Long): AlbumEntity?
     @Query("SELECT * FROM print WHERE scanDir = :scanDir AND fileName = :fileName") fun printAt(scanDir: String, fileName: String): PrintEntity?
 
@@ -175,7 +180,7 @@ interface AtticDao {
 
 @Database(
     entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -183,7 +188,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -217,6 +222,12 @@ abstract class AtticDatabase : RoomDatabase() {
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `print` ADD COLUMN `backFile` TEXT")
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `print` ADD COLUMN `stamp` TEXT")
             }
         }
 

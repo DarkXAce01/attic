@@ -9,6 +9,7 @@ import android.provider.MediaStore
 import androidx.exifinterface.media.ExifInterface
 import io.github.darkxace01.attic.vision.Deglare
 import io.github.darkxace01.attic.vision.Enhance
+import io.github.darkxace01.attic.vision.DateStamp
 import io.github.darkxace01.attic.vision.PrintHash
 import io.github.darkxace01.attic.vision.FrameTransform
 import io.github.darkxace01.attic.vision.Quad
@@ -45,6 +46,9 @@ class Library(private val context: Context) {
     internal val dao = db.dao()
     val settings = Settings(context)
     val root = File(context.filesDir, "scans").apply { mkdirs() }
+
+    /** The date-stamp reader: small, loaded the first time a print is read. */
+    private val dateStamp by lazy { DateStamp(context.assets.open("datestamp.onnx").use { it.readBytes() }) }
     private val prefs = context.getSharedPreferences("library", Context.MODE_PRIVATE)
 
     // ---- reading ----
@@ -198,7 +202,7 @@ class Library(private val context: Context) {
                 quad = p.quad.encode(), createdAt = now, enhance = settings.now.newScanLook,
             )
             renderEnhanced(e, p.image)
-            val withHash = e.copy(hashes = PrintHash.allTurns(p.image).joinToString(","))
+            val withHash = withStamp(e.copy(hashes = PrintHash.allTurns(p.image).joinToString(",")), p.image)
             withHash.copy(id = dao.insertPrint(withHash))
         }
     }
@@ -317,6 +321,32 @@ class Library(private val context: Context) {
     }
 
     /** Fingerprints for prints saved before they existed. */
+    /** Reads the camera's date stamp, for prints saved before Attic read them. */
+    suspend fun readMissingStamps() = io {
+        for (p in dao.printsWithoutStamp()) {
+            val img = readPng(p.file(root)) ?: continue
+            val read = withStamp(p, img)
+            img.release()
+            dao.updatePrint(if (read.date != p.date) read.copy(version = p.version + 1) else read)
+        }
+    }
+
+    /**
+     * [p] with its date stamp read from [image], and the date filled in from it when the print has none
+     * and the stamp can only mean one day.
+     */
+    private fun withStamp(p: PrintEntity, image: Mat): PrintEntity {
+        val reading = runCatching { dateStamp.read(image) }.getOrNull()
+        val read = p.copy(stamp = reading?.text ?: "")
+        val day = reading?.dates?.singleOrNull()
+        return if (day != null && p.dateFrom == null) {
+            val d = PhotoDate.day(day)
+            read.copy(dateFrom = d.from.toEpochDay(), dateTo = d.to.toEpochDay(), dateLabel = d.label)
+        } else {
+            read
+        }
+    }
+
     suspend fun fillMissingHashes() = io {
         for (p in dao.printsWithoutHashes()) {
             val img = readPng(p.file(root)) ?: continue
@@ -366,7 +396,8 @@ class Library(private val context: Context) {
             sharpness = Rectify.sharpness(flat), version = p.version + 1,
         )
         renderEnhanced(updated, flat)
-        val rehashed = updated.copy(hashes = PrintHash.allTurns(flat).joinToString(","))
+        // A better crop can show a stamp the old one cut off.
+        val rehashed = withStamp(updated.copy(hashes = PrintHash.allTurns(flat).joinToString(",")), flat)
         flat.release()
         original.release()
         dao.updatePrint(rehashed)

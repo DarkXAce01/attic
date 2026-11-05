@@ -229,6 +229,7 @@ private fun LicencesSheet(onDismiss: () -> Unit) {
         "Coil" to "Apache License 2.0. Loading photos.",
         "Instrument Serif, Geist Mono" to "SIL Open Font License 1.1. The studio logo.",
         "Print finder" to "Attic's own network, trained only on made-up album pages drawn with photos from the Unsplash Lite dataset (Unsplash License). No one's personal photos.",
+        "Date reader" to "Attic's own network, trained only on made-up camera date stamps drawn on photos from the Unsplash Lite dataset.",
         "Attic" to "GNU General Public License 3.0. The source is on GitHub: DarkXAce01/attic.",
     )
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Surface) {

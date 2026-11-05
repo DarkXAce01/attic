@@ -32,6 +32,9 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   can drag a corner or a whole side (with a magnifier under your finger), snap one to the edges, add
   one it missed or remove one, then save or retake. On the scan screen as Check, and in Settings
 - Scans go into the album you pick at the top of the scan screen, one capture per page
+- Date stamps: the orange date many film cameras printed in the corner ('87 7 14) is read from every
+  print, whichever way up it was scanned, and fills in the date when the photo has none. A stamp that
+  reads two ways (3 5 '88) asks which day it is. Prints already in Attic are read in the background
 
 **Keep**
 - Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their

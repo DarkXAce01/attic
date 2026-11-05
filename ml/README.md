@@ -47,3 +47,18 @@ Three maps, each 288 x 384:
 To get outlines, each core marks one print. Every print pixel belongs to the nearest core, four corners
 are fitted to each print's own pixels, and every side is then settled where the print map crosses one
 half. Prints cut off by the frame are left out, since they can't be captured whole.
+
+## The date reader
+
+`stamp.py` draws camera date stamps ('87 7 14 in glowing orange seven-segment digits) onto Unsplash
+photos, in the formats cameras used, with the glow, fading and camera blur of a real print. About half
+the samples have no stamp, and some have orange text that isn't a date. `python ml/stamp.py preview`
+(with `OUT` set to a folder) writes a grid of samples to look at.
+
+`stamp_train.py train` trains a small all-convolution network on endless strips (no dataset to
+generate), checked against strips drawn from photos it never trains on. `stamp_train.py export` writes
+`app/src/main/assets/datestamp.onnx` and checks OpenCV runs it the same as PyTorch.
+
+The network reads one 48 x 192 strip: the print's bottom-right corner, 0.2 x 0.8 of its short side. It
+gives, for each of 48 slices across the strip, how likely each character is (digits, apostrophe, space,
+or nothing); the app merges repeats and drops the nothings (CTC), and tries all four turns of the print.

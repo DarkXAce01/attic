@@ -181,6 +181,7 @@ private fun PrintPage(
                 value = p.date?.label ?: inherited?.let { "${it.label} (album)" },
                 placeholder = "Add a date",
             ) { editing = Editing.Date }
+            StampLine(p) { d -> work { library.setDate(printId, d) } }
             DetailRow("Who", people.joinToString(", ").ifEmpty { null }, "Add people") { editing = Editing.People }
             DetailRow("Where", p.place, "Add a place") { editing = Editing.Place }
             DetailRow("Caption", p.caption, "Add a caption") { editing = Editing.Caption }
@@ -280,6 +281,35 @@ private fun qualityLine(p: PrintEntity): String {
         else -> "sharp"
     }
     return "${p.width} × ${p.height} px, $mp MP, $sharp"
+}
+
+/**
+ * The date a film camera printed on the photo, if it has one. When it's the photo's date, it says where
+ * the date came from; otherwise it offers it, and when the stamp reads two ways it asks which.
+ */
+@Composable
+private fun StampLine(p: PrintEntity, onUse: (io.github.darkxace01.attic.data.PhotoDate) -> Unit) {
+    val days = p.stampDates.map { io.github.darkxace01.attic.data.PhotoDate.day(it) }
+    if (days.isEmpty()) return
+    if (p.date != null && p.date in days) {
+        Text(
+            "From the date printed on the photo.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Palette.Muted,
+            modifier = Modifier.padding(start = 76.dp, bottom = 6.dp),
+        )
+        return
+    }
+    Column(Modifier.padding(start = 76.dp, bottom = 6.dp)) {
+        Text(
+            if (days.size == 1) "The photo has ${days[0].label} printed on it." else "The photo has ${p.stamp} printed on it. Which day is it?",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Palette.Ink,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (d in days) QuietButton(if (days.size == 1) "Use it" else d.label, onClick = { onUse(d) }, color = Palette.Accent)
+        }
+    }
 }
 
 @Composable
