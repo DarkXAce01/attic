@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-feature android:name="android.hardware.camera" android:required="true" />
     <uses-permission android:name="android.permission.CAMERA" />
     <!-- Stories: spoken memories about a photo, recorded and kept on the phone. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
-    <!-- No INTERNET permission: nothing ever leaves the phone. -->
+    <!-- No INTERNET permission: nothing ever leaves the phone. Nor any network permission a library asks for. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
     <application
         android:name=".AtticApplication"
