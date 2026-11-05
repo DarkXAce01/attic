@@ -50,9 +50,18 @@ import org.opencv.core.Core
 import org.opencv.core.CvType
 import org.opencv.core.Mat
 import org.opencv.core.Rect
+import org.opencv.imgproc.Imgproc
+import kotlin.math.max
+import kotlin.math.min
 import java.util.concurrent.Executors
 
 data class Outline(val id: Long, val quad: Quad, val locked: Boolean)
+
+/**
+ * A shot waiting to be checked: the photo (scaled down to [image]) and the prints found on it, in
+ * [image] pixels. [back]: it's the back of a print, so only one outline is kept.
+ */
+data class ReviewUi(val image: ImageBitmap, val quads: List<Quad>, val back: Boolean)
 
 data class LivePreview(val id: Long, val image: ImageBitmap, val locked: Boolean)
 
@@ -96,6 +105,10 @@ data class ScanUiState(
     /** The page saved last, for adding its details: album and page number, page 0 before any. */
     val lastAlbumId: Long = 0,
     val lastPage: Int = 0,
+    /** Check each shot's outlines before saving it. */
+    val checkEachShot: Boolean = false,
+    /** A shot being checked. */
+    val review: ReviewUi? = null,
     val error: String? = null,
 )
 
@@ -111,7 +124,11 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private val captureExecutor = Executors.newSingleThreadExecutor()
 
-    private val _state = MutableStateFlow(ScanUiState(autoCapture = library.settings.now.autoCapture, glareFree = library.settings.now.glareFree))
+    private val _state = MutableStateFlow(ScanUiState(
+            autoCapture = library.settings.now.autoCapture,
+            glareFree = library.settings.now.glareFree,
+            checkEachShot = library.settings.now.checkEachShot,
+        ))
     val state: StateFlow<ScanUiState> = _state
 
     private val scanningAlbumId = MutableStateFlow<Long?>(null)
@@ -128,6 +145,13 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
                 .collect { a ->
                     if (a != null) _state.update { it.copy(albumId = a.id, albumTitle = a.title, albumPages = a.pages, albumPrints = a.count) }
                 }
+        }
+    }
+
+    init {
+        // Check can also be switched in Settings.
+        viewModelScope.launch {
+            library.settings.prefs.collect { p -> _state.update { it.copy(checkEachShot = p.checkEachShot) } }
         }
     }
 
@@ -221,6 +245,11 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             .onFailure { e -> _state.update { it.copy(error = "Camera unavailable: ${e.message}") } }
     }
 
+    fun setCheckEachShot(on: Boolean) {
+        library.settings.update { it.copy(checkEachShot = on) }
+        _state.update { it.copy(checkEachShot = on) }
+    }
+
     fun setAutoCapture(on: Boolean) {
         library.settings.update { it.copy(autoCapture = on) }
         _state.update { it.copy(autoCapture = on) }
@@ -254,6 +283,8 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     }
 
     override fun analyze(image: ImageProxy) {
+        // While a shot is being checked the camera isn't needed.
+        if (_state.value.review != null) { image.close(); return }
         val now = SystemClock.elapsedRealtime()
         val frame = try {
             image.toUprightRgba()
@@ -506,7 +537,11 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         store(prints) { library.saveCapture(first.jpeg, first.frame, it, shots.drop(1).map { s -> Library.Shot(s.jpeg, s.frame) }) }
     })
 
-    private suspend fun process(jpeg: ByteArray, frame: FrameTransform, normQuads: List<Quad>) = report(runCatching {
+    private suspend fun process(jpeg: ByteArray, frame: FrameTransform, normQuads: List<Quad>) {
+        if (library.settings.now.checkEachShot) openReview(jpeg, frame, normQuads, null) else save(jpeg, frame, normQuads)
+    }
+
+    private suspend fun save(jpeg: ByteArray, frame: FrameTransform, normQuads: List<Quad>) = report(runCatching {
         val full = decodeUpright(jpeg, frame)
         val w = full.cols().toFloat()
         val h = full.rows().toFloat()
@@ -526,6 +561,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
 
     /** The back of print [id]: the print in view (the biggest one), flattened and kept with it. */
     private suspend fun processBack(jpeg: ByteArray, frame: FrameTransform, normQuad: Quad?, id: Long) {
+        if (library.settings.now.checkEachShot) { openReview(jpeg, frame, listOfNotNull(normQuad), id); return }
         val result = runCatching {
             val full = decodeUpright(jpeg, frame)
             val w = full.cols().toFloat(); val h = full.rows().toFloat()
@@ -558,6 +594,94 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             _state.update { it.copy(justSavedBack = false) }
         } else {
             armed = true
+        }
+    }
+
+    // The shot being checked: the full photo stays decoded until it's saved or dropped.
+    private class Pending(val jpeg: ByteArray, val frame: FrameTransform, val full: Mat, val scale: Float, val backFor: Long?)
+    @Volatile private var pending: Pending? = null
+
+    /** Finds the outlines on the shot as a capture would, then waits for them to be checked. */
+    private suspend fun openReview(jpeg: ByteArray, frame: FrameTransform, normQuads: List<Quad>, backFor: Long?) {
+        val result = runCatching {
+            val full = decodeUpright(jpeg, frame)
+            val w = full.cols().toFloat(); val h = full.rows().toFloat()
+            var rough = normQuads.map { it.scale(w, h) }.ifEmpty { detector.detect(full) }
+            if (backFor != null) rough = listOfNotNull(rough.maxByOrNull { it.area })
+            val quads = rough.map { detector.finalOutline(full, it) }
+            val scale = min(1f, REVIEW_SIDE / max(w, h))
+            val small = Mat()
+            Imgproc.resize(full, small, org.opencv.core.Size(w * scale.toDouble(), h * scale.toDouble()), 0.0, 0.0, Imgproc.INTER_AREA)
+            val bmp = Bitmap.createBitmap(small.cols(), small.rows(), Bitmap.Config.ARGB_8888)
+            Utils.matToBitmap(small, bmp)
+            small.release()
+            pending?.full?.release()
+            pending = Pending(jpeg, frame, full, scale, backFor)
+            ReviewUi(bmp.asImageBitmap(), quads.map { it.scale(scale, scale) }, backFor != null)
+        }
+        result.onSuccess { r -> _state.update { it.copy(saving = false, review = r) } }
+            .onFailure { e ->
+                armed = true
+                _state.update { it.copy(saving = false, error = "Couldn't read the photo: ${e.message}") }
+            }
+    }
+
+    /** One outline put onto the nearest edges of the shot being checked. [q] in the review image's pixels. */
+    suspend fun snapInReview(q: Quad): Quad {
+        val p = pending ?: return q
+        return kotlinx.coroutines.withContext(Dispatchers.Default) {
+            detector.finalOutline(p.full, q.scale(1f / p.scale, 1f / p.scale), edgeSearch = 0.02f).scale(p.scale, p.scale)
+        }
+    }
+
+    /** Saves the checked shot with these outlines (review image pixels). None left: same as retaking. */
+    fun saveReview(quads: List<Quad>) {
+        val p = pending ?: return
+        if (quads.isEmpty()) { retake(); return }
+        pending = null
+        _state.update { it.copy(review = null, saving = true) }
+        viewModelScope.launch(Dispatchers.Default) {
+            val fq = quads.map { it.scale(1f / p.scale, 1f / p.scale) }
+            if (p.backFor != null) {
+                val result = runCatching {
+                    val flat = Rectify.warp(p.full, fq.maxBy { it.area })
+                    library.saveBack(p.backFor, flat, p.jpeg)
+                    flat.release()
+                }
+                p.full.release()
+                _state.update {
+                    it.copy(
+                        saving = false,
+                        backFor = if (result.isSuccess) null else it.backFor,
+                        justSavedBack = result.isSuccess,
+                        error = result.exceptionOrNull()?.let { e -> "Couldn't save the back: ${e.message}" },
+                    )
+                }
+                if (result.isSuccess) {
+                    delay(2500)
+                    _state.update { it.copy(justSavedBack = false) }
+                }
+                return@launch
+            }
+            report(runCatching {
+                val prints = fq.sortedWith(compareBy({ (it.center.y / p.full.rows() * 8).toInt() }, { it.center.x })).map { q ->
+                    val flat = Rectify.warp(p.full, q)
+                    Library.NewPrint(flat, q, Rectify.sharpness(flat))
+                }
+                p.full.release()
+                store(prints) { library.saveCapture(p.jpeg, p.frame, it) }
+            })
+        }
+    }
+
+    /** Drops the shot being checked; the camera takes the page again. */
+    fun retake() {
+        pending?.full?.release()
+        pending = null
+        _state.update { it.copy(review = null, saving = false) }
+        analysisExecutor.execute {
+            armed = true
+            allLockedSince = 0L
         }
     }
 
@@ -598,6 +722,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     }
 
     override fun onCleared() {
+        pending?.full?.release()
         analysisExecutor.shutdown()
         captureExecutor.shutdown()
     }
@@ -637,6 +762,9 @@ private fun ImageProxy.toUprightRgba(): Mat {
 
 /** Under this, a print looks soft (focus or shake) and is worth retaking. */
 const val SOFT_SHARPNESS = 60.0
+
+/** The longest side of the photo shown for checking outlines. */
+private const val REVIEW_SIDE = 1600f
 
 /** Shots of a glare-free page. */
 private const val SWEEP_SHOTS = 3

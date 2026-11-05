@@ -83,6 +83,12 @@ fun SettingsScreen(onBack: () -> Unit) {
                 prefs.saveToGallery,
             ) { on -> library.settings.update { it.copy(saveToGallery = on) } }
 
+            Toggle(
+                "Check each shot before saving",
+                "See the outlines Attic found and fix them by hand, like a document scanner. Also on the scan screen as Check.",
+                prefs.checkEachShot,
+            ) { on -> library.settings.update { it.copy(checkEachShot = on) } }
+
             Heading("Backup")
             BackupSection(backup, library.counts())
 

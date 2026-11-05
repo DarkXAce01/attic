@@ -42,6 +42,7 @@ import io.github.darkxace01.attic.data.PrintEntity
 import io.github.darkxace01.attic.finalOutline
 import io.github.darkxace01.attic.library
 import io.github.darkxace01.attic.printNet
+import io.github.darkxace01.attic.ui.OutlineEditor
 import io.github.darkxace01.attic.ui.PrimaryButton
 import io.github.darkxace01.attic.ui.QuietButton
 import io.github.darkxace01.attic.ui.TopBar
@@ -97,11 +98,11 @@ fun CropScreen(printId: Long, onDone: () -> Unit) {
         Box(Modifier.fillMaxWidth().weight(1f).padding(16.dp)) {
             val o = original
             val q = quad
-            if (o != null && q != null) CornerEditor(o.image, q, onChange = { quad = it })
+            if (o != null && q != null) OutlineEditor(o.image, listOf(q), selected = 0, onSelect = {}, onChange = { _, nq -> quad = nq }, modifier = Modifier.fillMaxSize())
             else Text("Loading the original…", color = Palette.Muted, modifier = Modifier.align(Alignment.Center))
         }
         Text(
-            "Drag each corner onto the corner of the print.",
+            "Drag the corners or sides onto the edges of the print.",
             style = MaterialTheme.typography.bodyMedium,
             color = Palette.Muted,
             modifier = Modifier.padding(horizontal = 20.dp),
@@ -134,109 +135,6 @@ fun CropScreen(printId: Long, onDone: () -> Unit) {
                     }
                 },
             )
-        }
-    }
-}
-
-@Composable
-private fun CornerEditor(image: ImageBitmap, quad: Quad, onChange: (Quad) -> Unit) {
-    var dragging by remember { mutableIntStateOf(-1) }
-    var current by remember { mutableStateOf(quad) }
-    LaunchedEffect(quad) { current = quad }
-
-    Canvas(
-        Modifier
-            .fillMaxSize()
-            .pointerInput(image) {
-                val fit = min(size.width / image.width.toFloat(), size.height / image.height.toFloat())
-                val ox = (size.width - image.width * fit) / 2
-                val oy = (size.height - image.height * fit) / 2
-                fun toScreen(p: Pt) = Offset(ox + p.x * fit, oy + p.y * fit)
-                detectDragGestures(
-                    onDragStart = { start ->
-                        dragging = current.points.indices.minBy { (toScreen(current.points[it]) - start).getDistance() }
-                            .takeIf { (toScreen(current.points[it]) - start).getDistance() < 64.dp.toPx() } ?: -1
-                    },
-                    onDragEnd = { dragging = -1; onChange(current) },
-                    onDragCancel = { dragging = -1 },
-                    onDrag = { change, delta ->
-                        if (dragging < 0) return@detectDragGestures
-                        change.consume()
-                        val pts = current.points.toMutableList()
-                        val p = pts[dragging]
-                        pts[dragging] = Pt(
-                            (p.x + delta.x / fit).coerceIn(0f, image.width.toFloat()),
-                            (p.y + delta.y / fit).coerceIn(0f, image.height.toFloat()),
-                        )
-                        current = Quad(pts[0], pts[1], pts[2], pts[3])
-                    },
-                )
-            },
-    ) {
-        val fit = min(size.width / image.width, size.height / image.height)
-        val ox = (size.width - image.width * fit) / 2
-        val oy = (size.height - image.height * fit) / 2
-        fun toScreen(p: Pt) = Offset(ox + p.x * fit, oy + p.y * fit)
-
-        drawImage(
-            image,
-            dstOffset = IntOffset(ox.toInt(), oy.toInt()),
-            dstSize = IntSize((image.width * fit).toInt(), (image.height * fit).toInt()),
-        )
-        val pts = current.points.map(::toScreen)
-        val path = Path().apply {
-            moveTo(pts[0].x, pts[0].y)
-            pts.drop(1).forEach { lineTo(it.x, it.y) }
-            close()
-        }
-        // Dim everything outside the crop.
-        clipPath(path, clipOp = androidx.compose.ui.graphics.ClipOp.Difference) {
-            drawRect(Color.Black.copy(alpha = 0.55f))
-        }
-        drawPath(path, Palette.Accent, style = Stroke(2.dp.toPx()))
-        pts.forEachIndexed { i, p ->
-            drawCircle(Color.White, radius = if (i == dragging) 14.dp.toPx() else 11.dp.toPx(), center = p)
-            drawCircle(Palette.Accent, radius = 7.dp.toPx(), center = p)
-        }
-
-        if (dragging >= 0) {
-            // Loupe in the opposite top corner from the finger, 3× magnified.
-            val corner = current.points[dragging]
-            val radius = 64.dp.toPx()
-            val zoom = 3f
-            val center = Offset(
-                if (pts[dragging].x < size.width / 2) size.width - radius - 8.dp.toPx() else radius + 8.dp.toPx(),
-                radius + 8.dp.toPx(),
-            )
-            val srcHalf = radius / (fit * zoom)
-            val src = Rect(corner.x - srcHalf, corner.y - srcHalf, corner.x + srcHalf, corner.y + srcHalf)
-            val circle = Path().apply { addOval(Rect(center, radius)) }
-            clipPath(circle) {
-                drawRect(Palette.Ground, topLeft = center - Offset(radius, radius), size = Size(radius * 2, radius * 2))
-                drawImage(
-                    image,
-                    srcOffset = IntOffset(src.left.toInt().coerceAtLeast(0), src.top.toInt().coerceAtLeast(0)),
-                    srcSize = IntSize(
-                        (src.width.toInt()).coerceAtMost(image.width - src.left.toInt().coerceAtLeast(0)),
-                        (src.height.toInt()).coerceAtMost(image.height - src.top.toInt().coerceAtLeast(0)),
-                    ),
-                    dstOffset = IntOffset(
-                        (center.x - radius + (src.left.coerceAtLeast(0f) - src.left) * fit * zoom).toInt(),
-                        (center.y - radius + (src.top.coerceAtLeast(0f) - src.top) * fit * zoom).toInt(),
-                    ),
-                    dstSize = IntSize(
-                        ((src.width.toInt()).coerceAtMost(image.width - src.left.toInt().coerceAtLeast(0)) * fit * zoom).toInt(),
-                        ((src.height.toInt()).coerceAtMost(image.height - src.top.toInt().coerceAtLeast(0)) * fit * zoom).toInt(),
-                    ),
-                )
-                // The crop edges, magnified, so you can see exactly where the corner sits.
-                val toLoupe = { p: Pt -> Offset(center.x + (p.x - corner.x) * fit * zoom, center.y + (p.y - corner.y) * fit * zoom) }
-                val lp = current.points.map(toLoupe)
-                drawLine(Palette.Accent, lp[dragging], lp[(dragging + 1) % 4], 2.dp.toPx())
-                drawLine(Palette.Accent, lp[dragging], lp[(dragging + 3) % 4], 2.dp.toPx())
-            }
-            drawCircle(Color.White, radius = radius, center = center, style = Stroke(2.dp.toPx()))
-            drawCircle(Color.White, radius = 3.dp.toPx(), center = center)
         }
     }
 }

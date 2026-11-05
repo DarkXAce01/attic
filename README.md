@@ -28,6 +28,9 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   shots up, and wherever one has a reflection it uses another shot where that spot is clear. The rest
   of the print comes from the first shot unchanged, so nothing gets soft. Fixing the crop later redoes
   the merge. In normal mode Attic says when it sees glare
+- Check mode, like a document scanner: each shot shows the outlines Attic found on the photo, and you
+  can drag a corner or a whole side (with a magnifier under your finger), snap one to the edges, add
+  one it missed or remove one, then save or retake. On the scan screen as Check, and in Settings
 - Scans go into the album you pick at the top of the scan screen, one capture per page
 
 **Keep**

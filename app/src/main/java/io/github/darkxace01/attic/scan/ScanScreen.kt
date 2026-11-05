@@ -78,6 +78,7 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
         flash.animateTo(0f, tween(260))
     }
 
+    Box(Modifier.fillMaxSize()) {
     Column(
         Modifier
             .fillMaxSize()
@@ -110,18 +111,10 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
                     color = Palette.Muted,
                 )
             }
-            // Glare-free: on, it takes each page from a few angles. Quiet when off, filled when on.
-            Text(
-                "Glare-free",
-                style = MaterialTheme.typography.labelLarge,
-                color = if (state.glareFree) Palette.Ink else Palette.Muted,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(if (state.glareFree) Palette.SurfaceHigh else Color.Transparent)
-                    .clickable { vm.setGlareFree(!state.glareFree) }
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-            )
-            Spacer(Modifier.width(8.dp))
+            // Check: each shot waits for its outlines to be checked. Glare-free: each page from a few angles.
+            ModeChip("Check", state.checkEachShot) { vm.setCheckEachShot(!state.checkEachShot) }
+            ModeChip("Glare-free", state.glareFree) { vm.setGlareFree(!state.glareFree) }
+            Spacer(Modifier.width(4.dp))
             Text("Auto", style = MaterialTheme.typography.labelLarge, color = Palette.Muted)
             Spacer(Modifier.width(10.dp))
             Switch(
@@ -202,6 +195,24 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
             )
         }
     }
+    // Over the camera, which stays ready for a retake.
+    state.review?.let { ReviewScreen(it, vm) }
+    }
+}
+
+/** A mode that's on or off: quiet when off, filled when on. */
+@Composable
+private fun ModeChip(text: String, on: Boolean, onClick: () -> Unit) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        color = if (on) Palette.Ink else Palette.Muted,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (on) Palette.SurfaceHigh else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    )
 }
 
 private fun statusLine(s: ScanUiState): String {
@@ -229,7 +240,7 @@ private fun statusLine(s: ScanUiState): String {
         s.waitingForNext -> "Done. Turn the page or move to the next photo."
         n == 0 -> if (s.glareFree) "Point at a page. You'll take it from a few angles." else "Point at a photo or an album page."
         s.glareSeen && !s.glareFree && s.readyProgress == 0f -> "Found $photos. There's glare; try Glare-free."
-        s.outlines.all { it.locked } && !s.autoCapture -> "Found $photos. Tap to capture."
+        s.outlines.all { it.locked } && !s.autoCapture -> if (s.checkEachShot) "Found $photos. Tap to take it and check." else "Found $photos. Tap to capture."
         s.outlines.all { it.locked } -> "Found $photos. Hold still…"
         else -> "Found $photos. Hold steady."
     }
