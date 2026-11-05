@@ -61,12 +61,14 @@ import io.github.darkxace01.attic.ui.QuietButton
 import io.github.darkxace01.attic.ui.TextSheet
 import io.github.darkxace01.attic.ui.TopBar
 import io.github.darkxace01.attic.ui.theme.Palette
+import io.github.darkxace01.attic.ui.sharePhotos
 import kotlinx.coroutines.launch
 
 /** One album, page by page, the way it was scanned. */
 @Composable
 fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, onScanHere: () -> Unit, onTellStories: () -> Unit) {
-    val library = LocalContext.current.library
+    val context = LocalContext.current
+    val library = context.library
     val album by remember(albumId) { library.album(albumId) }.collectAsStateWithLifecycle(null)
     val prints by remember(albumId) { library.printsIn(albumId) }.collectAsStateWithLifecycle(emptyList())
     val scope = rememberCoroutineScope()
@@ -86,6 +88,12 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
                 IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More", tint = Palette.Ink) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text("Tell its stories") }, onClick = { menu = false; onTellStories() })
+                    if (prints.isNotEmpty()) {
+                        DropdownMenuItem(text = { Text("Share all photos") }, onClick = {
+                            menu = false
+                            scope.launch { sharePhotos(context, prints.map { it.id }, "Share ${a.title}") }
+                        })
+                    }
                     DropdownMenuItem(text = { Text("Rename") }, onClick = { menu = false; renaming = true })
                     DropdownMenuItem(text = { Text("Set album date") }, onClick = { menu = false; dating = true })
                     DropdownMenuItem(text = { Text("Delete album", color = Palette.Warning) }, onClick = { menu = false; confirmDelete = true })

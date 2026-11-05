@@ -604,6 +604,27 @@ class Library(private val context: Context) {
         if (uri != null) dao.updatePrint(p.copy(galleryUri = uri.toString(), exportedVersion = p.version))
     }
 
+    /**
+     * Copies of [ids] to hand to another app (messages, mail, Google Photos): each as it looks in Attic,
+     * with its date, people, place and caption in the EXIF, named after its album and date. Earlier copies
+     * are cleared first.
+     */
+    suspend fun shareFiles(ids: List<Long>): List<File> = io {
+        val dir = File(context.cacheDir, "share")
+        dir.deleteRecursively()
+        dir.mkdirs()
+        val used = HashSet<String>()
+        ids.mapNotNull { dao.print(it) }.mapNotNull { p ->
+            val album = dao.album(p.albumId)
+            val date = p.date ?: album?.date
+            val base = safeFolder(listOfNotNull(album?.title, date?.label).joinToString(", ").ifEmpty { "Photo" })
+            var name = "$base.jpg"
+            var n = 2
+            while (!used.add(name)) name = "$base ${n++}.jpg"
+            File(dir, name).takeIf { writeJpeg(p, it) }
+        }
+    }
+
     private fun safeFolder(s: String) = s.replace(Regex("[\\\\/:*?\"<>|]"), " ").trim().ifEmpty { "Attic" }
 
     // ---- housekeeping ----

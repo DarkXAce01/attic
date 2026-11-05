@@ -71,6 +71,7 @@ import io.github.darkxace01.attic.ui.TextSheet
 import io.github.darkxace01.attic.ui.TopBar
 import io.github.darkxace01.attic.ui.fieldColors
 import io.github.darkxace01.attic.ui.theme.Palette
+import io.github.darkxace01.attic.ui.sharePhotos
 import io.github.darkxace01.attic.vision.Enhance
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -136,7 +137,8 @@ private fun PrintPage(
     onScanBack: (Long) -> Unit,
     onDeleted: () -> Unit,
 ) {
-    val library = LocalContext.current.library
+    val context = LocalContext.current
+    val library = context.library
     val print by remember(printId) { library.print(printId) }.collectAsStateWithLifecycle(null)
     val p = print ?: return
     val album by remember(p.albumId) { library.album(p.albumId) }.collectAsStateWithLifecycle(null)
@@ -159,6 +161,7 @@ private fun PrintPage(
         TopBar(album?.title ?: "", onBack = onBack) {
             val note = if (busy) "Saving…" else position
             if (note != null) Text(note, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+            QuietButton("Share", onClick = { scope.launch { sharePhotos(context, listOf(printId)) } })
         }
         val back = library.backFile(p)
         var showBack by remember(p.id) { mutableStateOf(false) }

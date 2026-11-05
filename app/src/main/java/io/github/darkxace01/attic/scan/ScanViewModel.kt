@@ -512,34 +512,94 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
      * A glare-free page: every print cut from every shot at the same size, then merged so each spot comes
      * from a shot where it has no glare. The first shot is the page's original.
      */
-    private suspend fun processSweep(shots: List<SweepShot>) = report(runCatching {
-        val first = shots[0]
-        val base = decodeUpright(first.jpeg, first.frame)
-        val bw = base.cols().toFloat(); val bh = base.rows().toFloat()
-        val quads = first.quads.map { q -> detector.finalOutline(base, q!!.scale(bw, bh)) }
-        val flats = quads.map { Rectify.warp(base, it) }
-        base.release()
-        val others = List(quads.size) { mutableListOf<Mat>() }
-        val otherQuads = List(quads.size) { MutableList<Quad?>(shots.size - 1) { null } }
+    private suspend fun processSweep(shots: List<SweepShot>) {
+        if (library.settings.now.checkEachShot) { openSweepReview(shots); return }
+        report(runCatching {
+            val first = shots[0]
+            val base = decodeUpright(first.jpeg, first.frame)
+            val bw = base.cols().toFloat(); val bh = base.rows().toFloat()
+            val quads = first.quads.map { q -> detector.finalOutline(base, q!!.scale(bw, bh)) }
+            merge(shots, base, quads, locate(shots, quads))
+        })
+    }
+
+    /** Where each of [quads] (outlines in the first shot) is in each other shot: [print][shot - 1]. */
+    private fun locate(shots: List<SweepShot>, quads: List<Quad>): List<List<Quad?>> {
+        val found = List(quads.size) { MutableList<Quad?>(shots.size - 1) { null } }
         for ((k, shot) in shots.drop(1).withIndex()) {
             val full = decodeUpright(shot.jpeg, shot.frame)
             val fw = full.cols().toFloat(); val fh = full.rows().toFloat()
             for (i in quads.indices) {
                 val q = shot.quads.getOrNull(i) ?: continue
-                val fq = detector.finalOutline(full, q.scale(fw, fh))
-                others[i] += Rectify.warp(full, fq, size = flats[i].cols() to flats[i].rows())
-                otherQuads[i][k] = fq
+                found[i][k] = detector.finalOutline(full, q.scale(fw, fh))
+            }
+            full.release()
+        }
+        return found
+    }
+
+    /**
+     * The glare-free merge: each print flattened from the first shot ([base], released here), with the
+     * glare filled in from the other shots, where it's at [others].
+     */
+    private suspend fun merge(shots: List<SweepShot>, base: Mat, quads: List<Quad>, others: List<List<Quad?>>): Stored {
+        val flats = quads.map { Rectify.warp(base, it) }
+        base.release()
+        val views = List(quads.size) { mutableListOf<Mat>() }
+        for ((k, shot) in shots.drop(1).withIndex()) {
+            if (quads.indices.none { others[it][k] != null }) continue
+            val full = decodeUpright(shot.jpeg, shot.frame)
+            for (i in quads.indices) {
+                val q = others[i][k] ?: continue
+                views[i] += Rectify.warp(full, q, size = flats[i].cols() to flats[i].rows())
             }
             full.release()
         }
         val prints = flats.mapIndexed { i, flat ->
-            val merged = Deglare.merge(flat, others[i])
+            val merged = Deglare.merge(flat, views[i])
             flat.release()
-            others[i].forEach { it.release() }
-            Library.NewPrint(merged, quads[i], Rectify.sharpness(merged), otherQuads[i])
+            views[i].forEach { it.release() }
+            Library.NewPrint(merged, quads[i], Rectify.sharpness(merged), others[i])
         }
-        store(prints) { library.saveCapture(first.jpeg, first.frame, it, shots.drop(1).map { s -> Library.Shot(s.jpeg, s.frame) }) }
-    })
+        val first = shots[0]
+        return store(prints) { library.saveCapture(first.jpeg, first.frame, it, shots.drop(1).map { s -> Library.Shot(s.jpeg, s.frame) }) }
+    }
+
+    /** A glare-free page waits to be checked like any shot: the outlines are checked on the first shot. */
+    private suspend fun openSweepReview(shots: List<SweepShot>) {
+        val first = shots[0]
+        val located = runCatching {
+            val base = decodeUpright(first.jpeg, first.frame)
+            val bw = base.cols().toFloat(); val bh = base.rows().toFloat()
+            val quads = first.quads.map { q -> detector.finalOutline(base, q!!.scale(bw, bh)) }
+            base.release()
+            quads to locate(shots, quads)
+        }.getOrElse { e ->
+            armed = true
+            _state.update { it.copy(saving = false, error = "Couldn't read the photo: ${e.message}") }
+            return
+        }
+        sweepPending = SweepPending(shots, located.first, located.second)
+        openReview(first.jpeg, first.frame, located.first, null, exact = true)
+    }
+
+    /** The glare-free shots behind the shot being checked, and where each print was found in them. */
+    private class SweepPending(val shots: List<SweepShot>, val quads: List<Quad>, val others: List<List<Quad?>>)
+    @Volatile private var sweepPending: SweepPending? = null
+
+    /**
+     * Carries checked outlines over to the other shots of a glare-free page. A print keeps where it was
+     * found in them, moved the way its outline was moved by hand; an outline added by hand is placed using
+     * the biggest print found in that shot (the page is flat, so one print shows how the whole page moved).
+     */
+    private fun carryOver(sp: SweepPending, checked: List<Quad>): List<List<Quad?>> = checked.map { q ->
+        val i = sp.quads.indices.filter { sp.quads[it].iou(q) > 0.5f }.maxByOrNull { sp.quads[it].iou(q) }
+        List(sp.shots.size - 1) { k ->
+            val j = if (i != null && sp.others[i][k] != null) i
+                else sp.quads.indices.filter { sp.others[it][k] != null }.maxByOrNull { sp.quads[it].area }
+            j?.let { Deglare.mapQuad(q, sp.quads[it], sp.others[it][k]!!) }
+        }
+    }
 
     private suspend fun process(jpeg: ByteArray, frame: FrameTransform, normQuads: List<Quad>) {
         if (library.settings.now.checkEachShot) openReview(jpeg, frame, normQuads, null) else save(jpeg, frame, normQuads)
@@ -606,13 +666,17 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     @Volatile private var pending: Pending? = null
 
     /** Finds the outlines on the shot as a capture would, then waits for them to be checked. */
-    private suspend fun openReview(jpeg: ByteArray, frame: FrameTransform, normQuads: List<Quad>, backFor: Long?) {
+    private suspend fun openReview(jpeg: ByteArray, frame: FrameTransform, normQuads: List<Quad>, backFor: Long?, exact: Boolean = false) {
+        if (!exact) sweepPending = null
         val result = runCatching {
             val full = decodeUpright(jpeg, frame)
             val w = full.cols().toFloat(); val h = full.rows().toFloat()
-            var rough = normQuads.map { it.scale(w, h) }.ifEmpty { detector.detect(full) }
-            if (backFor != null) rough = listOfNotNull(rough.maxByOrNull { it.area })
-            val quads = rough.map { detector.finalOutline(full, it) }
+            // Exact: already final outlines in the photo's pixels.
+            val quads = if (exact) normQuads else {
+                var rough = normQuads.map { it.scale(w, h) }.ifEmpty { detector.detect(full) }
+                if (backFor != null) rough = listOfNotNull(rough.maxByOrNull { it.area })
+                rough.map { detector.finalOutline(full, it) }
+            }
             val scale = min(1f, REVIEW_SIDE / max(w, h))
             val small = Mat()
             Imgproc.resize(full, small, org.opencv.core.Size(w * scale.toDouble(), h * scale.toDouble()), 0.0, 0.0, Imgproc.INTER_AREA)
@@ -667,6 +731,12 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
                 }
                 return@launch
             }
+            val sp = sweepPending
+            sweepPending = null
+            if (sp != null) {
+                report(runCatching { merge(sp.shots, p.full, fq, carryOver(sp, fq)) })
+                return@launch
+            }
             report(runCatching {
                 val prints = fq.sortedWith(compareBy({ (it.center.y / p.full.rows() * 8).toInt() }, { it.center.x })).map { q ->
                     val flat = Rectify.warp(p.full, q)
@@ -682,6 +752,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     fun retake() {
         pending?.full?.release()
         pending = null
+        sweepPending = null
         _state.update { it.copy(review = null, saving = false) }
         analysisExecutor.execute {
             armed = true
