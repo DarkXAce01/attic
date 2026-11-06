@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Riso paper. -->
+    <color name="ic_launcher_background">#EDEDE9</color>
+    <color name="paper">#EDEDE9</color>
+</resources>

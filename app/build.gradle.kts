@@ -17,8 +17,8 @@ android {
         // Android 10: scoped storage and MediaStore RELATIVE_PATH for saving prints to the gallery.
         minSdk = 29
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.9.0"
+        versionCode = 3
+        versionName = "1.0.0"
 
         ndk {
             // OpenCV ships native code for every ABI (~120 MB together). Most phones are arm64; some

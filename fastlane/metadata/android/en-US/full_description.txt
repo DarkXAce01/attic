@@ -1,0 +1,23 @@
+Your family's photos are sitting in albums in a cupboard. Attic brings them into your phone, a whole page at a time.
+
+<b>Scan</b>
+Point your phone at an album page. Attic finds every print on it, even five or six at once, straightens them, and saves each one as its own photo, sharp and full size. Hold still and it takes the shot for you, then waits for the next page.
+
+Glossy prints or plastic sleeves catching the light? Switch to Glare-free: take the page, move the phone a little, and Attic keeps the clear part of each shot. Film negatives on a lightbox come out as positives. Flatbed scans and photos already on your phone can come in too.
+
+<b>Remember</b>
+Give a whole page its date, names and place at once ("summer 87", "about 1985" and "the 80s" all work). Record the stories behind a photo in your own voice. Name the faces once and Attic finds them on other photos, shows how old everyone was, and draws the family tree. On this day brings a photo back from years ago.
+
+<b>Revive, honestly</b>
+Old prints fade and turn orange. Attic gently undoes that, cleans up dust and hairs, and can make a small print bigger, without inventing anything. The photo exactly as scanned is always one tap away.
+
+<b>Albums that feel like yours</b>
+Every album is an island printed in Riso inks: a kite, a balloon, a lighthouse, a paper boat and more, in colours you pick. Albums don't have to be paper albums: keep photos from your phone in them too, just to keep them together. Open one and turn its pages as they were.
+
+<b>Share with family</b>
+Send a whole album as one file by any app. Another phone with Attic opens it page by page, with its stories and names. Pass it round the family and back, and only what's new is added. A page of questions anyone can answer in a browser helps fill in who's who.
+
+<b>Keep it safe</b>
+Everything also goes into your gallery, with its date, names and place written into the file. Back up to an SD card, a USB stick or a folder another app syncs.
+
+No internet, no account, no ads, no subscriptions. Attic has no internet permission at all: your family's photos never leave your phone unless you send them. Free and open source (GPL-3.0), by Grease Pencil Studio.

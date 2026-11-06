@@ -1,0 +1,8 @@
+First public release.
+- Scan whole album pages: every print found, flattened and saved.
+- Glare-free, film negatives, and scans from files.
+- Dates, names, places, voice stories, faces, ages and the family tree.
+- Albums as Riso islands you can make your own; phone photos in albums too.
+- Share an album with family as one file; open one from them.
+- Timeline, On this day, slideshow, then and now, make it bigger.
+- No internet permission, no account, no ads.

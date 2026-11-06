@@ -1,0 +1,19 @@
+<!-- Themed icons (Android 13+): the print and the loop in one colour, as the phone tints it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group android:rotation="-7" android:pivotX="54" android:pivotY="54" android:scaleX="0.8" android:scaleY="0.8">
+        <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
+            android:pathData="M34,34h38v40h-38z M37.5,37.5v26h31v-26z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M37.5,63.5l0,-6l9,-9l7,7l5,-4l10,9l0,3z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M58,46m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0" />
+    </group>
+    <group android:translateX="24.5" android:translateY="21.5" android:scaleX="1" android:scaleY="1">
+        <path
+            android:pathData="M20,7.5C37,3 53,9 55,26C57,44 46,60 28,61C12,62 2,50 4,32C5.5,19 13,11 26,8.5"
+            android:strokeColor="#FFFFFFFF" android:strokeWidth="3.2"
+            android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+    </group>
+</vector>

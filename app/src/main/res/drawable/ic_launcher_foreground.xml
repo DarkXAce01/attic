@@ -1,14 +1,31 @@
+<!--
+  Attic's icon, in Riso: a print with a teal-ink shadow printed a hair off register, and the Grease Pencil
+  loop drawn round it in pencil red (the studio's signature, in every app icon).
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group android:rotation="-8" android:pivotX="54" android:pivotY="54">
-        <path android:fillColor="#5C5C5C" android:pathData="M34,36h40v36h-40z" />
+    <!-- The spot-ink shadow under the print. -->
+    <group android:rotation="-7" android:pivotX="54" android:pivotY="54" android:scaleX="0.8" android:scaleY="0.8">
+        <path android:fillColor="#00838A" android:pathData="M37,38h38v38h-38z" />
     </group>
-    <group android:rotation="5" android:pivotX="54" android:pivotY="54">
-        <path android:fillColor="#F2F2F2" android:pathData="M32,34h44v40h-44z" />
-        <path android:fillColor="#1E1E1E" android:pathData="M36,38h36v26h-36z" />
-        <path android:fillColor="#F2F2F2" android:pathData="M36,64l11,-12l8,8l6,-5l11,9z" />
+    <!-- The print: white border, a sky of fluorescent pink, sunflower sun, blue hills. -->
+    <group android:rotation="-7" android:pivotX="54" android:pivotY="54" android:scaleX="0.8" android:scaleY="0.8">
+        <path android:fillColor="#FBFAF6" android:pathData="M34,34h38v40h-38z" />
+        <path android:fillColor="#FF48B0" android:pathData="M37.5,37.5h31v26h-31z" />
+        <path android:fillColor="#FFB511" android:pathData="M58,46m-5,0a5,5 0,1 1,10 0a5,5 0,1 1,-10 0" />
+        <path android:fillColor="#3255A4" android:pathData="M37.5,63.5l0,-6l9,-9l7,7l5,-4l10,9l0,3z" />
+    </group>
+    <!-- The Grease Pencil loop, round the print. -->
+    <group android:translateX="24.5" android:translateY="21.5" android:scaleX="1" android:scaleY="1">
+        <path
+            android:pathData="M20,7.5C37,3 53,9 55,26C57,44 46,60 28,61C12,62 2,50 4,32C5.5,19 13,11 26,8.5"
+            android:strokeColor="#D4432A"
+            android:strokeWidth="3.2"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:fillColor="#00000000" />
     </group>
 </vector>

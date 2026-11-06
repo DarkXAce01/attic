@@ -2,8 +2,7 @@
 
 **App name:** Attic: photo album scanner
 
-**Short description (80 max):**
-Scan old albums page by page. Every print found, flattened and kept. Offline.
+**Short description (80 max):** see `fastlane/metadata/android/en-US/short_description.txt`
 
 **Full description:**
 
@@ -39,5 +38,11 @@ photos never leave your phone. Free and open source.
 
 **Privacy policy URL:** https://github.com/DarkXAce01/attic/blob/main/docs/play/privacy-policy.md
 
-**Still needed before release:** feature graphic and screenshots (after the design phase), the app icon
-with the Grease Pencil loop, and a decision on the app name shown on Play.
+**Store text, screenshots, icon and feature graphic** are in `fastlane/metadata/android/en-US/` (the
+layout F-Droid reads, and the one Play's tools upload from). Screenshots and the feature graphic are drawn
+by `AppShots` with the Unsplash test photos:
+`./gradlew :app:testDebugUnitTest --tests '*AppShots*' -Proborazzi.test.record=true`, then copy
+`app/build/shots/app_store_*.png`, `app_feature.png` and `store_icon.png` across.
+
+**Data safety form:** no data collected, no data shared. Camera, microphone and photos permissions are
+used on the device only.
