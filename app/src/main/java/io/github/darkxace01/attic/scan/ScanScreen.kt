@@ -74,6 +74,9 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
     // Nothing is taken while the sheet covers the camera.
     LaunchedEffect(pageSheet) { vm.setPaused(pageSheet != null) }
     pageSheet?.let { (album, page) -> PageSheet(album, page, onDismiss = { pageSheet = null }) }
+    val pickFiles = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        vm.importImages(uris)
+    }
 
     LaunchedEffect(state.shutterTick) {
         if (state.shutterTick == 0L) return@LaunchedEffect
@@ -114,6 +117,8 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
                     ModeChip("Auto", state.autoCapture) { vm.setAutoCapture(!state.autoCapture) }
                     ModeChip("Check", state.checkEachShot) { vm.setCheckEachShot(!state.checkEachShot) }
                     ModeChip("Glare-free", state.glareFree) { vm.setGlareFree(!state.glareFree) }
+                    // Scans from a flatbed, or photos of prints already on the phone.
+                    ModeChip("From files", false) { pickFiles.launch(arrayOf("image/*")) }
                 }
             }
 
@@ -260,6 +265,7 @@ private fun statusLine(s: ScanUiState): String {
     val photos = if (n == 1) "1 photo" else "$n photos"
     val sweep = s.sweep
     return when {
+        s.importing != null -> "Importing ${s.importing.first + 1} of ${s.importing.second}…".takeIf { s.importing.first < s.importing.second } ?: "Importing…"
         s.error != null -> s.error
         s.saving -> if (s.backFor != null) "Saving the back…" else if (s.glareFree) "Removing glare…" else "Saving…"
         s.justSavedBack -> "Added the back."

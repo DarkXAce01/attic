@@ -489,6 +489,37 @@ class Library(private val context: Context) {
         recrop(id, Quad(q.bl, q.tl, q.tr, q.br), border)
     }
 
+    // ---- importing ----
+
+    /** An image brought in from a file, ready to be treated like a camera shot. */
+    class Imported(val jpeg: ByteArray, val frame: io.github.darkxace01.attic.vision.FrameTransform)
+
+    /**
+     * Reads an image file (a flatbed scan, an old phone photo) as a JPEG to keep as the capture's original,
+     * with its EXIF turn. Very large scans are halved until they're under [IMPORT_PIXELS]. Null if it
+     * isn't an image Android can open.
+     */
+    suspend fun readImport(uri: Uri): Imported? = io {
+        val resolver = context.contentResolver
+        val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return@io null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outWidth <= 0) return@io null
+        val turn = runCatching { ExifInterface(bytes.inputStream()).rotationDegrees }.getOrDefault(0)
+        var sample = 1
+        while (bounds.outWidth.toLong() * bounds.outHeight / (sample * sample) > IMPORT_PIXELS) sample *= 2
+        val isJpeg = bounds.outMimeType == "image/jpeg"
+        val jpeg = if (isJpeg && sample == 1) bytes else {
+            val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample }) ?: return@io null
+            java.io.ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.JPEG, 97, it); bmp.recycle() }.toByteArray()
+        }
+        val w = (bounds.outWidth + sample - 1) / sample; val h = (bounds.outHeight + sample - 1) / sample
+        // A re-encoded JPEG has no EXIF, so the turn is applied from the frame instead.
+        val size = BitmapFactory.Options().apply { inJustDecodeBounds = true }.also { BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size, it) }
+        Imported(jpeg, io.github.darkxace01.attic.vision.FrameTransform(size.outWidth, size.outHeight, 0, 0, size.outWidth, size.outHeight, turn))
+            .takeIf { w > 0 && h > 0 }
+    }
+
     // ---- borders ----
 
     /** The plain border round [p], if it has one (null once it's been trimmed). */
@@ -933,3 +964,6 @@ private const val PAGE_SIDE = 1800
 
 /** Bumped when the way looks are made changes, so prints from before are redone once. */
 private const val LOOKS_VERSION = 2
+
+/** Largest image imported as it is, in pixels (a 600 dpi A4 scan is halved). */
+private const val IMPORT_PIXELS = 30_000_000L

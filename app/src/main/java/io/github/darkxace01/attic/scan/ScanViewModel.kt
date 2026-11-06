@@ -79,6 +79,8 @@ data class ScanUiState(
     val saving: Boolean = false,
     /** Already captured what's in view; waiting for the page to change. */
     val waitingForNext: Boolean = false,
+    /** Importing image files: how many done of how many. */
+    val importing: Pair<Int, Int>? = null,
     val justSaved: Int = 0,
     /** How many of the last capture's prints look soft enough to be worth retaking. */
     val justSavedSoft: Int = 0,
@@ -766,6 +768,51 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     /** A print flattened from a single shot: uncurled when it's curled (and that's on in Settings). */
     private fun flatten(src: Mat, quad: Quad): Mat =
         (if (library.settings.now.uncurl) runCatching { Curl.flatten(src, quad) }.getOrNull() else null) ?: Rectify.warp(src, quad)
+
+    /**
+     * Brings in image files (flatbed scans, old phone photos of prints) as pages of the album scans go
+     * into: the prints in each are found, flattened and saved like a camera shot. An image with no prints
+     * found in it is taken to be one print already cut out.
+     */
+    fun importImages(uris: List<android.net.Uri>) {
+        if (uris.isEmpty() || _state.value.importing != null) return
+        viewModelScope.launch(Dispatchers.Default) {
+            _state.update { it.copy(importing = 0 to uris.size, error = null) }
+            var saved = 0; var soft = 0; var failed = 0
+            for ((i, uri) in uris.withIndex()) {
+                runCatching {
+                    val img = library.readImport(uri) ?: error("not an image")
+                    val full = decodeUpright(img.jpeg, img.frame)
+                    val found = detector.detect(full)
+                    val prints = if (found.isEmpty()) {
+                        listOf(Library.NewPrint(full.clone(), Quad.ofSize(full.cols(), full.rows()), Rectify.sharpness(full)))
+                    } else {
+                        found.map { q ->
+                            val r = detector.finalOutline(full, q)
+                            val flat = flatten(full, r)
+                            Library.NewPrint(flat, r, Rectify.sharpness(flat))
+                        }
+                    }
+                    full.release()
+                    val stored = store(prints) { library.saveCapture(img.jpeg, img.frame, it) }
+                    saved += stored.saved.size; soft += stored.soft
+                }.onFailure { failed++ }
+                _state.update { it.copy(importing = i + 1 to uris.size) }
+            }
+            _state.update {
+                it.copy(
+                    importing = null,
+                    error = when {
+                        failed == uris.size -> "Couldn't open those files as pictures."
+                        failed > 0 -> "Imported $saved photos. $failed files couldn't be opened."
+                        else -> null
+                    },
+                    justSaved = if (failed == 0) saved else 0,
+                )
+            }
+            if (failed == 0) { delay(3000); _state.update { it.copy(justSaved = 0) } }
+        }
+    }
 
     private class Stored(val saved: List<io.github.darkxace01.attic.data.PrintEntity>, val thumbs: List<ImageBitmap>, val soft: Int, val twins: Int)
 
