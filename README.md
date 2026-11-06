@@ -36,8 +36,9 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   and you can drag a corner or a whole side (with a magnifier under your finger), snap one to the
   edges, add one it missed or remove one, then save or retake. Glare-free pages are checked on the
   first shot and the changes carried over to the others. Switch it on the scan screen or in Settings
-- The camera fills the screen with the album, the modes and what's happening floating over it; the
-  album so far sits bottom left as a little pile of its last prints
+- The camera is kept quiet, like a phone's own: the album at the top, Prints / Glare-free / Film, one
+  line saying what's happening, and the shutter. Everything else is under "More". The album so far
+  sits bottom left as a little pile of its last prints
 - Scans go into the album you pick at the top of the scan screen, one capture per page
 - Share an album with family: one .attic file (photos, backs, pages, stories, names, dates, its
   island) sent by any app. Another phone opens it in Attic as the album; a copy passed round and back
@@ -51,13 +52,13 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   print, whichever way up it was scanned, and fills in the date when the photo has none. A stamp that
   reads two ways (3 5 '88) asks which day it is. Prints already in Attic are read in the background
 
-**The attic** (design phase, first pass)
-- Albums float as small islands in a dark attic, one beam of light and dust drifting through it. Each
-  is a book: a cloth binding coloured from its own photos, the cover photo set into it, paper and print
-  edges layered underneath like rock, a few of its photos drifting around it, a pencil-red ribbon
-- Tap one and it comes up to you and falls open
-- Inside, every page is rebuilt as it was: the photo of the page underneath, each print laid back in
-  its exact spot and tilt, clean and flat. Pages turn over on their spine. Tap a print to open it
+**The albums** (Riso, the design phase)
+- Albums are little printed islands on paper (or on midnight blue), each a book with its cover photo,
+  coloured from its own photos, a few of its prints drifting round it
+- Three ways to lay them out: down a path, round a ring (one in front, swipe to turn it) or scattered
+  on a map you can drag about
+- Inside, every page is rebuilt as it was: each print laid back in its exact spot and tilt, clean and
+  flat. Pages turn over on their spine. Tap a print to open it
 - Pencil red (Grease Pencil Studio's colour) is the one accent
 
 **People**
