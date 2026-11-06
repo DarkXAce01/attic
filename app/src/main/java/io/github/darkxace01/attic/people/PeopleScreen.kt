@@ -140,9 +140,7 @@ private fun PersonTile(p: PersonSummary, faces: List<FaceEntity>, onClick: () ->
             FaceThumb(face, 88.dp)
         } else {
             // Named on a photo without a face found: their initial.
-            Box(Modifier.size(88.dp).clip(CircleShape).background(Palette.SurfaceHigh), contentAlignment = Alignment.Center) {
-                Text(p.name.take(1).uppercase(), style = MaterialTheme.typography.headlineSmall, color = Palette.Muted)
-            }
+            io.github.darkxace01.attic.ui.theme.Monogram(p.name, 88.dp)
         }
         Spacer(Modifier.height(6.dp))
         Text(p.name, style = MaterialTheme.typography.titleSmall, color = Palette.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)

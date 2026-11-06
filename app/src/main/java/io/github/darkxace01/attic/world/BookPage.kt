@@ -74,9 +74,13 @@ fun RebuiltPage(
         val hDp = with(density) { h.toDp() }
         Box(pageModifier.size(wDp, hDp)) {
             Canvas(Modifier.fillMaxSize()) {
-                // The pages underneath, a few edges showing to the right and below.
-                for (k in 4 downTo 1) {
-                    drawRect(Color(0xFF3A3632).copy(alpha = 0.9f - k * 0.15f), topLeft = Offset(k * 2.2f, k * 1.6f), size = size)
+                // The pages underneath, a few edges showing to the right and below, and the book's shadow
+                // printed as a dot screen, a little off, the way the islands' are.
+                val u = 1.dp.toPx()
+                drawRect(io.github.darkxace01.attic.ui.theme.Riso.dots(io.github.darkxace01.attic.ui.theme.Palette.Ink, 3 * u, 0.5f), topLeft = Offset(10 * u, 12 * u), size = size)
+                for (k in 3 downTo 1) {
+                    drawRect(io.github.darkxace01.attic.ui.theme.Palette.Ink, topLeft = Offset(k * 2.4f * u, k * 1.8f * u), size = size)
+                    drawRect(io.github.darkxace01.attic.ui.theme.Palette.Surface, topLeft = Offset(k * 2.4f * u - u, k * 1.8f * u - u), size = size)
                 }
                 val bd = page.backdrop
                 val fr = page.frame

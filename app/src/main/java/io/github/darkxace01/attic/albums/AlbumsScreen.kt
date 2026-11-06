@@ -41,6 +41,8 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.withFrameNanos
 import io.github.darkxace01.attic.world.riso.DressSheet
 import io.github.darkxace01.attic.world.riso.IslandLook
+import io.github.darkxace01.attic.world.riso.IslandKind
+import io.github.darkxace01.attic.world.riso.drawIsland
 import io.github.darkxace01.attic.world.riso.RisoWorld
 import io.github.darkxace01.attic.world.riso.WorldIsland
 import io.github.darkxace01.attic.world.riso.islandBitmap
@@ -109,7 +111,7 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
                     QuietButton("Settings", onClick = onSettings)
                 }
                 Spacer(Modifier.height(8.dp))
-                Box(Modifier.padding(end = 8.dp)) {
+                if (counts.total > 0 || working != null) Box(Modifier.padding(end = 8.dp)) {
                     SafetyLine(
                         counts, working, hasBackup = backupFolder != null,
                         onExport = {
@@ -124,10 +126,27 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
                     )
                 }
                 Spacer(Modifier.height(6.dp))
-                Text(
-                    if (albums.isEmpty()) "No albums yet. Scan your first page and it'll start one." else "Hold an album to make it yours.",
-                    style = MaterialTheme.typography.bodyMedium, color = Palette.Muted,
-                )
+                if (albums.isEmpty()) {
+                    // Where the first album will land: an island waiting, still unprinted.
+                    androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(280.dp)) {
+                        run {
+                            drawIsland(
+                                IslandLook(IslandKind.Balloon, io.github.darkxace01.attic.ui.theme.Ink.Aqua, io.github.darkxace01.attic.ui.theme.Ink.Pink, extra = io.github.darkxace01.attic.world.riso.Extra.Birds),
+                                emptyList(), androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.5f), size.width * 0.24f, clock.floatValue, 0,
+                            )
+                        }
+                    }
+                    Text("Your albums live here", style = MaterialTheme.typography.titleLarge, color = Palette.Ink)
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Scan the first page of a paper album and it starts one. Or start an album and fill it with photos from your phone: an album can just be a way of keeping photos together.",
+                        style = MaterialTheme.typography.bodyMedium, color = Palette.Muted,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    io.github.darkxace01.attic.ui.PrimaryButton("Start an album", onClick = { creating = true })
+                } else {
+                    Text("Hold an album to make it yours.", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+                }
             }
         },
     )

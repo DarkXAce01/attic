@@ -70,9 +70,7 @@ import kotlinx.coroutines.launch
 fun Avatar(p: PersonSummary?, name: String, faces: List<FaceEntity>, size: Dp, modifier: Modifier = Modifier) {
     val face = p?.faceId?.let { id -> faces.firstOrNull { it.id == id } }
     if (face != null) FaceThumb(face, size, modifier)
-    else Box(modifier.size(size).clip(CircleShape).background(Palette.SurfaceHigh), contentAlignment = Alignment.Center) {
-        Text(name.take(1).uppercase(), style = if (size > 60.dp) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleMedium, color = Palette.Muted)
-    }
+    else io.github.darkxace01.attic.ui.theme.Monogram(name, size, modifier)
 }
 
 /**

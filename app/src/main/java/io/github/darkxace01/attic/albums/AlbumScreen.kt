@@ -48,7 +48,6 @@ import io.github.darkxace01.attic.vision.PageLayout
 import io.github.darkxace01.attic.world.PageModel
 import io.github.darkxace01.attic.world.PagePrint
 import io.github.darkxace01.attic.world.RebuiltPage
-import io.github.darkxace01.attic.world.ATTIC
 import io.github.darkxace01.attic.world.pageFlip
 import io.github.darkxace01.attic.world.pagePin
 import io.github.darkxace01.attic.world.pageShade
@@ -127,7 +126,7 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
     val a = album ?: return
     val pages = prints.groupBy { it.page }.toSortedMap()
 
-    Column(Modifier.fillMaxSize().background(ATTIC)) {
+    Column(Modifier.fillMaxSize().background(Palette.Ground)) {
         TopBar(a.title, onBack = onBack, onTitleClick = { renaming = true }) {
             QuietButton("Scan here", onClick = onScanHere, color = Palette.Accent)
             Box {

@@ -77,14 +77,14 @@ private fun IslandRow(w: WorldIsland, index: Int, time: () -> Float, onOpen: (Lo
     ) {
         val wpx = constraints.maxWidth.toFloat()
         Canvas(Modifier.fillMaxSize().graphicsLayer { scaleX = scale; scaleY = scale }) {
-            drawIsland(w.look, w.photos, Offset(wpx * if (left) 0.38f else 0.62f, size.height * 0.5f), wpx * 0.25f, time(), index)
+            drawIsland(w.look, w.photos, Offset(wpx * if (left) 0.36f else 0.64f, size.height * 0.5f), wpx * 0.25f, time(), index)
         }
         AlbumTitle(
             w.title, w.meta, w.look.title,
             Modifier
                 .align(if (left) Alignment.BottomEnd else Alignment.BottomStart)
                 .padding(horizontal = 20.dp, vertical = 18.dp)
-                .widthIn(max = 170.dp),
+                .widthIn(max = 150.dp),
             alignEnd = left,
         )
     }
