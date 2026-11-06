@@ -37,6 +37,7 @@ import io.github.darkxace01.attic.vision.PrintNet
 import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.QuadTracker
 import io.github.darkxace01.attic.vision.Rectify
+import io.github.darkxace01.attic.vision.Curl
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -618,7 +619,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             // photo can be a sliver of album page. The network takes a closer look at just this print,
             // then each side settles on the real edge.
             val refined = detector.finalOutline(full, q)
-            val flat = Rectify.warp(full, refined)
+            val flat = flatten(full, refined)
             Library.NewPrint(flat, refined, Rectify.sharpness(flat))
         }
         full.release()
@@ -636,7 +637,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
                 full.release()
                 return@runCatching false
             }
-            val flat = Rectify.warp(full, detector.finalOutline(full, rough))
+            val flat = flatten(full, detector.finalOutline(full, rough))
             full.release()
             library.saveBack(id, flat, jpeg)
             flat.release()
@@ -714,7 +715,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             val fq = quads.map { it.scale(1f / p.scale, 1f / p.scale) }
             if (p.backFor != null) {
                 val result = runCatching {
-                    val flat = Rectify.warp(p.full, fq.maxBy { it.area })
+                    val flat = flatten(p.full, fq.maxBy { it.area })
                     library.saveBack(p.backFor, flat, p.jpeg)
                     flat.release()
                 }
@@ -741,7 +742,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             }
             report(runCatching {
                 val prints = fq.sortedWith(compareBy({ (it.center.y / p.full.rows() * 8).toInt() }, { it.center.x })).map { q ->
-                    val flat = Rectify.warp(p.full, q)
+                    val flat = flatten(p.full, q)
                     Library.NewPrint(flat, q, Rectify.sharpness(flat))
                 }
                 p.full.release()
@@ -761,6 +762,10 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             allLockedSince = 0L
         }
     }
+
+    /** A print flattened from a single shot: uncurled when it's curled (and that's on in Settings). */
+    private fun flatten(src: Mat, quad: Quad): Mat =
+        (if (library.settings.now.uncurl) runCatching { Curl.flatten(src, quad) }.getOrNull() else null) ?: Rectify.warp(src, quad)
 
     private class Stored(val saved: List<io.github.darkxace01.attic.data.PrintEntity>, val thumbs: List<ImageBitmap>, val soft: Int, val twins: Int)
 

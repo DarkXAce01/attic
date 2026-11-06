@@ -17,6 +17,8 @@ data class Prefs(
     val checkEachShot: Boolean = true,
     /** Dust, specks and hairs painted out of the Natural and Strong looks (Original stays exactly as scanned). */
     val cleanDust: Boolean = true,
+    /** Curled prints (bowed sides) are straightened when they're flattened. */
+    val uncurl: Boolean = true,
 )
 
 class Settings(context: Context) {
@@ -32,6 +34,7 @@ class Settings(context: Context) {
         glareFree = sp.getBoolean("glareFree", false),
         checkEachShot = sp.getBoolean("checkEachShot", true),
         cleanDust = sp.getBoolean("cleanDust", true),
+        uncurl = sp.getBoolean("uncurl", true),
     )
 
     fun update(change: (Prefs) -> Prefs) {
@@ -43,6 +46,7 @@ class Settings(context: Context) {
             .putBoolean("glareFree", p.glareFree)
             .putBoolean("checkEachShot", p.checkEachShot)
             .putBoolean("cleanDust", p.cleanDust)
+            .putBoolean("uncurl", p.uncurl)
             .apply()
         _prefs.value = p
     }

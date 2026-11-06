@@ -90,6 +90,12 @@ fun SettingsScreen(onBack: () -> Unit) {
             ) { on -> library.settings.update { it.copy(checkEachShot = on) } }
 
             Toggle(
+                "Straighten curled prints",
+                "When a print's sides bow because it's lifting off the page, the picture is straightened out with them. For new scans and fixed crops.",
+                prefs.uncurl,
+            ) { on -> library.settings.update { it.copy(uncurl = on) } }
+
+            Toggle(
                 "Clean up dust and hairs",
                 "Specks, hairs and small scratches are painted out of the Natural and Strong looks. Faces are left alone, and Original stays exactly as scanned. Changing this redoes every photo.",
                 prefs.cleanDust,

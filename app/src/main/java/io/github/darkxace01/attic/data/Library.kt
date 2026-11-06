@@ -11,6 +11,7 @@ import io.github.darkxace01.attic.vision.Deglare
 import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.Faces
 import io.github.darkxace01.attic.vision.Dust
+import io.github.darkxace01.attic.vision.Curl
 import io.github.darkxace01.attic.vision.FaceGroups
 import io.github.darkxace01.attic.vision.DateStamp
 import io.github.darkxace01.attic.vision.PrintHash
@@ -438,8 +439,10 @@ class Library(private val context: Context) {
     suspend fun recrop(id: Long, quad: Quad) = io {
         val p = dao.print(id) ?: return@io
         val original = loadUprightOriginal(p) ?: return@io
-        var flat = Rectify.warp(original, quad)
         val sweepFile = sweepFile(p)
+        // A glare-free print is merged from shots cut the same straight way, so it isn't uncurled.
+        var flat = (if (settings.now.uncurl && !sweepFile.exists()) runCatching { Curl.flatten(original, quad) }.getOrNull() else null)
+            ?: Rectify.warp(original, quad)
         val others = if (sweepFile.exists()) readSweep(sweepFile) else emptyList()
         if (others.any { it != null }) {
             // The print is flat, so where its old corners went in each shot tells where the new ones go.
