@@ -75,6 +75,12 @@ class Library(private val context: Context) {
             Timeline.rows(prints, albums.associate { it.id to it.date })
         }.flowOn(Dispatchers.Default)
 
+    /** What to bring back today: see [io.github.darkxace01.attic.timeline.OnThisDay]. */
+    fun onThisDay(today: java.time.LocalDate): Flow<io.github.darkxace01.attic.timeline.OnThisDay.Memory?> =
+        kotlinx.coroutines.flow.combine(dao.allPrintsFlow(), dao.albumsFlow()) { prints, albums ->
+            io.github.darkxace01.attic.timeline.OnThisDay.pick(prints, albums.associate { it.id to it.date }, today)
+        }.flowOn(Dispatchers.Default)
+
     /** The file to show and export: the enhanced version when there is one. */
     fun displayFile(p: PrintEntity): File = enhancedFile(p, p.enhance).takeIf { it.exists() } ?: p.file(root)
 

@@ -1,6 +1,15 @@
 package io.github.darkxace01.attic.timeline
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +39,8 @@ import io.github.darkxace01.attic.ui.theme.Palette
 fun TimelineScreen(onOpenPrint: (Long) -> Unit) {
     val library = LocalContext.current.library
     val rows by remember { library.timeline() }.collectAsStateWithLifecycle(null)
+    val today = remember { java.time.LocalDate.now() }
+    val memory by remember(today) { library.onThisDay(today) }.collectAsStateWithLifecycle(null)
 
     Column(Modifier.fillMaxSize()) {
         TopBar("Timeline", onBack = null)
@@ -48,6 +60,9 @@ fun TimelineScreen(onOpenPrint: (Long) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            memory?.let { m ->
+                item(span = { GridItemSpan(maxLineSpan) }, key = "memory") { MemoryStrip(m, today, onOpenPrint) }
+            }
             for (row in list) {
                 when (row) {
                     is Timeline.Row.Decade -> item(span = { GridItemSpan(maxLineSpan) }, key = "decade${row.decade}") {
@@ -69,6 +84,27 @@ fun TimelineScreen(onOpenPrint: (Long) -> Unit) {
                         }
                         items(row.prints, key = { "p${it.id}" }) { p -> PrintTile(p, library.displayFile(p)) { onOpenPrint(p.id) } }
                     }
+                }
+            }
+        }
+    }
+}
+
+/** Today's memory over the timeline: big prints in a row, each with how long ago it was. */
+@Composable
+private fun MemoryStrip(m: OnThisDay.Memory, today: java.time.LocalDate, onOpenPrint: (Long) -> Unit) {
+    val library = LocalContext.current.library
+    Column(Modifier.padding(bottom = 6.dp)) {
+        Text(m.title, style = MaterialTheme.typography.titleMedium, color = Palette.Ink, modifier = Modifier.padding(bottom = 8.dp))
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(m.prints, key = { it.first.id }) { (p, d) ->
+                Column(Modifier.width(200.dp).clip(RoundedCornerShape(14.dp)).clickable { onOpenPrint(p.id) }) {
+                    AsyncImage(
+                        library.displayFile(p), null, contentScale = ContentScale.Crop,
+                        modifier = Modifier.width(200.dp).height(150.dp).clip(RoundedCornerShape(14.dp)).background(Palette.Surface),
+                    )
+                    val line = listOfNotNull(d?.label, OnThisDay.ago(d, today)).joinToString(", ")
+                    if (line.isNotEmpty()) Text(line, style = MaterialTheme.typography.labelMedium, color = Palette.Muted, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
                 }
             }
         }

@@ -77,6 +77,8 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   story stays up while the story plays. Cast the screen to a TV to watch together
 - Family tree: on someone's page, add their parents, children, partner, brothers and sisters, and Attic
   draws the tree a generation to a row. Relatives without photos yet are drawn faintly
+- On this day, over the timeline: photos from this day in other years, or this week, or this month, and
+  when nothing is dated near today, one photo for the day
 
 **Keep**
 - Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their
