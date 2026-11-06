@@ -196,6 +196,7 @@ private fun PrintPage(
                 placeholder = "Add a date",
             ) { editing = Editing.Date }
             StampLine(p) { d -> work { library.setDate(printId, d) } }
+            if (p.date == null && p.stampDates.isEmpty()) HintLine(printId, p) { d -> work { library.setDate(printId, d) } }
             DetailRow("Who", people.joinToString(", ").ifEmpty { null }, "Add people") { editing = Editing.People }
             io.github.darkxace01.attic.people.FacesRow(p)
             DetailRow("Where", p.place, "Add a place") { editing = Editing.Place }
@@ -333,6 +334,33 @@ private fun StampLine(p: PrintEntity, onUse: (io.github.darkxace01.attic.data.Ph
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             for (d in days) QuietButton(if (days.size == 1) "Use it" else d.label, onClick = { onUse(d) }, color = Palette.Accent)
         }
+    }
+}
+
+/**
+ * A guess at when an undated photo is from, by how its people look in their dated photos. Offered, in
+ * plain words about where it comes from, and only used when tapped.
+ */
+@Composable
+private fun HintLine(printId: Long, p: PrintEntity, onUse: (io.github.darkxace01.attic.data.PhotoDate) -> Unit) {
+    val library = androidx.compose.ui.platform.LocalContext.current.library
+    var hint by remember { mutableStateOf<io.github.darkxace01.attic.people.DateHint.Hint?>(null) }
+    // Asked again when faces are named or the print recropped.
+    val faces by remember(printId) { library.facesOf(printId) }.collectAsStateWithLifecycle(emptyList())
+    val named = faces.map { it.personId }
+    androidx.compose.runtime.LaunchedEffect(printId, p.version, named) { hint = library.dateHint(printId) }
+    val h = hint ?: return
+    val who = h.names.joinToString(" and ") { "$it's" }
+    val years = if (h.from == h.to) "${h.from}" else "between ${h.from} and ${h.to}"
+    Column(Modifier.padding(start = 76.dp, bottom = 6.dp)) {
+        Text(
+            "A guess from $who dated photos: the faces here look most like ones from $years.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Palette.Muted,
+        )
+        QuietButton("Use about ${h.year}", onClick = {
+            onUse(io.github.darkxace01.attic.data.PhotoDate(java.time.LocalDate.of(h.from, 1, 1), java.time.LocalDate.of(h.to, 12, 31), "About ${h.year}"))
+        }, color = Palette.Accent)
     }
 }
 

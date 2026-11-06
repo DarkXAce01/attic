@@ -1142,6 +1142,33 @@ class Library(private val context: Context) {
         FaceGroups.suggest(FaceGroups.fromBytes(face.vec), named)?.let { dao.person(it.first) }
     }
 
+    /**
+     * When an undated print might be from, going by how the people in it look in their dated photos (see
+     * [io.github.darkxace01.attic.people.DateHint]). Only ever offered, never filled in.
+     */
+    suspend fun dateHint(printId: Long): io.github.darkxace01.attic.people.DateHint.Hint? = io {
+        val p = dao.print(printId) ?: return@io null
+        val album = dao.album(p.albumId)
+        if (p.date != null) return@io null
+        val named = dao.facesOfNow(printId).filter { it.personId != null && !it.ignored }
+        if (named.isEmpty()) return@io null
+        val people = named.mapNotNull { f -> dao.person(f.personId!!)?.let { it to FaceGroups.fromBytes(f.vec) } }
+        val albums = HashMap<Long, AlbumEntity?>()
+        val all = dao.allFacesNow().filter { it.printId != printId && it.personId in named.map { n -> n.personId } }
+        val dated = all.mapNotNull { f ->
+            val pr = dao.print(f.printId) ?: return@mapNotNull null
+            val d = pr.date ?: albums.getOrPut(pr.albumId) { dao.album(pr.albumId) }?.date ?: return@mapNotNull null
+            // Only photos dated to within a couple of years can say which years a face belongs to.
+            if (d.to.toEpochDay() - d.from.toEpochDay() > 800) return@mapNotNull null
+            f.personId!! to io.github.darkxace01.attic.people.DateHint.Seen(FaceGroups.fromBytes(f.vec), d.representative.year)
+        }.groupBy({ it.first }, { it.second })
+        val byName = people.associate { (person, _) -> person.name to dated[person.id].orEmpty() }
+        val hint = io.github.darkxace01.attic.people.DateHint.suggest(people.map { it.first.name to it.second }, byName) ?: return@io null
+        // The album's own date wins over a guess: only offer one inside it, or when the album has none.
+        val ad = album?.date
+        if (ad != null && (hint.year < ad.from.year || hint.year > ad.to.year)) null else hint
+    }
+
     suspend fun setBorn(personId: Long, date: PhotoDate?) = io {
         val p = dao.person(personId) ?: return@io
         dao.updatePerson(p.copy(bornFrom = date?.from?.toEpochDay(), bornTo = date?.to?.toEpochDay(), bornLabel = date?.label))
