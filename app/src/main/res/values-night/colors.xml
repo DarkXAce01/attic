@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Midnight, for the widget when the phone is dark. -->
+    <color name="widget_ground">#14172E</color>
+    <color name="widget_ink">#EEEAE0</color>
+    <color name="widget_muted">#A3A6C4</color>
+</resources>

@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Attic</string>
+    <string name="widget_name">On this day</string>
+    <string name="widget_description">A photo from this day in other years, from your albums</string>
 </resources>

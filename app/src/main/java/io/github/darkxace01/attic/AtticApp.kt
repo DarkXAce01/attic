@@ -74,7 +74,7 @@ private sealed interface Route {
 }
 
 @Composable
-fun AtticApp(incoming: android.net.Uri? = null, onIncomingDone: () -> Unit = {}) {
+fun AtticApp(incoming: android.net.Uri? = null, onIncomingDone: () -> Unit = {}, openPrint: Long? = null, onOpenPrintDone: () -> Unit = {}) {
     val context = LocalContext.current
     var hasCamera by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
@@ -111,6 +111,13 @@ fun AtticApp(incoming: android.net.Uri? = null, onIncomingDone: () -> Unit = {})
     fun tab(r: Route) { stack.clear(); stack += r }
 
     BackHandler(enabled = stack.size > 1) { back() }
+
+    // From the home screen's On this day: the photo, over the timeline.
+    androidx.compose.runtime.LaunchedEffect(openPrint) {
+        val id = openPrint ?: return@LaunchedEffect
+        tab(Route.Timeline); go(Route.Print(id))
+        onOpenPrintDone()
+    }
 
     // Coming back from the phone's settings with the camera allowed.
     val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current

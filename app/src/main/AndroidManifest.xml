@@ -54,6 +54,18 @@
                 <data android:mimeType="application/octet-stream" />
             </intent-filter>
         </activity>
+        <!-- The On this day widget on the home screen. -->
+        <receiver
+            android:name=".timeline.MemoryWidget"
+            android:exported="false"
+            android:label="@string/widget_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/memory_widget" />
+        </receiver>
         <!-- Sharing a photo hands the other app a copy from the cache, readable only by it. -->
         <provider
             android:name="androidx.core.content.FileProvider"

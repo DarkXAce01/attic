@@ -65,3 +65,13 @@ class OnThisDayTest {
         assertNull(OnThisDay.ago(null, today))
     }
 }
+
+class MemoryWidgetLineTest {
+    @org.junit.Test
+    fun dateAndHowLongAgo() {
+        val today = java.time.LocalDate.of(2026, 7, 14)
+        org.junit.Assert.assertEquals("14 Jul 1987, 39 years ago", io.github.darkxace01.attic.timeline.MemoryWidget.line(io.github.darkxace01.attic.data.PhotoDate.day(java.time.LocalDate.of(1987, 7, 14)), today))
+        org.junit.Assert.assertEquals("1980s, about 42 years ago", io.github.darkxace01.attic.timeline.MemoryWidget.line(io.github.darkxace01.attic.data.PhotoDate.decade(1980), today))
+        org.junit.Assert.assertEquals("No date yet", io.github.darkxace01.attic.timeline.MemoryWidget.line(null, today))
+    }
+}

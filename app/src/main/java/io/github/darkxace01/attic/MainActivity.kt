@@ -12,6 +12,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 class MainActivity : ComponentActivity() {
     /** An album file opened from another app (a chat, Files), waiting to be added. */
     private val incoming = androidx.compose.runtime.mutableStateOf<android.net.Uri?>(null)
+    /** A print to open, from the On this day widget. */
+    private val openPrint = androidx.compose.runtime.mutableStateOf<Long?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,13 +30,22 @@ class MainActivity : ComponentActivity() {
             val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
             val dark = when (prefs.look) { "paper" -> false; "midnight" -> true; else -> systemDark }
             androidx.compose.runtime.SideEffect { Palette.dark = dark }
-            AtticTheme { AtticApp(incoming = incoming.value, onIncomingDone = { incoming.value = null }) }
+            AtticTheme { AtticApp(
+                    incoming = incoming.value, onIncomingDone = { incoming.value = null },
+                    openPrint = openPrint.value, onOpenPrintDone = { openPrint.value = null },
+                ) }
         }
     }
 
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         take(intent)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Whatever was scanned or dated just now can be today's memory on the home screen.
+        io.github.darkxace01.attic.timeline.MemoryWidget.refresh(this)
     }
 
     private fun isDark(look: String) = when (look) {
@@ -44,6 +55,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun take(intent: android.content.Intent?) {
+        intent?.getLongExtra(io.github.darkxace01.attic.timeline.MemoryWidget.OPEN_PRINT, -1L)?.takeIf { it > 0 }?.let { openPrint.value = it; return }
         val uri = when (intent?.action) {
             android.content.Intent.ACTION_VIEW -> intent.data
             android.content.Intent.ACTION_SEND -> androidx.core.content.IntentCompat.getParcelableExtra(intent, android.content.Intent.EXTRA_STREAM, android.net.Uri::class.java)
