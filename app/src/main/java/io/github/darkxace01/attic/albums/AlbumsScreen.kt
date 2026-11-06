@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -102,12 +103,9 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
     }
     var dressing by remember { mutableStateOf<Long?>(null) }
 
-    RisoWorld(
-        islands,
-        time = { clock.floatValue },
-        onOpen = onOpen,
-        onDress = { dressing = it },
-        header = {
+    val prefs by library.settings.prefs.collectAsStateWithLifecycle()
+    val layout = prefs.albumLayout
+    val header: @Composable () -> Unit = {
             Column(Modifier.padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Albums", style = MaterialTheme.typography.displayMedium, color = Palette.Ink, modifier = Modifier.weight(1f))
@@ -157,11 +155,20 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     io.github.darkxace01.attic.ui.PrimaryButton("Start an album", onClick = { creating = true })
                 } else {
-                    Text("Hold an album to make it yours.", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+                    LayoutLine(layout) { l -> library.settings.update { it.copy(albumLayout = l) } }
                 }
             }
-        },
-    )
+        }
+
+    when {
+        albums.isEmpty() || layout == "path" -> RisoWorld(islands, time = { clock.floatValue }, onOpen = onOpen, onDress = { dressing = it }, header = header)
+        else -> Column(Modifier.fillMaxSize().background(Palette.Ground)) {
+            header()
+            val world = Modifier.fillMaxWidth().weight(1f)
+            if (layout == "ring") io.github.darkxace01.attic.world.riso.RisoRing(islands, { clock.floatValue }, onOpen, { dressing = it }, world)
+            else io.github.darkxace01.attic.world.riso.RisoMap(islands, { clock.floatValue }, onOpen, { dressing = it }, world)
+        }
+    }
 
     dressing?.let { id ->
         val w = islands.firstOrNull { it.id == id }
@@ -262,5 +269,31 @@ private fun AlbumCover(a: AlbumSummary, cover: File?, onClick: () -> Unit) {
         Spacer(Modifier.height(10.dp))
         Text(a.title, style = MaterialTheme.typography.titleMedium, color = Palette.Ink, maxLines = 2)
         Text(albumLine(a), style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+    }
+}
+
+/**
+ * How the albums are laid out, in a line like a camera's modes: down a path, round a ring, or scattered
+ * on a map. The chosen one is underlined in pencil.
+ */
+@Composable
+private fun LayoutLine(layout: String, onPick: (String) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
+        for ((key, label) in listOf("path" to "Path", "ring" to "Ring", "map" to "Map")) {
+            val on = key == layout
+            Column(
+                Modifier.clip(RoundedCornerShape(8.dp)).clickable { onPick(key) }.padding(end = 18.dp, top = 4.dp, bottom = 2.dp),
+            ) {
+                Text(
+                    label, color = if (on) Palette.Ink else Palette.Muted,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = if (on) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium),
+                )
+                androidx.compose.foundation.Canvas(Modifier.size(28.dp, 6.dp)) {
+                    if (on) drawLine(Palette.Accent, androidx.compose.ui.geometry.Offset(2f, size.height * 0.7f), androidx.compose.ui.geometry.Offset(size.width - 2f, size.height * 0.35f), 2.5.dp.toPx(), androidx.compose.ui.graphics.StrokeCap.Round)
+                }
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        Text("Hold one to make it yours", style = MaterialTheme.typography.bodySmall, color = Palette.Muted)
     }
 }

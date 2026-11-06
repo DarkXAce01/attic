@@ -25,6 +25,8 @@ data class Prefs(
     val negatives: Boolean = false,
     /** The phone's own photos on the timeline too (read where they are, never copied). */
     val phonePhotos: Boolean = false,
+    /** How the albums are laid out: "path" (down the page), "ring" (a carousel) or "map" (an archipelago). */
+    val albumLayout: String = "path",
 )
 
 class Settings(context: Context) {
@@ -44,6 +46,7 @@ class Settings(context: Context) {
         trimBorders = sp.getBoolean("trimBorders", false),
         negatives = sp.getBoolean("negatives", false),
         phonePhotos = sp.getBoolean("phonePhotos", false),
+        albumLayout = sp.getString("albumLayout", "path") ?: "path",
     )
 
     fun update(change: (Prefs) -> Prefs) {
@@ -59,6 +62,7 @@ class Settings(context: Context) {
             .putBoolean("trimBorders", p.trimBorders)
             .putBoolean("negatives", p.negatives)
             .putBoolean("phonePhotos", p.phonePhotos)
+            .putString("albumLayout", p.albumLayout)
             .apply()
         _prefs.value = p
     }

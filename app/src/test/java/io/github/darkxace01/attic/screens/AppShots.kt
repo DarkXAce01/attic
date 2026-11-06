@@ -51,12 +51,12 @@ class AppShots {
     private val context get() = ApplicationProvider.getApplicationContext<android.app.Application>()
 
     /** Three albums of test photos, with dates, places and a few names. Returns the first print's id. */
-    private fun seed(): Long {
+    private fun seed(more: Boolean = false): Long {
         assumeTrue(photoDir.isDirectory)
-        return java.util.concurrent.Executors.newSingleThreadExecutor().submit(java.util.concurrent.Callable { seedNow() }).get()
+        return java.util.concurrent.Executors.newSingleThreadExecutor().submit(java.util.concurrent.Callable { seedNow(more) }).get()
     }
 
-    private fun seedNow(): Long {
+    private fun seedNow(more: Boolean = false): Long {
         val lib = context.library
         val dao = lib.dao
         val files = photoDir.listFiles().orEmpty().filter { it.extension == "jpg" }.sortedBy { it.name }.drop(84)
@@ -64,13 +64,13 @@ class AppShots {
             Triple("Nani's red album", 1978, 9),
             Triple("Shimla, summer 87", 1987, 6),
             Triple("Holi at home", 1994, 5),
-        )
+        ) + if (more) listOf(Triple("Dad's slides", 1972, 2), Triple("School years", 1990, 2), Triple("Wedding", 1991, 3), Triple("Goa trip", 2003, 2)) else emptyList()
         var k = 0
         var first = 0L
         val names = listOf("Nani", "Ravi", "Meera", "Kabir")
         for ((ai, a) in albums.withIndex()) {
             val (title, year, n) = a
-            val albumId = dao.insertAlbum(AlbumEntity(title = title, createdAt = 1000L - ai, dateFrom = LocalDate.of(year, 1, 1).toEpochDay(), dateTo = LocalDate.of(year, 12, 31).toEpochDay(), dateLabel = "$year"))
+            val albumId = dao.insertAlbum(AlbumEntity(look = if (more) io.github.darkxace01.attic.world.riso.IslandLook(io.github.darkxace01.attic.world.riso.IslandKind.entries[(ai * 3 + 1) % 13], Ink.entries[ai % 11], Ink.entries[(ai + 5) % 11]).encode() else null, title = title, createdAt = 1000L - ai, dateFrom = LocalDate.of(year, 1, 1).toEpochDay(), dateTo = LocalDate.of(year, 12, 31).toEpochDay(), dateLabel = "$year"))
             for (i in 0 until n) {
                 val src = files[k++]
                 val dir = "seed_$k"
@@ -83,7 +83,7 @@ class AppShots {
                         albumId = albumId, scanDir = dir, fileName = "print_1.jpg", page = 1 + i / 2, position = i % 2,
                         width = bmp.width, height = bmp.height, sharpness = 200.0, quad = "0,0,1,0,1,1,0,1", enhance = 0,
                         dateFrom = day.toEpochDay(), dateTo = day.toEpochDay(), dateLabel = "${day.dayOfMonth} ${day.month.name.lowercase().replaceFirstChar { it.uppercase() }.take(3)} $year",
-                        place = if (i % 3 == 0) listOf("Shimla", "Jaipur", "Pune")[ai] else null,
+                        place = if (i % 3 == 0) listOf("Shimla", "Jaipur", "Pune")[ai % 3] else null,
                         caption = if (i == 0) "The first day at the new house" else null,
                         createdAt = 2000L + k,
                         galleryUri = "content://seed/$k", exportedVersion = 1, backedUpVersion = 1,
@@ -157,6 +157,9 @@ class AppShots {
             }
         }
     }
+
+    @Test fun ring() { seed(more = true); context.library.settings.update { it.copy(albumLayout = "ring") }; shot("ring") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }
+    @Test fun map() { seed(more = true); context.library.settings.update { it.copy(albumLayout = "map") }; shot("map") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }
 
     @Test fun welcome() { shot("welcome") { io.github.darkxace01.attic.AtticApp() } }
     @Test fun emptyAlbums() { shot("empty") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }

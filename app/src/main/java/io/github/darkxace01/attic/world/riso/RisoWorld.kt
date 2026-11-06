@@ -92,9 +92,9 @@ private fun IslandRow(w: WorldIsland, index: Int, time: () -> Float, onOpen: (Lo
 
 /** The title set the way the album's owner chose: printed, in grease pencil, or on label tape. */
 @Composable
-fun AlbumTitle(title: String, meta: String, style: TitleStyle, modifier: Modifier = Modifier, alignEnd: Boolean = false) {
-    val align = if (alignEnd) TextAlign.End else TextAlign.Start
-    Column(modifier, horizontalAlignment = if (alignEnd) Alignment.End else Alignment.Start) {
+fun AlbumTitle(title: String, meta: String, style: TitleStyle, modifier: Modifier = Modifier, alignEnd: Boolean = false, center: Boolean = false) {
+    val align = if (center) TextAlign.Center else if (alignEnd) TextAlign.End else TextAlign.Start
+    Column(modifier, horizontalAlignment = if (center) Alignment.CenterHorizontally else if (alignEnd) Alignment.End else Alignment.Start) {
         when (style) {
             TitleStyle.Printed -> Text(
                 title, textAlign = align, color = Palette.Ink,
