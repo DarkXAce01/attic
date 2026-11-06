@@ -2,7 +2,8 @@ package io.github.darkxace01.attic.world
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,6 +53,7 @@ val ALBUM_PAPER = Color(0xFF2A2724)
  * The page, lying open: the spine's shadow down its left side, the edges of the pages beneath peeking out
  * on the right, the prints raised a hair off the page.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RebuiltPage(
     page: PageModel,
@@ -59,6 +61,7 @@ fun RebuiltPage(
     modifier: Modifier = Modifier,
     pageModifier: Modifier = Modifier,
     shade: () -> Float = { 0f },
+    onLongPressPrint: (Long) -> Unit = {},
     printImage: @Composable (PagePrint, Modifier) -> Unit,
 ) {
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
@@ -110,7 +113,7 @@ fun RebuiltPage(
                             shadowElevation = 3.dp.toPx()
                         }
                         .background(Color(0xFFF4F1EA))
-                        .clickable { onOpenPrint(p.id) },
+                        .combinedClickable(onClick = { onOpenPrint(p.id) }, onLongClick = { onLongPressPrint(p.id) }),
                 )
             }
             // Still covered by the page being turned: in its shadow.

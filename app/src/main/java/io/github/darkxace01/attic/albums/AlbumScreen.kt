@@ -61,6 +61,11 @@ import io.github.darkxace01.attic.ui.QuietButton
 import io.github.darkxace01.attic.ui.TextSheet
 import io.github.darkxace01.attic.ui.TopBar
 import io.github.darkxace01.attic.ui.theme.Palette
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.CircleShape
 import io.github.darkxace01.attic.ui.sharePhotos
 import kotlinx.coroutines.launch
 
@@ -77,6 +82,11 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
     var dating by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var pageSheet by remember { mutableStateOf<Int?>(null) }
+    var flipped by remember { mutableStateOf(setOf<Long>()) }
+    val withStories by remember { library.printsWithStories() }.collectAsStateWithLifecycle(emptyList())
+    val player = remember { io.github.darkxace01.attic.data.StoryPlayer() }
+    val playing by player.playing.collectAsStateWithLifecycle()
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { player.stop() } }
 
     val a = album ?: return
     val pages = prints.groupBy { it.page }.toSortedMap()
@@ -122,18 +132,17 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
                             modifier = Modifier.fillMaxSize(),
                             pageModifier = Modifier.pageFlip(pager, i),
                             shade = { pageShade(pager, i) },
+                            // Long-press turns a print over to its back, and back again.
+                            onLongPressPrint = { id -> if (onPage.any { it.id == id && library.backFile(it) != null }) flipped = if (id in flipped) flipped - id else flipped + id },
                         ) { pp, mod ->
                             val p = onPage.first { it.id == pp.id }
-                            AsyncImage(
-                                model = coil3.request.ImageRequest.Builder(LocalContext.current)
-                                    .data(pp.image)
-                                    .memoryCacheKey("${pp.image}#${p.version}")
-                                    .diskCacheKey("${pp.image}#${p.version}")
-                                    .build(),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = mod,
-                            )
+                            PagePrintView(p, pp.image, flipped = p.id in flipped, hasStory = p.id in withStories, playing = playing == p.id, mod) {
+                                if (playing == p.id) player.stop()
+                                else scope.launch {
+                                    val first = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { library.storiesNow(p.id).firstOrNull() }
+                                    first?.let { player.play(p.id, library.storyFile(p, it)) }
+                                }
+                            }
                         }
                     }
                 }
@@ -276,4 +285,51 @@ private suspend fun pageModel(library: Library, number: Int, prints: List<PrintE
         PageLayout.Spot(cw * (i % cols + 0.5f), ch * (i / cols + 0.5f), w, h, ((p.id * 37 % 7) - 3) * 0.4f)
     }
     return PageModel(number, null, null, prints.mapIndexed { i, p -> PagePrint(p.id, library.displayFile(p), spots[i]) }, aspect)
+}
+
+/**
+ * A print on an album page. Turned over (long-press) it shows its back; a print with a story has a small
+ * mark in its corner that plays it right there, the page staying open.
+ */
+@Composable
+private fun PagePrintView(p: PrintEntity, image: Any, flipped: Boolean, hasStory: Boolean, playing: Boolean, modifier: Modifier, onStory: () -> Unit) {
+    val library = LocalContext.current.library
+    val turn by androidx.compose.animation.core.animateFloatAsState(if (flipped) 180f else 0f, androidx.compose.animation.core.tween(520), label = "turn")
+    Box(modifier.graphicsLayer { rotationY = turn; cameraDistance = 16f * density }) {
+        val back = if (turn > 90f) library.backFile(p) else null
+        AsyncImage(
+            model = coil3.request.ImageRequest.Builder(LocalContext.current)
+                .data(back ?: image)
+                .memoryCacheKey("${back ?: image}#${p.version}")
+                .diskCacheKey("${back ?: image}#${p.version}")
+                .build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            // The back is seen through the turned print: turn it again so it reads the right way.
+            modifier = Modifier.fillMaxSize().graphicsLayer { if (back != null) rotationY = 180f },
+        )
+        if (hasStory && turn < 90f) {
+            val pulse by androidx.compose.animation.core.rememberInfiniteTransition(label = "story").animateFloat(
+                0.55f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween<Float>(700), androidx.compose.animation.core.RepeatMode.Reverse), label = "pulse",
+            )
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(5.dp)
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable(onClick = onStory),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    Modifier
+                        .size(8.dp)
+                        .graphicsLayer { alpha = if (playing) pulse else 1f }
+                        .clip(CircleShape)
+                        .background(if (playing) Palette.Accent else Color.White),
+                )
+            }
+        }
+    }
 }
