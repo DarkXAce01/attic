@@ -83,6 +83,27 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
     var confirmDelete by remember { mutableStateOf(false) }
     var pageSheet by remember { mutableStateOf<Int?>(null) }
     var flipped by remember { mutableStateOf(setOf<Long>()) }
+    // Saving the album as a file: how far along, and how it went.
+    var saving by remember { mutableStateOf<String?>(null) }
+    fun export(uri: android.net.Uri?, pdf: Boolean) {
+        uri ?: return
+        saving = "Saving the album…"
+        // Not tied to this screen: leaving it doesn't stop the file half-written.
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            val ok = runCatching {
+                context.contentResolver.openOutputStream(uri)!!.use { out ->
+                    val ex = io.github.darkxace01.attic.data.AlbumExport(library)
+                    val step: (Int, Int) -> Unit = { d, t -> saving = "Saving the album… $d of $t photos" }
+                    if (pdf) ex.writePdf(albumId, out, step) else ex.writeHtml(albumId, out, step)
+                }
+            }.isSuccess
+            saving = if (ok) (if (pdf) "Saved. The PDF is ready to print or send." else "Saved. The page opens in any browser, no internet needed.") else "Couldn't save the album there."
+            kotlinx.coroutines.delay(3500)
+            saving = null
+        }
+    }
+    val saveHtml = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/html")) { export(it, pdf = false) }
+    val savePdf = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/pdf")) { export(it, pdf = true) }
     val withStories by remember { library.printsWithStories() }.collectAsStateWithLifecycle(emptyList())
     val player = remember { io.github.darkxace01.attic.data.StoryPlayer() }
     val playing by player.playing.collectAsStateWithLifecycle()
@@ -99,6 +120,8 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text("Tell its stories") }, onClick = { menu = false; onTellStories() })
                     if (prints.isNotEmpty()) {
+                        DropdownMenuItem(text = { Text("Save as a web page") }, onClick = { menu = false; saveHtml.launch("${a.title}.html") })
+                        DropdownMenuItem(text = { Text("Save as a photobook (PDF)") }, onClick = { menu = false; savePdf.launch("${a.title}.pdf") })
                         DropdownMenuItem(text = { Text("Share all photos") }, onClick = {
                             menu = false
                             scope.launch { sharePhotos(context, prints.map { it.id }, "Share ${a.title}") }
@@ -146,6 +169,9 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
                         }
                     }
                 }
+            }
+            saving?.let { msg ->
+                Text(msg, style = MaterialTheme.typography.bodyMedium, color = Palette.Ink, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
             }
             val current = numbers.getOrElse(pager.currentPage) { numbers.first() }
             Box(Modifier.padding(horizontal = 16.dp).padding(bottom = 12.dp)) {
