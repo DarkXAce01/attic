@@ -151,6 +151,9 @@ fun SettingsScreen(onBack: () -> Unit, onLightbox: () -> Unit = {}) {
             Heading("Backup")
             BackupSection(backup, library.counts())
 
+            Heading("Keepsake")
+            KeepsakeSection()
+
             Heading("About")
             Text(
                 "Attic ${BuildConfig.VERSION_NAME}. Everything stays on this phone: Attic has no internet access, " +
@@ -387,4 +390,32 @@ private fun GalleryCheckSection() {
             }
         }
     }
+}
+
+/** The whole archive as a folder of web pages, for a USB stick or relatives without the app. */
+@Composable
+private fun KeepsakeSection() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var progress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var done by remember { mutableStateOf<String?>(null) }
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        progress = 0 to 0
+        scope.launch {
+            val name = io.github.darkxace01.attic.data.Keepsake(context, context.library).write(uri) { d, t -> progress = d to t }
+            done = name?.let { "Saved as “$it”. Open index.html in it with any browser." } ?: "Couldn't write to that folder."
+            progress = null
+        }
+    }
+    Text(
+        "Every album as its own web page, with a front page for them all: photos, dates, names, backs and stories. For a USB stick, a drive, or a relative without Attic. Opens in any browser, no internet needed.",
+        style = MaterialTheme.typography.bodyMedium, color = Palette.Muted,
+    )
+    val p = progress
+    if (p != null) Text(
+        if (p.second == 0) "Making the keepsake…" else "Making the keepsake… album ${minOf(p.first + 1, p.second)} of ${p.second}",
+        style = MaterialTheme.typography.bodyMedium, color = Palette.Ink, modifier = Modifier.padding(vertical = 12.dp),
+    ) else QuietButton("Make a keepsake folder", onClick = { done = null; pick.launch(null) })
+    done?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Palette.Ink) }
 }

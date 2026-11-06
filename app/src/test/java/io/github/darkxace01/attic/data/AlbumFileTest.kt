@@ -121,3 +121,12 @@ class AlbumFileTest {
         bg { context.albumFile.open(ByteArrayInputStream("hello".toByteArray())) }
     }
 }
+
+class KeepsakeNameTest {
+    @org.junit.Test
+    fun numberedAndSafeOnAnyStick() {
+        org.junit.Assert.assertEquals("03 Nani's red album.html", io.github.darkxace01.attic.data.Keepsake.fileName(3, "Nani's red album"))
+        org.junit.Assert.assertEquals("12 Goa  trip 1987.html".replace("  ", " "), io.github.darkxace01.attic.data.Keepsake.fileName(12, "Goa / trip: 1987"))
+        org.junit.Assert.assertEquals("01 Album.html", io.github.darkxace01.attic.data.Keepsake.fileName(1, "???"))
+    }
+}
