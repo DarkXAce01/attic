@@ -104,5 +104,6 @@ class AppShots {
     @Test fun people() { seed(); shot("people") { io.github.darkxace01.attic.people.PeopleScreen(onOpenPerson = {}) } }
     @Test fun person() { seed(); shot("person") { io.github.darkxace01.attic.people.PersonScreen(1, onBack = {}, onOpenPrint = {}) } }
     @Test fun settings() { seed(); shot("settings") { io.github.darkxace01.attic.settings.SettingsScreen(onBack = {}) } }
+    @Test fun welcome() { shot("welcome") { io.github.darkxace01.attic.AtticApp() } }
     @Test fun emptyAlbums() { shot("empty") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }
 }
