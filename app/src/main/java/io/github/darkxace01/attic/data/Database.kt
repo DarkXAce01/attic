@@ -81,6 +81,8 @@ data class PrintEntity(
     val borderQuad: String? = null,
     /** Taken from a film negative: the crop is developed into a positive every time it's made. */
     @ColumnInfo(defaultValue = "0") val negative: Boolean = false,
+    /** Made bigger (see Upscale): every time the crop is made, it's made bigger again. */
+    @ColumnInfo(defaultValue = "0") val upscaled: Boolean = false,
 ) {
     val date: PhotoDate? get() = photoDate(dateFrom, dateTo, dateLabel)
     /** The dates the stamp can mean: one, two when it reads both ways, none without a stamp. */
@@ -299,7 +301,7 @@ interface AtticDao {
 
 @Database(
     entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class, FaceEntity::class, RelationEntity::class],
-    version = 11,
+    version = 12,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -307,7 +309,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -388,6 +390,13 @@ abstract class AtticDatabase : RoomDatabase() {
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `print` ADD COLUMN `negative` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** Made bigger. */
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `print` ADD COLUMN `upscaled` INTEGER NOT NULL DEFAULT 0")
             }
         }
 

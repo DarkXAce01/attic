@@ -86,6 +86,8 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   reads it in without overwriting anything already filled in
 - Phone photos on the timeline, if you want them: today's photos alongside the old scans, read where they
   are in the phone's gallery, never copied. On this day mixes them in too
+- Make it bigger: a small print is redrawn up to four times larger on the phone (Real-ESRGAN), with
+  crisp edges where a stretch would blur. It stays bigger through crop fixes; one tap goes back
 
 **Keep**
 - Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their

@@ -208,6 +208,7 @@ class Backup(private val context: Context, private val library: Library) {
                             backFile = p.optStringOrNull("backFile")?.takeIf { File(local, it).exists() },
                             borderQuad = p.optStringOrNull("borderQuad"),
                             negative = p.optBoolean("negative"),
+                            upscaled = p.optBoolean("upscaled"),
                         ),
                     )
                     val people = p.optJSONArray("people") ?: JSONArray()
@@ -277,6 +278,7 @@ class Backup(private val context: Context, private val library: Library) {
                         .putOpt("backFile", p.backFile)
                         .putOpt("borderQuad", p.borderQuad)
                         .put("negative", p.negative)
+                        .put("upscaled", p.upscaled)
                         .put("people", JSONArray(dao.peopleInNow(p.id)))
                         .put("faces", facesOf(p))
                         .put(

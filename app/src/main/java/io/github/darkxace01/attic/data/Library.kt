@@ -20,6 +20,7 @@ import io.github.darkxace01.attic.vision.PrintHash
 import io.github.darkxace01.attic.vision.FrameTransform
 import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.Rectify
+import io.github.darkxace01.attic.vision.Upscale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -456,7 +457,7 @@ class Library(private val context: Context) {
     suspend fun recrop(id: Long, quad: Quad) = recrop(id, quad, border = null)
 
     /** [recrop], with [border] as the outline to put a trimmed border back to (null: not trimmed). */
-    private suspend fun recrop(id: Long, quad: Quad, border: String?) = io {
+    private suspend fun recrop(id: Long, quad: Quad, border: String?, progress: (Int, Int) -> Unit = { _, _ -> }) = io {
         val p = dao.print(id) ?: return@io
         val original = loadUprightOriginal(p) ?: return@io
         val sweepFile = sweepFile(p)
@@ -487,6 +488,7 @@ class Library(private val context: Context) {
             flat.release()
             flat = developed
         }
+        if (p.upscaled) bigger(flat, progress)?.let { flat.release(); flat = it }
         writePng(flat, p.file(root))
         derivedFiles(p).forEach { it.delete() }
         val updated = p.copy(
@@ -508,6 +510,39 @@ class Library(private val context: Context) {
         // A trimmed border turns with the print, so it can still be put back.
         val border = p.borderQuad?.let(::parseQuad)?.let { b -> Quad(b.bl, b.tl, b.tr, b.br).encode() }
         recrop(id, Quad(q.bl, q.tl, q.tr, q.br), border)
+    }
+
+    // ---- making prints bigger ----
+
+    private val upscaler by lazy { Upscale(context.assets.open("upscale.onnx").use { it.readBytes() }) }
+    private val upscaleLock = Any()
+
+    /** [flat] made as big as is useful (see [Upscale.factorFor]), or null if it's big enough already. */
+    private fun bigger(flat: Mat, progress: (Int, Int) -> Unit): Mat? {
+        val f = Upscale.factorFor(flat.cols(), flat.rows())
+        if (f < MIN_UPSCALE) return null
+        return synchronized(upscaleLock) { upscaler.run(flat, f, progress) }
+    }
+
+    /** Whether making [p] bigger is worth offering. */
+    fun canUpscale(p: PrintEntity) = !p.upscaled && Upscale.factorFor(p.width, p.height) >= MIN_UPSCALE
+
+    /** Makes print [id] bigger, now and whenever its crop is made again. [progress] gets tiles done of how many. */
+    suspend fun upscale(id: Long, progress: (Int, Int) -> Unit = { _, _ -> }) = withContext(kotlinx.coroutines.NonCancellable) {
+        // Once begun it finishes, even if the photo is closed: the flag and the crop must agree.
+        val p = printNow(id) ?: return@withContext
+        if (p.upscaled) return@withContext
+        io { dao.updatePrint(p.copy(upscaled = true)) }
+        recrop(id, p.cropQuad, p.borderQuad, progress)
+        io { dao.print(id)?.let(::exportNow) }
+    }
+
+    /** Back to the size it was scanned at. */
+    suspend fun unupscale(id: Long) {
+        val p = printNow(id) ?: return
+        if (!p.upscaled) return
+        io { dao.updatePrint(p.copy(upscaled = false)) }
+        recrop(id, p.cropQuad, p.borderQuad)
     }
 
     /** Marks freshly saved prints as taken from negatives (their crops are already developed). */
@@ -1047,6 +1082,9 @@ private const val PAGE_SIDE = 1800
 
 /** Bumped when the way looks are made changes, so prints from before are redone once. */
 private const val LOOKS_VERSION = 2
+
+/** Making a print bigger is offered when it can be made at least this many times bigger. */
+private const val MIN_UPSCALE = 1.5
 
 /** Largest image imported as it is, in pixels (a 600 dpi A4 scan is halved). */
 private const val IMPORT_PIXELS = 30_000_000L

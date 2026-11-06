@@ -150,6 +150,8 @@ private fun PrintPage(
     var editing by remember { mutableStateOf(Editing.None) }
     var busy by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    // How far making it bigger has got, 0..1, while it's going.
+    var upscaling by remember { mutableStateOf<Float?>(null) }
 
     fun work(block: suspend () -> Unit) {
         scope.launch {
@@ -206,6 +208,11 @@ private fun PrintPage(
                 color = Palette.Muted,
             )
             BorderLine(p, onTrim = { work { library.trimBorder(printId) } }, onRestore = { work { library.restoreBorder(printId) } })
+            UpscaleLine(
+                p, upscaling,
+                onUpscale = { work { library.upscale(printId) { done, total -> upscaling = done.toFloat() / total }; upscaling = null } },
+                onUndo = { work { library.unupscale(printId) } },
+            )
             Spacer(Modifier.height(10.dp))
             Text(
                 qualityLine(p),
@@ -454,6 +461,26 @@ private fun PeopleSheet(initial: List<String>, onDismiss: () -> Unit, onSave: (L
 }
 
 /** The print's plain border: trim it off, or put it back. Nothing when there's no border. */
+@Composable
+private fun UpscaleLine(p: PrintEntity, progress: Float?, onUpscale: () -> Unit, onUndo: () -> Unit) {
+    val library = LocalContext.current.library
+    val text = when {
+        progress != null -> "Making it bigger… ${(progress * 100).toInt()}%"
+        p.upscaled -> "Made bigger, ${p.width} by ${p.height}."
+        library.canUpscale(p) -> "Small for printing or a big screen: ${p.width} by ${p.height}."
+        else -> return
+    }
+    Spacer(Modifier.height(6.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = Modifier.weight(1f))
+        when {
+            progress != null -> {}
+            p.upscaled -> QuietButton("Scanned size", onClick = onUndo)
+            else -> QuietButton("Make it bigger", onClick = onUpscale)
+        }
+    }
+}
+
 @Composable
 private fun BorderLine(p: PrintEntity, onTrim: () -> Unit, onRestore: () -> Unit) {
     val library = LocalContext.current.library

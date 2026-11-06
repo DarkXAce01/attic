@@ -278,6 +278,7 @@ private fun LicencesSheet(onDismiss: () -> Unit) {
         "Date reader" to "Attic's own network, trained only on made-up camera date stamps drawn on photos from the Unsplash Lite dataset.",
         "Face finder (YuNet)" to "MIT License, Copyright (c) 2020 Shiqi Yu. From the OpenCV model zoo. Runs on the phone.",
         "Face matcher (SFace)" to "Apache License 2.0, by Yaoyao Zhong and Weihong Deng. From the OpenCV model zoo. Runs on the phone; faces never leave it.",
+        "Making prints bigger (Real-ESRGAN)" to "BSD 3-Clause License, Copyright (c) 2021 Xintao Wang. The general x4v3 model. Runs on the phone.",
         "Attic" to "GNU General Public License 3.0. The source is on GitHub: DarkXAce01/attic.",
     )
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Surface) {
