@@ -72,8 +72,8 @@ Tags: **[MVP]** first release · **[v1]** public launch · **[v2]** after launch
 | **Family tree** | v2 | Link people (parent, sibling, spouse). Browse by family branch; see who's missing photos. |
 | **Voice stories** | v1 | Hold any photo and record a memory. Audio is attached forever and plays from the album page. |
 | **Story sessions** | v1 | "Interview mode" for grandparents: the app shows photos one by one, full screen, records them talking, and splits the audio per photo automatically. Feels like a podcast with your family. |
-| **Handwriting & captions** | v1 | Text read from backs and album margins becomes searchable captions. |
-| **Era hint** | v2 | When there's no date, the app suggests a decade from print size, border style, paper and color fade. Always shown as a suggestion, never stored as fact. |
+| **Handwriting & captions** | parked | Text read from backs and album margins becomes searchable captions. |
+| **Era hint** | parked | When there's no date, the app suggests a decade from print size, border style, paper and color fade. Always shown as a suggestion, never stored as fact. |
 | **Places & then-and-now** | v2 | Pin a photo to a place. Stand in the same spot today and the camera overlays the old photo so you can line it up; Attic makes a before/after slider. |
 | **Family help pack** | v2 | No server needed. Export a "help me tag" pack over WhatsApp or Nearby Share. A relative tags faces and dates on their phone and sends it back; Attic merges the answers. |
 | **Duplicate finder** | v1 | Catches the same print scanned twice, or one that's already in your phone gallery. |
@@ -87,7 +87,7 @@ All optional, never automatic. Always shown with an original/restored slider, an
 | Fade & color cast fix | MVP | Classic image processing, instant, on-device. Most 80s/90s prints have gone orange or magenta. |
 | Dust & scratch removal | v1 | Detects and fills specks and fine cracks. |
 | Upscaling | v2 | Real-ESRGAN family, for small prints you want to enlarge. |
-| Face restoration | v2 | GFPGAN (Apache-2.0). **Not CodeFormer**: its license is non-commercial. |
+| ~~Face restoration~~ | dropped | Dropped (Nov 2026): it redraws faces from other people's, so it can quietly change who someone looks like. Attic corrects photos; it doesn't invent them. |
 | Colorize black & white | Moon | Clearly marked as an interpretation. Never replaces the original. |
 
 ### D. Albums: the world inside the app
@@ -193,6 +193,17 @@ spines and covers. Opening one plays a small book-opening animation, and its pag
 premium and look made by someone who knows art, never like a template. This is the design phase's main
 work (with D. Rebuilt albums, 3D book and Tilt light).
 
+**Themes (Nov 2026).** The user wants the revamp to be bold: themes with colour and texture on the
+app's own screens, animation, and creative album islands with a few per-album choices. The first theme
+is **Riso** (spot inks that overprint, dot screens instead of gradients, the red grease pencil for marks).
+Infrared, Night broadcast (CRT) and One bit follow later. Themes never alter the photos. Proposal:
+`docs/design/attic-riso.html`. Design work is shown as a proposal first and built only once approved.
+
+**Sharing albums (planned).** No links or cloud. Each album is already a folder in the gallery
+(Pictures/Attic/<album>); add "Open in gallery" and keep the folder in step with renames. New: one album
+file (photos, pages, backs, stories, names, dates) that another Attic adds as it was, and passing an album
+round the family with only new things merged back. The web page and PDF move into the same Share sheet.
+
 **Order of work:** first build and perfect the functionality, then the design phase (the album world,
 the Grease Pencil signature and a full UX pass). Until then, keep screens plain and correct rather than
 half-styled.
@@ -291,7 +302,7 @@ detection runs at 15+ fps on a mid-range phone.
 | **0 · Spike** | 2–3 wks | Viewfinder, live detection, flat full-res crops | The go bar in §7 is hit |
 | **1 · MVP "Scan & keep"** | 6–8 wks | Multi-print scan, live strip, auto-capture, quality check, quick-tag sheet, fuzzy dates, simple library (by album / year), color fix, backup health, export with metadata | You've digitized one complete family album with it and would use it for the rest |
 | **2 · v1 "Relive"** (public launch) | 8–10 wks | Rebuilt albums, 3D book with one perfect theme, tilt light, flip a print, voice stories + story sessions, hands-free page turning, glare-free sweep, date-stamp reader, faces & ages, decade timeline | Family members who aren't you open it *for fun* |
-| **3 · v2 "Everything"** | ongoing | More album themes (Shoebox, Slide tray…), gallery mode, smart search, On this day + widget, family tree, help packs, then-and-now, shareable album files, TV, negatives mode, upscaling & face restore | |
+| **3 · v2 "Everything"** | ongoing | More album themes (Shoebox, Slide tray…), gallery mode, smart search, On this day + widget, family tree, help packs, then-and-now, shareable album files, TV, negatives mode, upscaling | |
 | **Moon** | — | Default gallery app, colorization, iOS | |
 
 **Launch:** Google Play + F-Droid, "free forever, no ads, no internet permission" as the headline. Optional
