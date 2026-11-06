@@ -44,8 +44,9 @@ import java.util.Locale
  *
  * Each capture folder holds `original.jpg` (the untouched camera photo, never modified) and one PNG per
  * print. Edits are stored as data (crop corners, enhancement) and the PNGs are rebuilt from the original,
- * so nothing is ever lost by editing. The enhanced look sits next to the plain crop as `print_N_e1.png`
- * (natural) or `print_N_e2.png` (strong).
+ * so nothing is ever lost by editing. The enhanced look sits next to the plain crop as `print_N_e1.jpg`
+ * (natural) or `print_N_e2.jpg` (strong): a high-quality JPEG, since it can always be made again from the
+ * lossless crop. (Builds before 0.x kept them as PNG; [shrinkLooks] turns those into JPEGs.)
  *
  * A glare-free capture also keeps the other shots, `shot_2.jpg` and on (with `frame_2.json` and on), and
  * for each print `sweep_print_N.json`: where that print is in each of them. Fixing the crop redoes the
@@ -269,15 +270,20 @@ class Library(private val context: Context) {
 
     private fun enhancedFile(p: PrintEntity, level: Int): File = enhancedFile(p.scanDir, p.fileName, level)
 
-    private fun enhancedFile(dir: String, fileName: String, level: Int): File =
-        if (level == Enhance.OFF) File(File(root, dir), fileName)
-        else File(File(root, dir), fileName.removeSuffix(".png") + "_e$level.png")
+    private fun enhancedFile(dir: String, fileName: String, level: Int): File {
+        if (level == Enhance.OFF) return File(File(root, dir), fileName)
+        val old = File(File(root, dir), fileName.removeSuffix(".png") + "_e$level.png")
+        return if (old.exists()) old else lookJpeg(dir, fileName, level)
+    }
+
+    /** Where a look is written now: a JPEG beside the lossless crop. */
+    private fun lookJpeg(dir: String, fileName: String, level: Int) = File(File(root, dir), fileName.removeSuffix(".png") + "_e$level.jpg")
 
     /** Every derived file a print can have, including the colour-fix files of earlier builds. */
     private fun derivedFiles(p: PrintEntity): List<File> {
         val dir = File(root, p.scanDir)
         val stem = p.fileName.removeSuffix(".png")
-        return listOf("_fix", "_e1", "_e2").map { File(dir, "$stem$it.png") }
+        return listOf("_fix", "_e1", "_e2").map { File(dir, "$stem$it.png") } + listOf("_e1", "_e2").map { File(dir, "$stem$it.jpg") }
     }
 
     // ---- albums ----
@@ -465,7 +471,9 @@ class Library(private val context: Context) {
         } else {
             Enhance.apply(src, p.enhance)
         }
-        writePng(out, enhancedFile(p, p.enhance))
+        val jpeg = lookJpeg(p.scanDir, p.fileName, p.enhance)
+        writeLook(out, jpeg)
+        File(jpeg.parentFile, jpeg.name.removeSuffix(".jpg") + ".png").delete()
         out.release()
         if (flat == null) src.release()
     }
@@ -557,6 +565,7 @@ class Library(private val context: Context) {
 
     /** Fills in enhanced files that are missing (prints from before enhancement, or an interrupted save). */
     suspend fun renderMissing() = io {
+        shrinkLooks()
         dao.allPrints().filter { it.enhance != Enhance.OFF && !enhancedFile(it, it.enhance).exists() && it.file(root).exists() }
             .forEach { renderEnhanced(it, null) }
     }
@@ -1238,6 +1247,32 @@ class Library(private val context: Context) {
         Imgproc.cvtColor(bgr, rgba, Imgproc.COLOR_BGR2RGBA)
         bgr.release()
         return rgba
+    }
+
+    /**
+     * Turns looks kept as PNG by earlier builds into JPEGs, a quarter of the size or less. Each is
+     * written whole before the PNG goes, so an interruption loses nothing.
+     */
+    private fun shrinkLooks() {
+        for (p in dao.allPrints()) for (level in listOf(1, 2)) {
+            val png = File(File(root, p.scanDir), p.fileName.removeSuffix(".png") + "_e$level.png")
+            if (!png.exists()) continue
+            val img = readPng(png) ?: continue
+            val jpeg = lookJpeg(p.scanDir, p.fileName, level)
+            writeLook(img, jpeg)
+            img.release()
+            if (jpeg.length() > 0) png.delete()
+        }
+    }
+
+    /** A look as a high-quality JPEG (written to a temporary name first, so it's never half there). */
+    private fun writeLook(rgba: Mat, file: File) {
+        val bgr = Mat()
+        Imgproc.cvtColor(rgba, bgr, Imgproc.COLOR_RGBA2BGR)
+        val tmp = File(file.parentFile, file.name + ".part.jpg")
+        Imgcodecs.imwrite(tmp.path, bgr, MatOfInt(Imgcodecs.IMWRITE_JPEG_QUALITY, 95))
+        bgr.release()
+        if (tmp.length() > 0) tmp.renameTo(file) else tmp.delete()
     }
 
     private fun writePng(rgba: Mat, file: File) {

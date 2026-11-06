@@ -60,7 +60,7 @@ object Tour {
         Stop("Albums", "tab.Albums", "Your albums", "Each album is a little island with its photo in the scene. Tap one to open it, or hold it to choose its scene and how its title is written."),
         Stop("Albums", "albums.layouts", "Path, ring or map", "Lay the islands out down a path, round a ring, or scattered across a map.", optional = true),
         Stop("Albums", "albums.new", "A new album", "Make one for each real album you have. Photos already on your phone can go in one too, without being copied."),
-        Stop("Albums", "albums.menu", "Settings", "Themes, backup, the keepsake folder and how new scans look are all in this menu."),
+        Stop("Albums", "tab.Settings", "Settings", "The little gear, there on every tab: themes, backup, the keepsake folder and how new scans look."),
         Stop("People", "tab.People", "People", "Name a face once and Attic finds it in other photos, then helps you build the family tree."),
         Stop("Timeline", "tab.Timeline", "Every photo by year", "The timeline runs from the oldest photo. Search finds people, places, years and captions."),
         Stop("Scan", "tab.Scan", "Scanning", "Point the phone at a print or a whole album page. Attic finds each photo, straightens it and takes it when the phone is steady."),

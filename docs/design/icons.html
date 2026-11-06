@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attic icon, new identity</title>
+<style>
+:root{--paper:#EDEDE9;--ink:#1D1E22;--muted:#5F6068;--pencil:#D4432A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 17px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1180px;margin:0 auto;padding:40px 22px 80px}
+h1{font-size:clamp(40px,6vw,64px);line-height:.95;margin:0 0 14px;letter-spacing:-.02em}
+h2{font-size:30px;line-height:1.05;margin:0 0 6px;letter-spacing:-.01em}
+p{max-width:70ch;margin:0 0 12px}
+.lede{font-size:19px;color:#333}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:26px;margin-top:34px}
+.card{background:#fff;border:2px solid var(--ink);box-shadow:7px 7px 0 var(--ink);padding:22px}
+.card .why{color:var(--muted);font-size:15.5px}
+.row{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:16px 0 8px}
+.home{display:flex;gap:16px;align-items:flex-end;padding:16px 18px;border-radius:16px;margin-top:12px}
+.home.light{background:#d9dde3}.home.dark{background:#1b1d24}
+.app{display:grid;justify-items:center;gap:5px;font-size:11.5px}
+.home.dark .app{color:#e8e8ea}
+.app svg{display:block}
+.cmp{display:flex;gap:30px;align-items:center;margin-top:26px;background:#fff;border:2px solid var(--ink);padding:18px 22px}
+.tag{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <h1>A face of its own</h1>
+  <p class="lede">Attic's icon was a tilted photo with the red loop round it, which is almost exactly Sweepy's. These four each start from something only this app has. None uses a letter or the name, so they survive a rename. Each keeps the studio's red loop, as the rules ask, but small, so it signs the icon rather than being it.</p>
+  <p>Every one is shown in the three shapes phones cut icons to, at home-screen size on a light and a dark wallpaper, and as the one-colour version Android 13+ uses for themed icons.</p>
+
+  <div class="cmp">
+    <div class="app" id="sweepy"></div>
+    <div><b>Sweepy today</b><br><span class="tag">For comparison: the tilted print and loop it shares with the old Attic icon.</span></div>
+    <div class="app" id="oldattic"></div>
+    <div><b>Attic today</b></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</main>
+<script>
+const CONCEPTS=[
+ {id:'island',name:'The island',why:'The album world in one shape: a floating island with a little photo standing on it like a sail. Nobody else has this; it is the first thing you see in the app. Midnight-blue ground, spot inks.',
+  bg:'#14172E', draw:(mono)=>{
+   const c=mono?'#fff':null;
+   return `
+   <path d="M22,62 Q54,54 86,62 Q80,72 66,76 Q60,90 52,92 Q46,80 38,76 Q26,72 22,62Z" fill="${c||'#7E8299'}"/>
+   <ellipse cx="54" cy="62" rx="32" ry="7" fill="${c||'#00A95C'}"/>
+   <path d="M52,24 L52,60" stroke="${c||'#EEEAE0'}" stroke-width="2.4" stroke-linecap="round"/>
+   <g ${mono?'':''}><path d="M54,26 L54,56 L76,56Z" fill="${c||'#FFB511'}"/>${mono?'':'<path d="M54,40 L54,56 L76,56 L66,46 Z" fill="#FF48B0"/><circle cx="60" cy="46" r="3.5" fill="#FFE800"/>'}</g>
+   <path d="M50,32 L50,56 L36,56Z" fill="${c||'#EEEAE0'}"/>
+   ${loop(80,26,12,mono)}`}},
+ {id:'corners',name:'Photo corners',why:'The four black paper corners that held every photo in a family album, with the picture inside lifted out: an album waiting to be brought home. Calm, archival, instantly about old photos. Cream ground.',
+  bg:'#F3EBDD', draw:(mono)=>{
+   const k=mono?'#fff':'#1D1E22';
+   const pic=mono?'':`<rect x="35" y="37" width="38" height="34" fill="#3255A4"/><path d="M35,62 L46,52 L54,59 L60,54 L73,64 L73,71 L35,71Z" fill="#00838A"/><circle cx="63" cy="46" r="4.5" fill="#FFB511"/>`;
+   return `${pic}
+   <path d="M30,32 h14 L30,46Z" fill="${k}"/><path d="M78,32 v14 L64,32Z" fill="${k}"/>
+   <path d="M78,76 h-14 L78,62Z" fill="${k}"/><path d="M30,76 v-14 L44,76Z" fill="${k}"/>
+   ${loop(80,26,12,mono)}`}},
+ {id:'kite',name:'The kite',why:'A diamond kite whose skin is a photo, string trailing off: memories let up into the air. Lively and simple at small sizes; ties to the islands without being literal. Sky-teal ground.',
+  bg:'#00838A', draw:(mono)=>{
+   const c=mono?'#fff':null;
+   return `
+   <path d="M54,18 L80,46 L54,78 L28,46Z" fill="${c||'#F4F2ED'}"/>
+   ${mono?'':`<clipPath id="kc"><path d="M54,23 L75,46 L54,72 L33,46Z"/></clipPath><g clip-path="url(#kc)"><rect x="30" y="20" width="50" height="60" fill="#FF6C2F"/><rect x="30" y="20" width="50" height="22" fill="#FF48B0"/><circle cx="58" cy="44" r="6" fill="#FFE800"/><rect x="30" y="52" width="50" height="30" fill="#14172E"/></g>`}
+   <path d="M54,78 Q48,86 56,92 Q62,98 54,104" stroke="${c||'#F4F2ED'}" stroke-width="2" fill="none" stroke-linecap="round"/>
+   <path d="M50,88 l-5,-3 v6Z M50,88 l5,-3 v6Z" fill="${c||'#FFE800'}"/>
+   ${loop(28,26,12,mono)}`}},
+ {id:'boat',name:'The paper boat',why:'A folded paper boat sailing on a photo for a sail: something made by hand, carrying a picture home. Warm and friendly, reads well even at 48 dp. Deep navy ground, cream paper.',
+  bg:'#233158', draw:(mono)=>{
+   const c=mono?'#fff':null;
+   return `
+   <path d="M54,22 L54,66" stroke="${c||'#F4F2ED'}" stroke-width="2.4" stroke-linecap="round"/>
+   <path d="M57,24 L57,62 L80,62Z" fill="${c||'#F4F2ED'}"/>
+   ${mono?'':'<path d="M59,40 L59,60 L77,60 Z" fill="#3255A4"/><circle cx="64" cy="50" r="3.2" fill="#FFB511"/><path d="M59,30 L59,40 L69,48 Z" fill="#FF48B0"/>'}
+   <path d="M51,34 L51,62 L34,62Z" fill="${c||'#F4F2ED'}"/>
+   <path d="M26,64 L82,64 L74,76 L34,76Z" fill="${c||'#F4F2ED'}"/>
+   <path d="M44,64 L54,76 L64,64Z" fill="${c||'#E8DCCB'}" ${mono?'opacity=".6"':''}/>
+   <path d="M22,84 q8,-4 16,0 t16,0 t16,0 t16,0" stroke="${c||'#F4F2ED'}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+   ${loop(28,24,12,mono)}`}},
+];
+/* The studio's loop: hand-drawn, overshooting where it started; small, in a corner. */
+function loop(cx,cy,r,mono){
+  const col=mono?'#fff':'#D4432A', s=r/26;
+  return `<g transform="translate(${cx-30*s},${cy-34*s}) scale(${s})"><path d="M20,7.5C37,3 53,9 55,26C57,44 46,60 28,61C12,62 2,50 4,32C5.5,19 13,11 26,8.5" fill="none" stroke="${col}" stroke-width="${mono?6:6.5}" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+}
+const SHAPES={circle:'<circle cx="54" cy="54" r="54"/>',squircle:'<path d="M54,0C90,0 108,18 108,54C108,90 90,108 54,108C18,108 0,90 0,54C0,18 18,0 54,0Z"/>',rounded:'<rect width="108" height="108" rx="24"/>'};
+let n=0;
+function icon(c,size,shape,mono){
+  const id='m'+(n++); const bg=mono?'#2b3a55':c.bg;
+  // Adaptive icons show the middle 72 of 108; the art is drawn for that safe zone.
+  return `<svg width="${size}" height="${size}" viewBox="0 0 108 108"><defs><clipPath id="${id}">${SHAPES[shape]}</clipPath></defs><g clip-path="url(#${id})"><rect width="108" height="108" fill="${bg}"/><g transform="translate(54 54) scale(1.14) translate(-54 -54)">${c.draw(mono)}</g></g></svg>`;
+}
+const grid=document.getElementById('grid');
+for(const c of CONCEPTS){
+  const el=document.createElement('section'); el.className='card';
+  el.innerHTML=`<h2>${c.name}</h2><p class="why">${c.why}</p>
+   <div class="row">${icon(c,150,'squircle')}${icon(c,110,'circle')}${icon(c,110,'rounded')}${icon(c,78,'circle',true)}</div>
+   <div class="tag">Squircle, circle and rounded square, then the themed one-colour version.</div>
+   <div class="home light">${['#7aa','#c96','#88b'].map(x=>`<div class="app">${'<svg width="52" height="52"><circle cx="26" cy="26" r="26" fill="'+x+'"/></svg>'}<span>App</span></div>`).join('')}<div class="app">${icon(c,52,'circle')}<span>Attic</span></div></div>
+   <div class="home dark"><div class="app">${icon(c,52,'squircle')}<span>Attic</span></div>${['#577','#965','#558'].map(x=>`<div class="app">${'<svg width="52" height="52"><rect width="52" height="52" rx="16" fill="'+x+'"/></svg>'}<span>App</span></div>`).join('')}<div class="app">${icon(c,52,'squircle',true)}<span>Themed</span></div></div>`;
+  grid.appendChild(el);
+}
+/* Sweepy and the old Attic, from their vector files, for comparison. */
+document.getElementById('sweepy').innerHTML=`<svg width="96" height="96" viewBox="0 0 108 108"><circle cx="54" cy="54" r="54" fill="#F2EFE8"/><g transform="rotate(-6 54 54)"><path fill="#1C1A17" d="M38,32h32a3,3 0,0 1,3 3v40a3,3 0,0 1,-3 3h-32a3,3 0,0 1,-3 -3v-40a3,3 0,0 1,3 -3z"/><path fill="#FDFCF9" d="M39,33.5h30a2,2 0,0 1,2 2v38.5a2,2 0,0 1,-2 2h-30a2,2 0,0 1,-2 -2v-38.5a2,2 0,0 1,2 -2z"/><path fill="#1C1A17" d="M40,36.5h28v28h-28z"/><path fill="#F2EFE8" d="M40,58l9,-8 6,5 5,-4 8,7v6.5h-28z"/></g><path fill="none" stroke="#D4432A" stroke-width="3.4" stroke-linecap="round" d="M44,27.5C61,23 77,29 79,46C81,64 70,80 52,81C36,82 26,70 28,52C29.5,39 37,31 50,28.5"/></svg>`;
+document.getElementById('oldattic').innerHTML=`<svg width="96" height="96" viewBox="0 0 108 108"><circle cx="54" cy="54" r="54" fill="#EDEDE9"/><g transform="rotate(-7 54 54) translate(10.8 10.8) scale(.8)"><path fill="#00838A" d="M37,38h38v38h-38z"/><path fill="#FBFAF6" d="M34,34h38v40h-38z"/><path fill="#FF48B0" d="M37.5,37.5h31v26h-31z"/><circle cx="58" cy="46" r="5" fill="#FFB511"/><path fill="#3255A4" d="M37.5,63.5l0,-6l9,-9l7,7l5,-4l10,9l0,3z"/></g><g transform="translate(24.5 21.5)"><path fill="none" stroke="#D4432A" stroke-width="3.2" stroke-linecap="round" d="M20,7.5C37,3 53,9 55,26C57,44 46,60 28,61C12,62 2,50 4,32C5.5,19 13,11 26,8.5"/></g></svg>`;
+</script>
+</body>
+</html>

@@ -68,7 +68,8 @@ fun DressSheet(
     fun set(l: IslandLook) { look = l; onChange(l) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Ground, dragHandle = { io.github.darkxace01.attic.ui.theme.PencilHandle() }, scrimColor = Palette.Ink.copy(alpha = 0.4f)) {
-        Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 20.dp)) {
+        // The island stays in view at the top while the choices scroll under it, so every change shows.
+        Column(Modifier.navigationBarsPadding()) {
             Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Make it yours", style = MaterialTheme.typography.titleLarge, color = Palette.Ink, modifier = Modifier.weight(1f))
                 QuietButton("Surprise me", onClick = {
@@ -76,12 +77,14 @@ fun DressSheet(
                     set(look.copy(kind = k, a = a, b = b, extra = Extra.entries.random(), title = TitleStyle.entries.random()))
                 })
             }
-            Box(Modifier.fillMaxWidth().height(250.dp)) {
-                Canvas(Modifier.fillMaxWidth().height(250.dp)) {
+            Box(Modifier.fillMaxWidth().height(210.dp)) {
+                Canvas(Modifier.fillMaxWidth().height(210.dp)) {
                     drawIsland(look, photos, Offset(size.width * 0.36f, size.height * 0.5f), size.width * 0.21f, time(), 1)
                 }
                 AlbumTitle(title, meta, look.title, Modifier.align(Alignment.BottomEnd).padding(20.dp), alignEnd = true)
             }
+            androidx.compose.foundation.layout.Spacer(Modifier.fillMaxWidth().height(1.dp).background(Palette.SurfaceHigh))
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(bottom = 20.dp)) {
 
             Heading("Island")
             LazyRow(contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -133,6 +136,7 @@ fun DressSheet(
                         )
                     }
                 }
+            }
             }
         }
     }

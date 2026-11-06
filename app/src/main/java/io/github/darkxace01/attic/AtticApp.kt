@@ -1,5 +1,6 @@
 package io.github.darkxace01.attic
 
+import androidx.compose.material.icons.outlined.Settings
 import io.github.darkxace01.attic.ui.tourTarget
 import io.github.darkxace01.attic.ui.theme.ground
 import android.Manifest
@@ -227,7 +228,7 @@ fun AtticApp(incoming: android.net.Uri? = null, onIncomingDone: () -> Unit = {},
                 ) { r -> screen(r) }
             }
             if (top == Route.Scan || top == Route.Albums || top == Route.People || top == Route.Timeline) {
-                TabBar(top, dark = false, onTab = ::tab)
+                TabBar(top, dark = false, onTab = ::tab, onSettings = { go(Route.Settings) })
             } else {
                 Spacer(Modifier.navigationBarsPadding())
             }
@@ -262,7 +263,7 @@ fun AtticApp(incoming: android.net.Uri? = null, onIncomingDone: () -> Unit = {},
 }
 
 @Composable
-private fun TabBar(current: Route, dark: Boolean, onTab: (Route) -> Unit) {
+private fun TabBar(current: Route, dark: Boolean, onTab: (Route) -> Unit, onSettings: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -273,6 +274,13 @@ private fun TabBar(current: Route, dark: Boolean, onTab: (Route) -> Unit) {
     ) {
         for ((label, route) in listOf("Scan" to Route.Scan, "Albums" to Route.Albums, "People" to Route.People, "Timeline" to Route.Timeline)) {
             TabItem(label, current == route, dark, { onTab(route) }, Modifier.weight(1f).tourTarget("tab.$label"))
+        }
+        // Settings, a quiet gear at the end of the tabs: one tap from any of them.
+        androidx.compose.material3.IconButton(onClick = onSettings, modifier = Modifier.padding(end = 4.dp).tourTarget("tab.Settings")) {
+            androidx.compose.material3.Icon(
+                androidx.compose.material.icons.Icons.Outlined.Settings, contentDescription = "Settings",
+                tint = (if (dark) Palette.Ground else Palette.Ink).copy(alpha = 0.55f),
+            )
         }
     }
 }
