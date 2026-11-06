@@ -82,6 +82,12 @@ fun SettingsScreen(onBack: () -> Unit, onLightbox: () -> Unit = {}) {
             Spacer(Modifier.height(10.dp))
             InkChoice(listOf("auto" to "Auto", "paper" to "Paper", "midnight" to "Midnight"), prefs.look) { l -> library.settings.update { it.copy(look = l) } }
 
+            Toggle(
+                "Tilt light",
+                "Prints catch the light as you tilt the phone, like a real one in your hand. Only light on top; the photo isn't changed.",
+                prefs.tiltLight,
+            ) { on -> library.settings.update { it.copy(tiltLight = on) } }
+
             Heading("New scans")
             Text("How new scans look at first. You can change any photo later.", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
             Spacer(Modifier.height(10.dp))

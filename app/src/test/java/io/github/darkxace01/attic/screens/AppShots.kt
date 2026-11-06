@@ -1,5 +1,13 @@
 package io.github.darkxace01.attic.screens
 
+import io.github.darkxace01.attic.ui.tiltLight
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.asImageBitmap
@@ -212,6 +220,20 @@ class AppShots {
     }
 
     @Test fun search() { seed(); shot("search") { io.github.darkxace01.attic.timeline.SearchScreen(onBack = {}, onOpenPrint = {}, onSlideshow = {}) } }
+    @Test fun tiltLight() {
+        assumeTrue(photoDir.isDirectory)
+        val bmp = BitmapFactory.decodeFile(photoDir.listFiles()!!.filter { it.extension == "jpg" }.sortedBy { it.name }[98].path, BitmapFactory.Options().apply { inSampleSize = 4 }).asImageBitmap()
+        shot("tilt") {
+            androidx.compose.foundation.layout.Row(androidx.compose.ui.Modifier.background(Palette.Ground).padding(16.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
+                for (t in listOf(androidx.compose.ui.geometry.Offset.Zero, androidx.compose.ui.geometry.Offset(-0.5f, -0.3f), androidx.compose.ui.geometry.Offset(0.4f, 0.2f))) {
+                    androidx.compose.foundation.Image(
+                        bmp, null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = androidx.compose.ui.Modifier.size(110.dp, 150.dp).tiltLight(androidx.compose.runtime.mutableStateOf(t)).background(Color.White).padding(5.dp),
+                    )
+                }
+            }
+        }
+    }
     @Test fun welcome() { shot("welcome") { io.github.darkxace01.attic.AtticApp() } }
     @Test fun emptyAlbums() { shot("empty") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }
 }

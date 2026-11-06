@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import io.github.darkxace01.attic.ui.theme.printCard
+import io.github.darkxace01.attic.ui.tiltLight
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.wrapContentSize
@@ -418,6 +419,8 @@ private fun ZoomableImage(p: PrintEntity, onZoomed: (Boolean) -> Unit, file: jav
     ) {
         // The photo sits on the page as a print: its own shape, a white border and a printed shadow.
         val aspect = (p.width.toFloat() / p.height.coerceAtLeast(1)).takeIf { it.isFinite() && it > 0f } ?: 0.75f
+        val lightOn by LocalContext.current.library.settings.prefs.collectAsStateWithLifecycle()
+        val tilt = io.github.darkxace01.attic.ui.TiltLight.rememberTilt(lightOn.tiltLight && scale <= 1f)
         Box(
             Modifier
                 .fillMaxSize()
@@ -428,7 +431,8 @@ private fun ZoomableImage(p: PrintEntity, onZoomed: (Boolean) -> Unit, file: jav
                     scaleX = scale; scaleY = scale
                     translationX = offset.x; translationY = offset.y
                 }
-                .then(if (scale > 1f) Modifier else Modifier.printCard()),
+                .then(if (scale > 1f) Modifier else Modifier.printCard())
+                .tiltLight(tilt.takeIf { lightOn.tiltLight && scale <= 1f }),
         ) {
             val layer = Modifier.fillMaxSize()
             // Both are loaded up front so switching is instant, not a reload.

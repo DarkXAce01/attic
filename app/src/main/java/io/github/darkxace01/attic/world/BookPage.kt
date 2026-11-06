@@ -1,5 +1,10 @@
 package io.github.darkxace01.attic.world
 
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.darkxace01.attic.library
+import io.github.darkxace01.attic.ui.tiltLight
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -70,6 +75,8 @@ fun RebuiltPage(
         val w = min(maxW * 0.9f, maxH * 0.92f * page.aspect)
         val h = w / page.aspect
         val density = LocalDensity.current
+        val prefs by androidx.compose.ui.platform.LocalContext.current.library.settings.prefs.collectAsStateWithLifecycle()
+        val tilt = io.github.darkxace01.attic.ui.TiltLight.rememberTilt(prefs.tiltLight).takeIf { prefs.tiltLight }
         val wDp = with(density) { w.toDp() }
         val hDp = with(density) { h.toDp() }
         Box(pageModifier.size(wDp, hDp)) {
@@ -116,6 +123,7 @@ fun RebuiltPage(
                             rotationZ = s.angleDeg
                             shadowElevation = 3.dp.toPx()
                         }
+                        .tiltLight(tilt)
                         .background(Color(0xFFF4F1EA))
                         .combinedClickable(onClick = { onOpenPrint(p.id) }, onLongClick = { onLongPressPrint(p.id) }),
                 )
