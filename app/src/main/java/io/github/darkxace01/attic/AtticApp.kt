@@ -64,7 +64,8 @@ private sealed interface Route {
     data class Session(val albumId: Long) : Route
     data object People : Route
     data object Lightbox : Route
-    data class Slideshow(val albumId: Long?, val personId: Long?) : Route
+    data class Slideshow(val albumId: Long?, val personId: Long?, val printIds: List<Long>? = null) : Route
+    data object Search : Route
     data class Person(val id: Long) : Route
     data class FamilyTree(val rootId: Long?) : Route
     data class ThenNow(val printId: Long) : Route
@@ -149,10 +150,13 @@ fun AtticApp(incoming: android.net.Uri? = null, onIncomingDone: () -> Unit = {})
                     Route.Albums -> Box(Modifier.statusBarsPadding()) {
                         AlbumsScreen(onOpen = { go(Route.Album(it)) }, onSettings = { go(Route.Settings) })
                     }
-                    Route.Timeline -> Box(Modifier.statusBarsPadding()) { TimelineScreen(onOpenPrint = { go(Route.Print(it)) }, onOpenPhone = { go(Route.Phone(it)) }) }
+                    Route.Timeline -> Box(Modifier.statusBarsPadding()) { TimelineScreen(onOpenPrint = { go(Route.Print(it)) }, onOpenPhone = { go(Route.Phone(it)) }, onSearch = { go(Route.Search) }) }
                     is Route.Phone -> Box(Modifier.statusBarsPadding()) { io.github.darkxace01.attic.timeline.PhonePhotoScreen(top.photo, onBack = ::back) }
                     Route.Settings -> Box(Modifier.statusBarsPadding()) { SettingsScreen(onBack = ::back, onLightbox = { go(Route.Lightbox) }) }
-                    is Route.Slideshow -> io.github.darkxace01.attic.slideshow.SlideshowScreen(top.albumId, top.personId, onDone = ::back)
+                    is Route.Slideshow -> io.github.darkxace01.attic.slideshow.SlideshowScreen(top.albumId, top.personId, onDone = ::back, printIds = top.printIds)
+                    Route.Search -> Box(Modifier.statusBarsPadding()) {
+                        io.github.darkxace01.attic.timeline.SearchScreen(onBack = ::back, onOpenPrint = { go(Route.Print(it)) }, onSlideshow = { go(Route.Slideshow(null, null, it)) })
+                    }
                     Route.Lightbox -> io.github.darkxace01.attic.settings.LightboxScreen(onDone = ::back)
                     is Route.Album -> Box(Modifier.statusBarsPadding()) {
                         AlbumScreen(

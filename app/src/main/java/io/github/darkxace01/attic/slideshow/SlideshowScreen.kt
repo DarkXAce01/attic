@@ -60,10 +60,11 @@ import kotlinx.coroutines.withContext
  * screen stays on. Cast the phone's screen to a TV to watch it together.
  */
 @Composable
-fun SlideshowScreen(albumId: Long?, personId: Long?, onDone: () -> Unit) {
+fun SlideshowScreen(albumId: Long?, personId: Long?, onDone: () -> Unit, printIds: List<Long>? = null) {
     val library = LocalContext.current.library
-    val source: Flow<List<Item>> = remember(albumId, personId) {
+    val source: Flow<List<Item>> = remember(albumId, personId, printIds) {
         when {
+            printIds != null -> library.printsById(printIds).map { l -> l.map(::ScanItem) }
             personId != null -> library.printsOf(personId).map { l -> l.map(::ScanItem) }
             // An album's scans, then its photos from the phone.
             albumId != null -> kotlinx.coroutines.flow.combine(library.printsIn(albumId), library.phoneIn(albumId)) { p, ph -> p.map(::ScanItem) + ph.map(::PhoneItem) }

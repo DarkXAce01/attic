@@ -211,6 +211,7 @@ class AppShots {
         Palette.dark = false
     }
 
+    @Test fun search() { seed(); shot("search") { io.github.darkxace01.attic.timeline.SearchScreen(onBack = {}, onOpenPrint = {}, onSlideshow = {}) } }
     @Test fun welcome() { shot("welcome") { io.github.darkxace01.attic.AtticApp() } }
     @Test fun emptyAlbums() { shot("empty") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }
 }

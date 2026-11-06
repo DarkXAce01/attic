@@ -192,6 +192,9 @@ data class AlbumSummary(
     val phone: Int = 0,
 )
 
+/** One name on one print. */
+data class PrintName(val printId: Long, val name: String)
+
 data class LibraryCounts(val total: Int, val inGallery: Int, val backedUp: Int = 0, val onlyInAttic: Int = 0)
 
 @Dao
@@ -310,6 +313,8 @@ interface AtticDao {
     @Query("DELETE FROM album_phone WHERE id = :id") fun deletePhone(id: Long)
     @Query("SELECT * FROM album_phone WHERE id = :id") fun phoneByIdNow(id: Long): AlbumPhoneEntity?
     @Query("SELECT COUNT(*) FROM album_phone WHERE uri = :uri") fun phoneUriCount(uri: String): Int
+    @Query("SELECT pp.printId AS printId, p.name AS name FROM print_person pp JOIN person p ON p.id = pp.personId ORDER BY p.name")
+    fun printNames(): Flow<List<PrintName>>
     @Query("SELECT * FROM relation") fun relationsNow(): List<RelationEntity>
     @Query("UPDATE relation SET a = :to WHERE a = :from") fun moveRelationsA(from: Long, to: Long)
     @Query("UPDATE relation SET b = :to WHERE b = :from") fun moveRelationsB(from: Long, to: Long)

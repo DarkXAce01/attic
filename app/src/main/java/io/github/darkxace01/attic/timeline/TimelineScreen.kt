@@ -1,6 +1,7 @@
 package io.github.darkxace01.attic.timeline
 
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
@@ -41,7 +42,7 @@ import io.github.darkxace01.attic.ui.theme.Palette
 
 /** Every photo from every album, by decade and year, oldest first. */
 @Composable
-fun TimelineScreen(onOpenPrint: (Long) -> Unit, onOpenPhone: (PhonePhoto) -> Unit = {}) {
+fun TimelineScreen(onOpenPrint: (Long) -> Unit, onOpenPhone: (PhonePhoto) -> Unit = {}, onSearch: () -> Unit = {}) {
     val context = LocalContext.current
     val library = context.library
     val prefs by library.settings.prefs.collectAsStateWithLifecycle()
@@ -54,6 +55,9 @@ fun TimelineScreen(onOpenPrint: (Long) -> Unit, onOpenPhone: (PhonePhoto) -> Uni
 
     Column(Modifier.fillMaxSize()) {
         TopBar("Timeline", onBack = null, ink = io.github.darkxace01.attic.ui.theme.Ink.Aqua.color) {
+            if (rows?.isNotEmpty() == true) androidx.compose.material3.IconButton(onClick = onSearch) {
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Search, contentDescription = "Find photos", tint = Palette.Ink)
+            }
             if (!prefs.phonePhotos || !PhonePhotos.allowed(context)) {
                 io.github.darkxace01.attic.ui.QuietButton("Add phone photos", onClick = {
                     if (PhonePhotos.allowed(context)) library.settings.update { it.copy(phonePhotos = true) } else askPhotos.launch(PhonePhotos.permissions)

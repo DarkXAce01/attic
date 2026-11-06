@@ -91,6 +91,19 @@ class Library(private val context: Context) {
             io.github.darkxace01.attic.timeline.OnThisDay.pick(prints, albums.associate { it.id to it.date }, today, phone)
         }.flowOn(Dispatchers.Default)
 
+    /** Prints [ids], in that order (the ones that still exist). */
+    fun printsById(ids: List<Long>): Flow<List<PrintEntity>> =
+        dao.allPrintsFlow().map { all -> val byId = all.associateBy { it.id }; ids.mapNotNull(byId::get) }
+
+    /** Everything known about every print, for [Search]. */
+    fun known(): Flow<List<Search.Known>> =
+        kotlinx.coroutines.flow.combine(dao.allPrintsFlow(), dao.albumsFlow(), dao.printNames(), dao.printsWithStories()) { prints, albums, names, stories ->
+            val byId = albums.associateBy { it.id }
+            val people = names.groupBy({ it.printId }, { it.name })
+            val told = stories.toSet()
+            prints.map { p -> Search.Known(p, p.date ?: byId[p.albumId]?.date, byId[p.albumId]?.title.orEmpty(), people[p.id].orEmpty(), p.id in told) }
+        }.flowOn(Dispatchers.Default)
+
     // ---- photos from the phone, kept in albums by reference ----
 
     /** Album [albumId]'s photos from the phone, oldest first, as the timeline shows phone photos. */
