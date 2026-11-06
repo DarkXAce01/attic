@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attic themes, every screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@50..150,300..900&family=Instrument+Sans:wdth,wght@75..100,400..700&family=Reenie+Beanie&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=VT323&family=Instrument+Serif:ital@0;1&family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<style>
+/* Attic themes, every screen. The page stays on Attic's Riso paper; each theme gets a band with every
+   screen of the app in it, and a switch for its two sides.
+   Layout idea: a proof sheet. Islands first (they change most), then the two chosen themes in full,
+   then two other directions worth a look, then what comes after. */
+:root{
+  --paper:#EDEDE9; --ink:#1D1E22; --muted:#5F6068; --pencil:#D4432A; --blue:#3255A4;
+  --display:"Anybody","Arial Narrow",sans-serif;
+  --body:"Instrument Sans","Segoe UI",system-ui,sans-serif;
+  --hand:"Reenie Beanie","Comic Sans MS",cursive;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:400 17px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+main{max-width:1280px;margin:0 auto;padding:0 20px 120px}
+h1,h2,h3{margin:0;text-wrap:balance}
+p{margin:0;max-width:66ch}
+:focus-visible{outline:3px solid var(--pencil);outline-offset:3px}
+.hand{font-family:var(--hand);color:var(--pencil);font-size:27px;line-height:1}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+nav.toc a{color:var(--ink);border:2px solid var(--ink);padding:5px 12px;text-decoration:none;font-weight:600;font-size:15px;background:var(--paper)}
+nav.toc a:hover{background:var(--ink);color:var(--paper)}
+header.top{padding:60px 0 8px;display:grid;gap:18px}
+header.top h1{font-family:var(--display);font-weight:880;font-stretch:64%;font-size:clamp(52px,9vw,108px);line-height:.86}
+header.top h1 span{color:var(--pencil)}
+.lede{font-size:19px;color:var(--muted)}
+.sec{margin-top:76px;display:grid;gap:22px}
+.sec>h2,.bandhead h2{font-family:var(--display);font-weight:860;font-stretch:66%;font-size:clamp(40px,6vw,66px);line-height:.9}
+.sec>p{color:var(--ink)}
+.decide{border-left:5px solid var(--pencil);padding:4px 0 4px 16px;display:grid;gap:8px}
+.decide b{font-size:18px}
+
+/* Islands grid */
+.kinds{border:2px solid var(--ink);box-shadow:8px 8px 0 var(--ink);overflow:hidden}
+.krow{display:grid;grid-template-columns:150px 1fr;border-top:2px solid var(--ink)}
+.krow:first-child{border-top:0}
+.krow .name{padding:16px;display:grid;align-content:center;gap:4px;border-right:2px solid var(--ink);background:var(--paper)}
+.krow .name b{font-family:var(--display);font-weight:820;font-stretch:72%;font-size:26px;line-height:1}
+.krow .name small{color:var(--muted);font-size:13.5px}
+.krow canvas{width:100%;height:210px;display:block}
+.kcaps{display:grid;grid-template-columns:150px repeat(6,1fr);font-size:13px;color:var(--muted);border-top:2px solid var(--ink);background:var(--paper)}
+.kcaps span{padding:8px 4px;text-align:center}
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.compare .note{background:#fff;border:2px solid var(--ink);padding:14px 16px;font-size:15.5px}
+.compare .note b{display:block;margin-bottom:4px}
+
+/* Bands */
+.band{margin-top:76px;border:2px solid var(--ink);box-shadow:8px 8px 0 var(--ink);overflow:hidden}
+.bandhead{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end;padding:26px 26px 20px;border-bottom:2px solid var(--ink);background:var(--paper)}
+.bandhead p{color:var(--muted);margin-top:10px}
+.sides{display:flex;border:2px solid var(--ink)}
+.sides button{font:600 15px var(--body);padding:9px 16px;background:var(--paper);color:var(--ink);border:0;cursor:pointer}
+.sides button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.stage{padding:30px 22px 26px;display:grid;gap:22px;transition:background .3s}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:26px 18px;justify-items:center}
+.cell{display:grid;gap:8px;justify-items:center;margin:0}
+.cell figcaption{font-size:14px;color:var(--cap,#5F6068);text-align:center}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.note{background:#fff;color:#1D1E22;border:2px solid #1D1E22;padding:14px 16px;font-size:15px;line-height:1.5}
+.note b{display:block;margin-bottom:4px;font-size:16px}
+
+/* ---------- The phone: drawn at 290 x 600, shown a bit smaller ---------- */
+.phone{width:250px;height:500px;border-radius:33px;padding:8px;background:#111214;box-shadow:0 16px 34px rgba(0,0,0,.28);position:relative}
+.screen{position:relative;width:290px;height:600px;transform:scale(.8069);transform-origin:0 0;border-radius:30px;overflow:hidden;background:var(--bg);color:var(--fg);font:400 13px/1.4 var(--body);display:flex;flex-direction:column;isolation:isolate}
+.status{height:26px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:11px;font-weight:600}
+.bar{display:flex;align-items:center;gap:10px;padding:6px 16px 8px}
+.bar .back{font-size:18px;line-height:1}
+.title{font-family:var(--tdisplay);font-size:var(--tsize,27px);font-weight:var(--tweight,700);line-height:1.02;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 0}
+.title.s{font-size:calc(var(--tsize,27px)*.78)}
+.act{font-weight:700;font-size:12px;color:var(--accent)}
+.tabs{margin-top:auto;display:flex;justify-content:space-around;padding:10px 6px 14px;font-size:12px;font-weight:600;background:var(--bg);position:relative;z-index:3}
+.tabs span{opacity:.6;padding-bottom:4px}
+.tabs span.on{opacity:1;border-bottom:var(--tabmark)}
+.body{flex:1;position:relative;overflow:hidden}
+.pad{padding:0 16px}
+.muted{color:var(--muted)}
+.layout{display:flex;gap:14px;padding:0 16px 6px;font-size:12px;font-weight:600}
+.layout span{opacity:.55}.layout span.on{opacity:1;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+canvas.world{position:absolute;inset:0;width:100%;height:100%}
+.lab{position:absolute;font-family:var(--tdisplay);font-size:var(--lsize,16px);font-weight:var(--tweight,700);line-height:1.05;max-width:120px}
+.lab small{display:block;font-family:var(--body);font-size:10.5px;font-weight:500;color:var(--muted);margin-top:3px}
+.lab.c{left:0;right:0;max-width:none;text-align:center}
+.sheet{position:absolute;left:14px;right:14px;top:8px;bottom:58px;background:var(--surface);border:var(--sheetline);box-shadow:var(--sheetshadow)}
+.print{position:absolute;background:var(--printwhite);padding:5px;box-shadow:var(--printshadow);border-radius:var(--printr,0)}
+.print img,.bigprint img,.ph img{display:block;width:100%;height:100%;object-fit:cover;border-radius:var(--imgr,0)}
+.pageline{position:absolute;left:0;right:0;bottom:22px;text-align:center;font-size:12px;color:var(--muted)}
+.chiprow{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:var(--chipline);padding:4px 10px;font-size:12px;font-weight:600;border-radius:var(--chipr,0);white-space:nowrap}
+.chip.on{background:var(--fg);color:var(--bg)}
+.btn{display:inline-block;background:var(--accent);color:var(--onaccent);font-weight:700;font-size:13px;padding:10px 16px;border-radius:var(--btnr,0);box-shadow:var(--btnshadow,none);text-align:center}
+.btn.q{background:transparent;color:var(--fg);box-shadow:none;border:var(--chipline)}
+.bigprint{margin:4px 22px 0;height:250px;background:var(--printwhite);padding:7px;box-shadow:var(--printshadow);transform:rotate(-1deg);border-radius:var(--printr,0)}
+.rows{padding:14px 22px 0;display:grid;gap:9px}
+.row{display:grid;grid-template-columns:52px 1fr;gap:8px;align-items:baseline}
+.row .k{color:var(--muted);font-size:12px}
+.row .v{font-size:14px}
+.field{border:var(--chipline);padding:8px 10px;font-size:13px;border-radius:var(--chipr,0);color:var(--muted)}
+.cam{flex:1;display:flex;flex-direction:column}
+.cam .album{text-align:center;font-family:var(--tdisplay);font-weight:var(--tweight,700);font-size:calc(var(--lsize,16px)*1.05);padding:4px 0 8px}
+.finder{position:relative;margin:0 12px;flex:1;border-radius:var(--finderr,14px);overflow:hidden;background:#3a2a1e}
+.fp{position:absolute;background:#f4f2ed;padding:3px}
+.fp img{display:block;width:100%;height:100%;object-fit:cover}
+.corner{position:absolute;width:15px;height:15px;border-color:var(--ready);border-style:solid;border-width:0}
+.statusline{text-align:center;font-size:13px;font-weight:600;padding:9px 0 4px}
+.modes{display:flex;justify-content:center;gap:16px;font-size:12px;font-weight:600;padding:2px 0 6px}
+.modes span{opacity:.55}.modes span.on{opacity:1;color:var(--accent)}
+.shutterrow{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:2px 20px 14px}
+.pile{width:42px;height:42px;position:relative}
+.pile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:2px solid var(--printwhite)}
+canvas.shutter{width:84px;height:84px}
+.faces{display:grid;grid-template-columns:repeat(3,1fr);gap:12px 8px;padding:6px 16px}
+.face{display:grid;gap:5px;justify-items:center;font-size:12px;font-weight:600}
+.face .ph,.face .mono{width:64px;height:64px;border-radius:50%;overflow:hidden;box-shadow:var(--faceshadow,none)}
+.mono{display:grid;place-items:center;font-family:var(--tdisplay);font-size:28px;font-weight:var(--tweight,700);color:#1D1E22}
+.card{margin:4px 16px 8px;padding:12px;border:var(--sheetline);background:var(--surface);box-shadow:var(--sheetshadow);display:grid;gap:8px}
+.minis{display:flex;gap:6px}
+.minis .ph{width:44px;height:44px;border-radius:50%;overflow:hidden}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:4px 16px}
+.tile{aspect-ratio:1;background:var(--printwhite);padding:3px;position:relative;box-shadow:var(--tileshadow,none);border-radius:var(--printr,0)}
+.tile img{display:block;width:100%;height:100%;object-fit:cover;border-radius:var(--imgr,0)}
+.tile .tag{position:absolute;right:6px;bottom:6px;background:var(--bg);color:var(--fg);font-size:10px;font-weight:700;padding:1px 6px;border-radius:9px}
+.decade{font-family:var(--tdisplay);font-size:calc(var(--tsize,27px)*1.4);font-weight:var(--tweight,700);line-height:1;padding:12px 16px 2px}
+.strip{display:flex;gap:10px;padding:2px 16px 4px;overflow:hidden}
+.strip .print{position:relative;flex:0 0 auto;width:132px;height:100px}
+.smart{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:6px 16px}
+.smart .print{position:relative;width:100%;height:96px}
+.smart b{display:block;font-size:13px;margin-top:6px}
+.smart small{color:var(--muted);font-size:11px}
+.set{padding:0 16px;display:grid;gap:12px}
+.seth{font-family:var(--tdisplay);font-weight:var(--tweight,700);font-size:calc(var(--tsize,27px)*.8);color:var(--accent2,var(--fg))}
+.themes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tc{border:var(--chipline);padding:7px;display:grid;gap:5px;font-size:12px;font-weight:700;border-radius:var(--chipr,0)}
+.tc.on{outline:2px solid var(--accent);outline-offset:2px}
+.tc .chips{display:flex;height:18px}.tc .chips i{flex:1}
+.seg{display:flex;border:var(--chipline);width:max-content;border-radius:var(--chipr,0);overflow:hidden}
+.seg span{padding:6px 10px;font-size:12px;font-weight:700}
+.seg span.on{background:var(--fg);color:var(--bg)}
+.tog{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font-size:13px}
+.tog small{display:block;color:var(--muted);font-size:11px}
+.sw{width:38px;height:22px;border:var(--chipline);border-radius:12px;position:relative;background:var(--bg)}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:var(--fg)}
+.sw.on{background:var(--accent);border-color:var(--accent)}.sw.on::after{left:19px;background:var(--onaccent)}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.45);z-index:8}
+.bsheet{position:absolute;left:0;right:0;bottom:0;z-index:9;background:var(--bg);padding:10px 16px 18px;display:grid;gap:10px;border-top:var(--sheetline);border-radius:var(--sheetr,0) var(--sheetr,0) 0 0;box-shadow:var(--sheetshadow)}
+.handle{justify-self:center;width:44px;height:4px;border-radius:2px;background:var(--fg);opacity:.6}
+.dlg{position:absolute;left:24px;right:24px;top:190px;z-index:9;background:var(--bg);padding:18px;display:grid;gap:10px;border:var(--sheetline);box-shadow:var(--sheetshadow);border-radius:var(--sheetr,0)}
+.dlg h4{margin:0;font-family:var(--tdisplay);font-weight:var(--tweight,700);font-size:calc(var(--tsize,27px)*.75)}
+.dlg .acts{display:flex;justify-content:flex-end;gap:14px;font-weight:700;font-size:13px}
+.slide{position:absolute;inset:0;background:#000}
+.slide img{width:100%;height:100%;object-fit:contain}
+.slidecap{position:absolute;left:0;right:0;bottom:40px;text-align:center;color:#fff;font-family:var(--tdisplay);font-size:calc(var(--lsize,16px)*1.1);font-weight:var(--tweight,700)}
+.home{position:absolute;inset:0;background:var(--wall);}
+.wgt{position:absolute;left:22px;top:110px;width:150px;height:170px;padding:10px;background:var(--bg);border:var(--sheetline);box-shadow:var(--sheetshadow);border-radius:var(--wr,14px);display:flex;flex-direction:column;gap:6px}
+.wgt .ph{flex:1;background:var(--printwhite);padding:3px;border-radius:var(--printr,0)}
+.wgt b{font-size:12px}.wgt small{font-size:10.5px;color:var(--muted)}
+.apps{position:absolute;left:22px;right:22px;bottom:70px;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.apps i{display:block;width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.35)}
+.wave{display:flex;gap:3px;align-items:center;justify-content:center;height:40px}
+.wave i{width:4px;border-radius:2px;background:var(--accent)}
+.loupe{position:absolute;width:86px;height:86px;border-radius:50%;border:3px solid var(--fg);overflow:hidden;box-shadow:var(--sheetshadow);z-index:3}
+.loupe img{position:absolute;width:300%;height:300%;left:-90%;top:-30%;object-fit:cover}
+.handle-dot{position:absolute;width:14px;height:14px;border-radius:50%;background:var(--accent);border:2px solid #fff;z-index:3}
+
+/* ================= INFRARED ================= */
+.ir .bloom{--bg:#F6ECEE;--fg:#3A0D1C;--muted:#8A5763;--surface:#FBF4F5;--accent:#008FA3;--onaccent:#fff;--ready:#00A7BC;--printwhite:#FFF9F6;--glow:rgba(226,30,86,.5);--crimson:#D3164F;--magenta:#FF4F9A;--cyan:#00A7BC;--sulphur:#E9D200;--wall:#E7C9D2;--accent2:#D3164F}
+.ir .safelight{--bg:#170910;--fg:#FBE3EA;--muted:#C58C9C;--surface:#24101A;--accent:#21D4E8;--onaccent:#06181B;--ready:#21D4E8;--printwhite:#F7F1EC;--glow:rgba(255,40,96,.75);--crimson:#FF2A63;--magenta:#FF66B0;--cyan:#21D4E8;--sulphur:#FFE600;--wall:#3a0f1f;--accent2:#FF2A63}
+.ir .screen{--tdisplay:"Bricolage Grotesque",var(--body);--tweight:800;--tabmark:3px solid var(--crimson);
+  --sheetline:0;--sheetshadow:0 0 0 1px color-mix(in srgb,var(--crimson) 35%,transparent),0 0 26px var(--glow);
+  --printshadow:0 0 14px var(--glow);--tileshadow:0 0 8px var(--glow);--faceshadow:0 0 0 2px var(--crimson),0 0 14px var(--glow);
+  --chipline:1.5px solid var(--crimson);--chipr:20px;--btnr:22px;--btnshadow:0 0 16px color-mix(in srgb,var(--cyan) 60%,transparent);--finderr:18px;--sheetr:22px;--wr:22px}
+.ir .title,.ir .lab,.ir .cam .album,.ir .decade,.ir .seth,.ir .dlg h4,.ir .slidecap,.ir .big{text-shadow:0 0 6px var(--glow),0 0 18px var(--glow)}
+.ir .stage.bloom{background:#F3E4E8}.ir .stage.safelight{background:#100509;--cap:#D9A9B6}
+
+/* ================= NIGHT BROADCAST ================= */
+.crt .testcard{--bg:#D5D6D2;--fg:#121316;--muted:#55585F;--surface:#E6E7E3;--accent:#D21F25;--onaccent:#fff;--ready:#D21F25;--printwhite:#F4F2ED;--phos:#121316;--fringe-a:rgba(210,31,37,.55);--fringe-b:rgba(0,140,210,.55);--scan:rgba(0,0,0,.06);--wall:#9fa29c}
+.crt .latenight{--bg:#070B10;--fg:#DFF5E3;--muted:#7FA08A;--surface:#0E151C;--accent:#FFB000;--onaccent:#1A1000;--ready:#FFB000;--printwhite:#F4F2ED;--phos:#9DFFB8;--fringe-a:rgba(255,40,60,.7);--fringe-b:rgba(40,200,255,.7);--scan:rgba(0,0,0,.34);--wall:#0d1a14}
+.crt .screen{--tdisplay:"VT323",monospace;--tsize:34px;--tweight:400;--lsize:21px;--tabmark:3px solid var(--accent);
+  --sheetline:5px solid #1b1d22;--sheetshadow:0 0 0 2px #2b2e35,0 0 22px color-mix(in srgb,var(--phos) 22%,transparent);
+  --printshadow:0 2px 8px rgba(0,0,0,.4);--chipline:2px solid var(--fg);--btnr:6px;--finderr:26px;--printr:10px;--imgr:8px;--sheetr:14px;--wr:18px}
+.crt .title,.crt .lab,.crt .cam .album,.crt .decade,.crt .seth,.crt .dlg h4,.crt .slidecap,.crt .big{text-shadow:-1.2px 0 var(--fringe-a),1.2px 0 var(--fringe-b),0 0 10px color-mix(in srgb,var(--phos) 45%,transparent)}
+/* Scanlines and the glass's dark corners: over the app's own surfaces, under every photo. */
+.crt .screen::after{content:"";position:absolute;inset:0;z-index:6;pointer-events:none;background:repeating-linear-gradient(to bottom,transparent 0 2px,var(--scan) 2px 3px);box-shadow:inset 0 0 60px rgba(0,0,0,.45);border-radius:30px}
+.crt .print,.crt .bigprint,.crt .finder,.crt .pile,.crt .tile,.crt .ph,.crt canvas.world,.crt .slide,.crt .loupe{z-index:7}
+.crt .bigprint,.crt .finder,.crt .pile,.crt .tile,.crt .ph{position:relative}
+.crt .bars{display:flex;height:9px;margin:0 16px 8px}.crt .bars i{flex:1}
+.crt .stage.testcard{background:#C9CAC5}.crt .stage.latenight{background:#030507;--cap:#8FB89A}
+
+/* ================= CYANOTYPE ================= */
+.cy .sunprint{--bg:#F5F3EC;--fg:#14306E;--muted:#5B6B91;--surface:#FFFFFF;--accent:#1F4CB0;--onaccent:#fff;--ready:#1F4CB0;--printwhite:#FFFFFF;--line:#14306E;--wall:#c9d3e6;--accent2:#1F4CB0}
+.cy .prussian{--bg:#102A63;--fg:#EEF2FA;--muted:#9FB0D6;--surface:#173375;--accent:#F2C14E;--onaccent:#1B1300;--ready:#F2C14E;--printwhite:#F4F2ED;--line:#EEF2FA;--wall:#0a1c45;--accent2:#EEF2FA}
+.cy .screen{--tdisplay:"Instrument Serif",Georgia,serif;--tweight:400;--tsize:32px;--lsize:19px;--tabmark:2px solid var(--fg);
+  --sheetline:1.5px solid var(--line);--sheetshadow:none;--printshadow:0 0 0 1.5px var(--line);--chipline:1.5px solid var(--line);--chipr:3px;--btnr:3px;--finderr:4px;--sheetr:6px}
+.cy .title,.cy .lab,.cy .decade,.cy .seth{font-style:italic}
+.cy .stage.sunprint{background:#E9E6DC}.cy .stage.prussian{background:#0A1C45;--cap:#9FB0D6}
+
+/* ================= KODACHROME ================= */
+.kc .lightbox{--bg:#FBF6EA;--fg:#2A1A12;--muted:#7A6455;--surface:#FFFDF6;--accent:#D6282B;--onaccent:#fff;--ready:#F7B500;--printwhite:#FFFFFF;--yellow:#F7B500;--wall:#e9d9b5;--accent2:#D6282B}
+.kc .projector{--bg:#1B1410;--fg:#FBEFD9;--muted:#BFA88E;--surface:#261C16;--accent:#F7B500;--onaccent:#1B1300;--ready:#F7B500;--printwhite:#F4EEE2;--yellow:#F7B500;--wall:#120d0a;--accent2:#F7B500}
+.kc .screen{--tdisplay:"Archivo",var(--body);--tweight:900;--tsize:28px;--tabmark:4px solid var(--yellow);
+  --sheetline:0;--sheetshadow:0 10px 24px rgba(0,0,0,.22);--printshadow:0 3px 8px rgba(0,0,0,.28);--printr:9px;--imgr:2px;--chipline:2px solid var(--fg);--chipr:4px;--btnr:6px;--finderr:10px;--sheetr:14px}
+.kc .title,.kc .lab,.kc .decade,.kc .seth{font-stretch:75%;letter-spacing:-.01em}
+.kc .print{padding:9px}
+.kc .stage.lightbox{background:#F1E6CF}.kc .stage.projector{background:#0d0907;--cap:#BFA88E}
+
+/* Picker + next */
+.mats{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px}
+.mat{border:2px solid var(--ink);background:var(--paper);box-shadow:6px 6px 0 var(--ink);display:grid}
+.mat canvas{width:100%;height:210px;display:block;border-bottom:2px solid var(--ink)}
+.mat div{padding:14px 16px 16px;display:grid;gap:6px}
+.mat b{font-family:var(--display);font-weight:820;font-stretch:72%;font-size:26px;line-height:1}
+.mat p{font-size:15.5px;color:var(--muted)}
+.ask{border:2px dashed var(--pencil);padding:18px 20px;display:grid;gap:8px;max-width:860px}
+.ask ol{margin:0;padding-left:22px;display:grid;gap:6px}
+@media (max-width:820px){.bandhead{grid-template-columns:1fr}.krow{grid-template-columns:1fr}.krow .name{border-right:0;border-bottom:2px solid var(--ink)}.kcaps{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+<header class="top">
+  <div class="hand">round two</div>
+  <h1>Every screen, in <span>Infrared</span> and Night broadcast</h1>
+  <p class="lede">Below is every screen of Attic as it is today, drawn in the two themes you picked, each with its light and dark side. Before them, the islands, which I've redrawn so the album's own photo is the star. After them, two more directions I found looking at what photo people love right now, in case one beats these.</p>
+  <nav class="toc" aria-label="Sections"><a href="#islands">Islands</a><a href="#infrared">Infrared</a><a href="#night-broadcast">Night broadcast</a><a href="#others">Two other ideas</a><a href="#next">After the themes</a></nav>
+</header>
+
+<section class="sec" id="islands">
+  <h2>Islands: same kinds, each theme's own drawing</h2>
+  <div class="decide">
+    <b>My call: both.</b>
+    <p>The kind you pick for an album (a tent, a mountain, a lighthouse) stays with the album whatever the theme. Each theme then draws it in its own way: spot inks in Riso, a crimson forest under halation in Infrared, glowing vector lines like an old arcade screen in Night broadcast. Switch themes and your albums keep their character but change their clothes.</p>
+  </div>
+  <div class="kinds" aria-label="Six island kinds in three themes">
+    <div class="krow"><div class="name"><b>Riso, redrawn</b><small>What the app gets now</small></div><canvas data-kinds="riso"></canvas></div>
+    <div class="krow"><div class="name"><b>Infrared</b><small>Bloom side</small></div><canvas data-kinds="ir"></canvas></div>
+    <div class="krow"><div class="name"><b>Night broadcast</b><small>Late night side</small></div><canvas data-kinds="crt"></canvas></div>
+    <div class="kcaps" aria-hidden="true"><span></span><span>Album</span><span>Mountain</span><span>Campsite</span><span>Lighthouse</span><span>Balloon</span><span>Pond</span></div>
+  </div>
+  <div class="compare">
+    <div class="note"><b>Why the preview's islands looked better</b>In the app the drawing is the hero: a big tent or kite fills the screen and the album's photo is a little flag, or gets cut into a shape. In the preview the photo is a real print standing on a small, complete island with water, land and a few details round it.</div>
+    <div class="note"><b>What changes</b>Every island becomes a small world: water and its shadow, the land, the kind's scenery behind or beside, and the cover photo standing in front as a print, whole, never cut. Three fit on a screen instead of one and a half.</div>
+    <div class="note"><b>What stays</b>Your 13 kinds, the inks you chose, the extras (birds, stars, fireflies) and the title styles. Albums you've already dressed keep their choices.</div>
+  </div>
+</section>
+
+<section class="band ir" id="infrared">
+  <div class="bandhead">
+    <div><h2>Infrared</h2><p>False-colour infrared film: leaves crimson, skies cyan, bright things blooming with a red halo. Bloom is the light side, Safelight the dark. Cyan is the main action.</p></div>
+    <div class="sides" role="group" aria-label="Infrared side"><button type="button" data-side="bloom" aria-pressed="true">Bloom</button><button type="button" data-side="safelight" aria-pressed="false">Safelight</button></div>
+  </div>
+  <div class="stage bloom"><div class="grid"></div>
+    <div class="notes">
+      <div class="note"><b>Halation round things, never on them</b>Titles and prints glow a little, the way the film bled light round anything bright. Photos are never tinted.</div>
+      <div class="note"><b>Type</b>Bricolage Grotesque, heavy and soft, for titles. The house sans for reading.</div>
+      <div class="note"><b>Camera</b>The frame follows the side: pale pink by day, darkroom black at night. The corners and shutter glow cyan when a print is held steady.</div>
+    </div>
+  </div>
+</section>
+
+<section class="band crt" id="night-broadcast">
+  <div class="bandhead">
+    <div><h2>Night broadcast</h2><p>Late-night TV: phosphor letters with a hair of red and blue fringe, scanlines, curved-glass corners, an on-screen display font. Test card is the light side, Late night the dark. Amber is the main action.</p></div>
+    <div class="sides" role="group" aria-label="Night broadcast side"><button type="button" data-side="testcard" aria-pressed="true">Test card</button><button type="button" data-side="latenight" aria-pressed="false">Late night</button></div>
+  </div>
+  <div class="stage testcard"><div class="grid"></div>
+    <div class="notes">
+      <div class="note"><b>Scanlines stay behind the photos</b>Lines, glass and fringes are on Attic's own surfaces. Each photo sits above them in a rounded screen frame, clean.</div>
+      <div class="note"><b>Type</b>VT323 for titles and names, the house sans for reading. Long text is never set in the screen font.</div>
+      <div class="note"><b>Islands</b>Drawn as glowing vector lines, like an old arcade or radar screen, with the cover photo standing on each as a lit picture.</div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="others">
+  <h2>Two other directions worth a look</h2>
+  <p>I looked at where photo and print design is heading. The big theme is real process and texture over polish: risograph, halftone, grain, light leaks, archival prints. Two ideas come straight out of the history of family photos, and might suit Attic even better than TV and infrared. Shown on four screens each so you can compare.</p>
+</section>
+
+<section class="band cy" id="cyanotype">
+  <div class="bandhead">
+    <div><h2>Cyanotype</h2><p>The sun print: Prussian blue paper, white lines where the light got through, the way botanists and architects copied things for a century. Calm, archival, very "family archive". Sun print is the light side, Prussian the dark.</p></div>
+    <div class="sides" role="group" aria-label="Cyanotype side"><button type="button" data-side="sunprint" aria-pressed="true">Sun print</button><button type="button" data-side="prussian" aria-pressed="false">Prussian</button></div>
+  </div>
+  <div class="stage sunprint"><div class="grid" data-few="1"></div></div>
+</section>
+
+<section class="band kc" id="kodachrome">
+  <div class="bandhead">
+    <div><h2>Kodachrome</h2><p>The slide box and the lightbox: warm whites, the yellow and red of the film box, every photo in a rounded card slide mount, and the projector's dark room at night. Lightbox is the light side, Projector the dark.</p></div>
+    <div class="sides" role="group" aria-label="Kodachrome side"><button type="button" data-side="lightbox" aria-pressed="true">Lightbox</button><button type="button" data-side="projector" aria-pressed="false">Projector</button></div>
+  </div>
+  <div class="stage lightbox"><div class="grid" data-few="1"></div></div>
+</section>
+
+<section class="sec" id="next">
+  <div class="hand">after the themes</div>
+  <h2>Album materials and the page curl</h2>
+  <p>A theme is the room; a material is the album you pick up in it. Any album can be any material. Three to start with:</p>
+  <div class="mats">
+    <div class="mat"><canvas id="m-shoebox" width="520" height="420" aria-label="A shoebox of loose prints"></canvas><div><b>Shoebox</b><p>A loose pile instead of pages. Push prints around, pick one up, flip it to read the back.</p></div></div>
+    <div class="mat"><canvas id="m-slides" width="520" height="420" aria-label="A carousel slide tray"></canvas><div><b>Slide tray</b><p>A round projector tray. Swipe and it clicks round, the slide thrown big on the wall.</p></div></div>
+    <div class="mat"><canvas id="m-leather" width="520" height="420" aria-label="A leather-bound album"></canvas><div><b>Leather-bound</b><p>Stamped cover, black pages, prints held by paper corners, and pages that turn with a real curl.</p></div></div>
+  </div>
+  <div class="ask">
+    <b>What I need from you</b>
+    <ol>
+      <li>Infrared and Night broadcast, as shown? Or swap one for Cyanotype or Kodachrome?</li>
+      <li>The redrawn islands: build them into Riso now, before the themes?</li>
+      <li>Anything on any screen you'd change: a colour, a font, the light and dark names.</li>
+    </ol>
+  </div>
+</section>
+</main>
+
+<script>
+const PHOTOS = %%PHOTOS%%;
+const imgs={};
+function load(k){ if(!imgs[k]) imgs[k]=new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=PHOTOS[k];}); return imgs[k]; }
+function cover(g,img,x,y,w,h){ if(!img) return; const s=Math.max(w/img.width,h/img.height),dw=img.width*s,dh=img.height*s; g.save();g.beginPath();g.rect(x,y,w,h);g.clip();g.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh);g.restore(); }
+function rnd(seed){ let s=(seed*7919+13)%233280; return ()=>{ s=(s*9301+49297)%233280; return s/233280; }; }
+function cssv(el,n){ return getComputedStyle(el).getPropertyValue(n).trim(); }
+function round(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+
+const ALBUMS=[
+  {t:"Nani's red album",m:"1978 · 42 photos",p:"tree",k:"book"},
+  {t:"Shimla, summer 87",m:"1987 · 31 photos",p:"village",k:"mountain"},
+  {t:"Holi at home",m:"1994 · 18 photos",p:"fire",k:"tent"},
+  {t:"Goa trip",m:"2003 · 24 photos",p:"lake",k:"lighthouse"},
+  {t:"Dad's slides",m:"1972 · 60 photos",p:"road",k:"balloon"},
+  {t:"School years",m:"1990 · 12 photos",p:"hiker",k:"pond"},
+];
+
+/* ---------- How each theme draws: colours read from the screen, plus a manner ---------- */
+function style(theme,el){
+  const v=n=>cssv(el,n);
+  if(theme==='riso') return {mode:'riso',land:'#00838A',rock:'#FF48B0',water:'#3255A4',detail:'#FFE800',accent:'#D4432A',line:'#1D1E22',white:'#F4F2ED',bg:'#EDEDE9'};
+  if(theme==='ir') return {mode:'ir',land:v('--crimson'),rock:'#8E0E36',water:v('--cyan'),detail:v('--magenta'),accent:v('--sulphur'),line:v('--fg'),white:v('--printwhite'),bg:v('--bg'),glow:v('--glow')};
+  if(theme==='crt') return {mode:'crt',land:v('--phos'),rock:v('--phos'),water:v('--accent'),detail:v('--accent'),accent:v('--accent'),line:v('--phos'),white:v('--printwhite'),bg:v('--bg')};
+  if(theme==='cy') return {mode:'cy',land:v('--line'),rock:v('--line'),water:v('--line'),detail:v('--line'),accent:v('--accent'),line:v('--line'),white:v('--printwhite'),bg:v('--bg')};
+  return {mode:'kc',land:'#6E9B3A',rock:'#8A5A36',water:'#2E7FB8',detail:v('--yellow'),accent:'#D6282B',line:v('--fg'),white:v('--printwhite'),bg:v('--bg')};
+}
+function dotsFill(g,col,step){ const c=document.createElement('canvas'); c.width=c.height=step; const x=c.getContext('2d'); x.fillStyle=col; x.beginPath(); x.arc(step/2,step/2,step*.28,0,7); x.fill(); return g.createPattern(c,'repeat'); }
+function hatch(g,col){ const c=document.createElement('canvas'); c.width=c.height=6; const x=c.getContext('2d'); x.strokeStyle=col; x.globalAlpha=.7; x.lineWidth=1; x.beginPath(); x.moveTo(0,6); x.lineTo(6,0); x.stroke(); return g.createPattern(c,'repeat'); }
+/* Paint a shape the theme's way: flat ink, glowing ink, vector line, white line, or warm paint. */
+function paint(g,S,path,col,opts={}){
+  g.save();
+  if(S.mode==='crt'){ path(); g.fillStyle=S.bg; g.fill(); g.shadowColor=col; g.shadowBlur=8; g.strokeStyle=col; g.lineWidth=1.6; g.stroke(); if(opts.hatch){ g.fillStyle=hatch(g,col); g.globalAlpha=.5; path(); g.fill(); } }
+  else if(S.mode==='cy'){ path(); g.fillStyle=S.bg; g.fill(); g.strokeStyle=col; g.lineWidth=1.5; g.stroke(); if(opts.hatch){ g.fillStyle=hatch(g,col); path(); g.fill(); } }
+  else { if(S.mode==='ir'){ g.shadowColor=S.glow; g.shadowBlur=opts.noglow?0:12; } if(S.mode==='kc'){ g.shadowColor='rgba(0,0,0,.25)'; g.shadowBlur=6; g.shadowOffsetY=3; }
+    path(); g.fillStyle=col; g.fill(); g.shadowBlur=0; g.shadowOffsetY=0;
+    if(opts.dots && S.mode==='riso'){ path(); g.fillStyle=dotsFill(g,'rgba(29,30,34,.55)',5); g.fill(); } }
+  g.restore();
+}
+/* One island at (cx, cy), about s across: water, rock, land, the kind's scenery, the album's photo standing in front. */
+function island(g,kind,cx,cy,s,img,S,seed){
+  const r=rnd(seed+1);
+  // Water and its shadow under the island.
+  g.save();
+  if(S.mode==='riso'){ g.fillStyle=dotsFill(g,'rgba(50,85,164,.6)',6); g.beginPath(); g.ellipse(cx,cy+s*.6,s*.62,s*.09,0,0,7); g.fill(); }
+  else if(S.mode==='ir'){ g.globalAlpha=.3; g.fillStyle=S.water; g.shadowColor=S.water; g.shadowBlur=20; g.beginPath(); g.ellipse(cx,cy+s*.6,s*.7,s*.1,0,0,7); g.fill(); }
+  else if(S.mode==='crt'||S.mode==='cy'){ g.strokeStyle=S.line; g.globalAlpha=.6; g.setLineDash([4,5]); g.lineWidth=1.3; g.beginPath(); g.ellipse(cx,cy+s*.6,s*.62,s*.09,0,0,7); g.stroke(); }
+  else { g.fillStyle='rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(cx,cy+s*.6,s*.55,s*.07,0,0,7); g.fill(); }
+  g.restore();
+  // Rock underneath, then the land on top.
+  const rx=s*.62, ty=cy+s*.2;
+  paint(g,S,()=>{ g.beginPath(); g.moveTo(cx-rx,ty); g.bezierCurveTo(cx-rx*.7,ty+s*.32,cx-s*.12,ty+s*.38,cx,ty+s*.4); g.bezierCurveTo(cx+s*.12,ty+s*.38,cx+rx*.7,ty+s*.32,cx+rx,ty); g.closePath(); },S.rock,{dots:true,hatch:true,noglow:true});
+  paint(g,S,()=>{ g.beginPath(); g.ellipse(cx,ty,rx,s*.13,0,0,7); },S.land);
+  // Scenery for the kind, behind and to the left of the photo.
+  const L=cx-s*.36, gy=ty-s*.02;
+  if(kind==='mountain'){
+    paint(g,S,()=>{ g.beginPath(); g.moveTo(cx-s*.6,gy); g.lineTo(cx-s*.28,cy-s*.62); g.lineTo(cx+s*.05,gy); g.closePath(); },S.mode==='riso'?'#3255A4':S.mode==='kc'?'#5B6E8C':S.detail);
+    paint(g,S,()=>{ g.beginPath(); g.moveTo(cx-s*.28,cy-s*.62); g.lineTo(cx-s*.37,cy-s*.42); g.lineTo(cx-s*.3,cy-s*.46); g.lineTo(cx-s*.24,cy-s*.4); g.lineTo(cx-s*.2,cy-s*.46); g.closePath(); },S.white,{noglow:true});
+  } else if(kind==='tent'){
+    paint(g,S,()=>{ g.beginPath(); g.moveTo(L-s*.2,gy); g.lineTo(L,cy-s*.22); g.lineTo(L+s*.2,gy); g.closePath(); },S.mode==='riso'?'#FF48B0':S.detail);
+    paint(g,S,()=>{ g.beginPath(); g.moveTo(L-s*.05,gy); g.lineTo(L,cy-s*.06); g.lineTo(L+s*.05,gy); g.closePath(); },S.line,{noglow:true});
+    paint(g,S,()=>{ g.beginPath(); g.moveTo(L+s*.27,gy); g.quadraticCurveTo(L+s*.22,gy-s*.1,L+s*.28,gy-s*.14); g.quadraticCurveTo(L+s*.34,gy-s*.08,L+s*.29,gy); g.closePath(); },S.mode==='crt'||S.mode==='cy'?S.accent:'#E8552E');
+  } else if(kind==='lighthouse'){
+    paint(g,S,()=>{ g.beginPath(); g.moveTo(L-s*.07,gy); g.lineTo(L-s*.04,cy-s*.42); g.lineTo(L+s*.04,cy-s*.42); g.lineTo(L+s*.07,gy); g.closePath(); },S.mode==='riso'?'#F4F2ED':S.white);
+    for(let k=0;k<3;k++) paint(g,S,()=>{ const y=gy-s*(.08+k*.12); g.beginPath(); g.rect(L-s*.065+k*s*.005,y-s*.05,s*.13-k*s*.01,s*.05); },S.mode==='riso'?'#D4432A':S.detail,{noglow:true});
+    paint(g,S,()=>{ g.beginPath(); g.rect(L-s*.05,cy-s*.52,s*.1,s*.1); },S.accent);
+    g.save(); g.globalAlpha=.5; g.strokeStyle=S.mode==='riso'?'#FFE800':S.accent; g.lineWidth=2; g.beginPath(); g.moveTo(L,cy-s*.47); g.lineTo(L-s*.36,cy-s*.6); g.moveTo(L,cy-s*.47); g.lineTo(L-s*.36,cy-s*.36); g.stroke(); g.restore();
+  } else if(kind==='balloon'){
+    paint(g,S,()=>{ g.beginPath(); g.arc(L,cy-s*.58,s*.16,0,7); },S.mode==='riso'?'#FF48B0':S.detail);
+    paint(g,S,()=>{ g.beginPath(); g.ellipse(L,cy-s*.58,s*.06,s*.16,0,0,7); },S.mode==='riso'?'#FFE800':S.accent,{noglow:true});
+    g.save(); g.strokeStyle=S.line; g.lineWidth=1; g.beginPath(); g.moveTo(L-s*.1,cy-s*.46); g.lineTo(L-s*.03,cy-s*.3); g.moveTo(L+s*.1,cy-s*.46); g.lineTo(L+s*.03,cy-s*.3); g.stroke(); g.restore();
+    paint(g,S,()=>{ g.beginPath(); g.rect(L-s*.04,cy-s*.3,s*.08,s*.06); },S.mode==='riso'?'#B48A5A':S.rock,{noglow:true});
+  } else if(kind==='pond'){
+    paint(g,S,()=>{ g.beginPath(); g.ellipse(L+s*.02,gy+s*.02,s*.2,s*.05,0,0,7); },S.water,{noglow:true});
+    for(let k=0;k<4;k++){ g.save(); g.strokeStyle=S.mode==='riso'?'#1D1E22':S.line; g.lineWidth=1.6; g.beginPath(); const x=L-s*.18+k*s*.03; g.moveTo(x,gy); g.quadraticCurveTo(x-s*.02,gy-s*.1,x+s*.01,gy-s*.18-k*s*.02); g.stroke(); g.restore(); }
+  } else { // album: an open book under the photo
+    paint(g,S,()=>{ g.beginPath(); g.moveTo(cx-s*.38,gy-s*.02); g.lineTo(cx,gy+s*.04); g.lineTo(cx+s*.38,gy-s*.02); g.lineTo(cx+s*.36,gy-s*.1); g.lineTo(cx,gy-s*.04); g.lineTo(cx-s*.36,gy-s*.1); g.closePath(); },S.mode==='riso'?'#D4432A':S.detail);
+  }
+  // A few trees or reeds round the edge, so it's a place.
+  for(let k=0;k<3;k++){ const x=cx+s*(.28+k*.1)+r()*s*.04, y=ty-s*.02+r()*s*.04;
+    paint(g,S,()=>{ g.beginPath(); g.arc(x,y-s*.08,s*(.05+r()*.03),0,7); },S.mode==='riso'?'#00838A':S.mode==='kc'?'#4E7A2A':S.mode==='ir'?S.detail:S.land); }
+  // The album's photo, whole, standing on two little legs.
+  const pw=s*.5, ph=s*.42, px=cx-pw/2+s*.05, py=cy-s*.45, rot=(seed%2?-1:1)*2.5*Math.PI/180;
+  g.save(); g.strokeStyle=S.mode==='riso'?'#1D1E22':S.line; g.lineWidth=1.6; g.beginPath(); g.moveTo(px+pw*.3,py+ph); g.lineTo(px+pw*.26,gy+s*.02); g.moveTo(px+pw*.7,py+ph); g.lineTo(px+pw*.74,gy+s*.02); g.stroke(); g.restore();
+  g.save(); g.translate(px+pw/2,py+ph/2); g.rotate(rot);
+  if(S.mode==='riso'){ g.fillStyle=dotsFill(g,'rgba(29,30,34,.75)',4); g.fillRect(-pw/2+5,-ph/2+5,pw,ph); }
+  if(S.mode==='ir'){ g.shadowColor=S.glow; g.shadowBlur=16; }
+  if(S.mode==='crt'){ g.shadowColor=S.line; g.shadowBlur=14; }
+  if(S.mode==='kc'){ g.shadowColor='rgba(0,0,0,.3)'; g.shadowBlur=8; g.shadowOffsetY=3; }
+  g.fillStyle=S.white;
+  if(S.mode==='kc'||S.mode==='crt'){ round(g,-pw/2,-ph/2,pw,ph,S.mode==='kc'?6:8); g.fill(); } else g.fillRect(-pw/2,-ph/2,pw,ph);
+  g.shadowBlur=0; g.shadowOffsetY=0;
+  const b=S.mode==='kc'?s*.06:s*.03;
+  if(S.mode==='crt'){ g.save(); round(g,-pw/2+b,-ph/2+b,pw-2*b,ph-2*b,6); g.clip(); cover(g,img,-pw/2+b,-ph/2+b,pw-2*b,ph-2*b); g.restore(); }
+  else cover(g,img,-pw/2+b,-ph/2+b,pw-2*b,ph-2*b);
+  if(S.mode==='cy'){ g.strokeStyle=S.line; g.lineWidth=1.5; g.strokeRect(-pw/2,-ph/2,pw,ph); }
+  if(S.mode==='riso'){ g.strokeStyle='#1D1E22'; g.lineWidth=1.5; g.strokeRect(-pw/2,-ph/2,pw,ph); }
+  g.restore();
+}
+
+/* ---------- Worlds: path, ring and map ---------- */
+async function drawWorld(cv){
+  const theme=cv.dataset.theme, mode=cv.dataset.world, scr=cv.closest('.screen');
+  const gen=(cv._gen||0)+1; cv._gen=gen;
+  const pics=await Promise.all(ALBUMS.map(a=>load(a.p))); if(cv._gen!==gen) return;
+  const W=290,H=cv.clientHeight||400; cv.width=W*2; cv.height=H*2;
+  const g=cv.getContext('2d'); g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,W,H); const S=style(theme,scr);
+  const path=(pts)=>{ g.save(); g.setLineDash([3,7]); g.lineWidth=2; g.strokeStyle=S.mode==='riso'?'#D4432A':S.line; g.globalAlpha=.5; g.beginPath(); pts.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y)); g.stroke(); g.restore(); };
+  if(mode==='path'){ const sp=[[.3,.2],[.7,.5],[.3,.8]].map(([x,y])=>[x*W,y*H]); path(sp); sp.forEach(([x,y],i)=>island(g,ALBUMS[i].k,x,y,118,pics[i],S,i)); }
+  else if(mode==='ring'){
+    g.save(); g.strokeStyle=S.line; g.globalAlpha=.3; g.setLineDash([2,6]); g.lineWidth=2; g.beginPath(); g.ellipse(W/2,H*.5,W*.44,H*.1,0,0,7); g.stroke(); g.restore();
+    const order=[[3,.12,.36,.5,.45],[2,.88,.36,.5,.45],[0,.25,.42,.75,.75],[4,.75,.42,.75,.75],[1,.5,.5,1.25,1]];
+    for(const [i,x,y,sc,a] of order){ g.save(); g.globalAlpha=a; island(g,ALBUMS[i].k,x*W,y*H,118*sc,pics[i],S,i); g.restore(); }
+  } else {
+    if(S.mode!=='crt'){ g.save(); g.strokeStyle=S.mode==='riso'?'#00838A':S.water; g.globalAlpha=.6; g.lineWidth=1.5; const r=rnd(5); for(let k=0;k<22;k++){ const x=r()*W,y=r()*H; g.beginPath(); g.moveTo(x-8,y); g.quadraticCurveTo(x-4,y-4,x,y); g.quadraticCurveTo(x+4,y-4,x+8,y); g.stroke(); } g.restore(); }
+    else { g.save(); g.strokeStyle=S.line; g.globalAlpha=.12; for(let x=0;x<W;x+=24){ g.beginPath(); g.moveTo(x,0); g.lineTo(x,H); g.stroke(); } for(let y=0;y<H;y+=24){ g.beginPath(); g.moveTo(0,y); g.lineTo(W,y); g.stroke(); } g.restore(); }
+    const sp=[[.5,.45],[.2,.2],[.82,.22],[.18,.72],[.8,.75],[.5,.93]];
+    sp.forEach(([x,y],i)=>island(g,ALBUMS[i].k,x*W,y*H,84,pics[i],S,i));
+  }
+}
+async function drawKinds(cv){
+  const theme=cv.dataset.kinds; const holder=document.createElement('div'); holder.className=theme==='ir'?'ir':theme==='crt'?'crt':'';
+  const scr=document.createElement('div'); scr.className='screen '+(theme==='ir'?'bloom':theme==='crt'?'latenight':''); scr.style.position='absolute'; scr.style.left='-9999px'; holder.appendChild(scr); document.body.appendChild(holder);
+  const S=style(theme,scr); holder.remove();
+  const W=cv.clientWidth||900,H=210; cv.width=W*2; cv.height=H*2; const g=cv.getContext('2d'); g.setTransform(2,0,0,2,0,0);
+  g.fillStyle=S.bg; g.fillRect(0,0,W,H);
+  if(theme==='crt'){ g.fillStyle='rgba(0,0,0,.25)'; for(let y=0;y<H;y+=3) g.fillRect(0,y,W,1); }
+  const kinds=['book','mountain','tent','lighthouse','balloon','pond'], photos=['tree','village','fire','lake','road','hiker'];
+  const pics=await Promise.all(photos.map(load));
+  kinds.forEach((k,i)=>island(g,k,W*(i+.5)/6,H*.5,Math.min(118,W/6*.9),pics[i],S,i));
+}
+
+/* ---------- Shutters ---------- */
+function drawShutter(cv){
+  const theme=cv.dataset.theme, scr=cv.closest('.screen'), v=n=>cssv(scr,n);
+  const g=cv.getContext('2d'); g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,84,84); const c=42,r=27;
+  if(theme==='ir'){ g.save(); g.shadowColor=v('--glow'); g.shadowBlur=18; g.fillStyle=v('--crimson'); g.beginPath(); g.arc(c,c,r,0,7); g.fill(); g.restore(); g.strokeStyle=v('--cyan'); g.lineWidth=3; g.lineCap='round'; g.beginPath(); g.arc(c,c,r+8,-Math.PI/2,Math.PI*.8); g.stroke(); }
+  else if(theme==='crt'){ g.save(); g.shadowColor=v('--accent'); g.shadowBlur=20; g.fillStyle=v('--accent'); g.beginPath(); g.arc(c,c,r,0,7); g.fill(); g.restore(); g.fillStyle='rgba(0,0,0,.2)'; for(let y=c-r;y<c+r;y+=3) g.fillRect(c-r,y,2*r,1); g.strokeStyle=v('--fg'); g.lineWidth=2; g.setLineDash([4,4]); g.beginPath(); g.arc(c,c,r+8,0,7); g.stroke(); }
+  else if(theme==='cy'){ g.strokeStyle=v('--fg'); g.lineWidth=2; g.beginPath(); g.arc(c,c,r+7,0,7); g.stroke(); g.fillStyle=v('--accent'); g.beginPath(); g.arc(c,c,r,0,7); g.fill(); }
+  else { g.fillStyle=v('--yellow'); g.beginPath(); g.arc(c,c,r+6,0,7); g.fill(); g.fillStyle='#D6282B'; g.beginPath(); g.arc(c,c,r-2,0,7); g.fill(); }
+}
+function drawTree(cv){
+  const scr=cv.closest('.screen'), fg=cssv(scr,'--fg'); const g=cv.getContext('2d'); g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,290,400);
+  g.strokeStyle=fg; g.globalAlpha=.6; g.lineWidth=1.5;
+  const L=(a,b,c,d)=>{ g.beginPath(); g.moveTo(a,b); g.lineTo(c,d); g.stroke(); };
+  L(100,62,190,62); L(145,62,145,110); L(70,110,220,110); L(70,110,70,140); L(220,110,220,140); L(145,110,145,140); L(70,200,70,250); L(30,250,110,250); L(30,250,30,272); L(110,250,110,272);
+}
+
+/* ---------- Screens ---------- */
+const st='<div class="status"><span>9:41</span><span>●●● ▮</span></div>';
+function tabs(on){ return '<div class="tabs">'+["Scan","Albums","People","Timeline"].map(t=>'<span class="'+(t===on?'on':'')+'">'+t+'</span>').join('')+'</div>'; }
+function deco(theme){ return theme==='crt'?'<div class="bars"><i style="background:#C0C0C0"></i><i style="background:#C0C000"></i><i style="background:#00C0C0"></i><i style="background:#00C000"></i><i style="background:#C000C0"></i><i style="background:#C00000"></i><i style="background:#0000C0"></i></div>':''; }
+function bar(t,o={}){ return '<div class="bar">'+(o.back?'<span class="back">←</span>':'')+'<div class="title'+(o.s?' s':'')+'">'+t+'</div>'+(o.act?'<span class="act">'+o.act+'</span>':'')+(o.more?'<span>⋮</span>':'')+'</div>'; }
+function img(k,cls,style){ return '<div class="'+(cls||'ph')+'"'+(style?' style="'+style+'"':'')+'><img alt="" data-src="'+k+'"></div>'; }
+function pr(k,l,t,w,h,r){ return '<div class="print" style="left:'+l+'px;top:'+t+'px;width:'+w+'px;height:'+h+'px;transform:rotate('+r+'deg)"><img alt="" data-src="'+k+'"></div>'; }
+function corners(l,t,w,h){ const c=(x,y,b,tr)=>'<span class="corner" style="left:'+x+'%;top:'+y+'%;'+b+';transform:'+tr+'"></span>';
+  return c(l,t,'border-left-width:3px;border-top-width:3px','translate(-4px,-4px)')+c(l+w,t,'border-right-width:3px;border-top-width:3px','translate(-11px,-4px)')+c(l,t+h,'border-left-width:3px;border-bottom-width:3px','translate(-4px,-11px)')+c(l+w,t+h,'border-right-width:3px;border-bottom-width:3px','translate(-11px,-11px)'); }
+function world(theme,mode){ return '<canvas class="world" data-theme="'+theme+'" data-world="'+mode+'"></canvas>'; }
+
+const SCREENS={
+  welcome:["Welcome",t=>st+'<div class="body"><div class="pad" style="padding-top:26px"><div class="title big" style="font-size:calc(var(--tsize,27px)*2.1);white-space:normal">Attic</div><p class="muted" style="margin-top:8px;font-size:14px">Bring the family albums into your phone. Every print found, flattened and kept, with who, when and where.</p></div>'+world(t,'path').replace('class="world"','class="world" style="top:110px;height:300px"')+'<div style="position:absolute;left:16px;right:16px;bottom:20px;display:grid;gap:8px"><span class="btn">Start scanning</span><span class="btn q">Look around first</span></div></div>'],
+  camera:["The camera",t=>st+'<div class="cam"><div class="album">'+ALBUMS[0].t+' ▾</div><div class="finder">'+
+    '<div class="fp" style="left:8%;top:7%;width:46%;height:40%"><img alt="" data-src="tree"></div>'+corners(8,7,46,40)+
+    '<div class="fp" style="left:58%;top:10%;width:36%;height:34%"><img alt="" data-src="dog"></div>'+corners(58,10,36,34)+
+    '<div class="fp" style="left:12%;top:54%;width:78%;height:38%"><img alt="" data-src="lake"></div>'+corners(12,54,78,38)+
+    '</div><div class="statusline">Hold still</div><div class="modes"><span class="on">Prints</span><span>Glare-free</span><span>Film</span></div><div class="shutterrow"><div class="pile"><img alt="" data-src="hiker" style="transform:rotate(-8deg)"><img alt="" data-src="cat" style="transform:rotate(5deg)"></div><canvas class="shutter" width="168" height="168" data-theme="'+t+'"></canvas><div style="justify-self:end;font-size:12px;font-weight:600">Details</div></div></div>'],
+  check:["Checking a shot",t=>st+bar('3 prints found',{s:1})+'<div class="body"><div class="finder" style="position:absolute;inset:4px 12px 92px">'+
+    '<div class="fp" style="left:8%;top:7%;width:46%;height:40%"><img alt="" data-src="tree"></div>'+corners(8,7,46,40)+
+    '<div class="fp" style="left:58%;top:10%;width:36%;height:34%"><img alt="" data-src="dog"></div>'+corners(58,10,36,34)+
+    '<div class="fp" style="left:12%;top:54%;width:78%;height:38%"><img alt="" data-src="lake"></div>'+corners(12,54,78,38)+
+    '</div><p class="muted" style="position:absolute;left:16px;right:16px;bottom:56px;font-size:12px;text-align:center">Drag a corner or a side to fix an outline</p><div style="position:absolute;left:16px;right:16px;bottom:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px"><span class="btn q">Retake</span><span class="btn">Save</span></div></div>'],
+  path:["Albums, down a path",t=>st+bar('Albums',{act:'New album',more:1})+deco(t)+'<div class="layout"><span class="on">Path</span><span>Ring</span><span>Map</span></div><div class="body">'+world(t,'path')+
+    '<div class="lab" style="right:12px;top:16%;text-align:right">'+ALBUMS[0].t+'<small>'+ALBUMS[0].m+'</small></div><div class="lab" style="left:14px;top:46%">'+ALBUMS[1].t+'<small>'+ALBUMS[1].m+'</small></div><div class="lab" style="right:12px;top:76%;text-align:right">'+ALBUMS[2].t+'<small>'+ALBUMS[2].m+'</small></div></div>'+tabs('Albums')],
+  ring:["Albums, round a ring",t=>st+bar('Albums',{act:'New album',more:1})+deco(t)+'<div class="layout"><span>Path</span><span class="on">Ring</span><span>Map</span></div><div class="body">'+world(t,'ring')+'<div class="lab c" style="bottom:18px">'+ALBUMS[1].t+'<small>2 of 6</small></div></div>'+tabs('Albums')],
+  map:["Albums, on a map",t=>st+bar('Albums',{act:'New album',more:1})+deco(t)+'<div class="layout"><span>Path</span><span>Ring</span><span class="on">Map</span></div><div class="body">'+world(t,'map')+'</div>'+tabs('Albums')],
+  page:["An album page",t=>st+bar(ALBUMS[1].t,{back:1,s:1,act:'Scan here'})+'<div class="body"><div class="sheet">'+pr('village',14,16,120,150,-2)+pr('road',132,28,98,128,1.5)+pr('hiker',20,196,104,138,1)+pr('cat',136,186,96,96,-1.5)+'</div><div class="pageline">Page 3 of 14</div></div>'],
+  photo:["A photo",t=>st+bar('14 Jul 1987',{back:1,s:1,more:1})+'<div class="body"><div class="bigprint"><img alt="" data-src="village"></div><div class="rows"><div class="row"><span class="k">When</span><span class="v">14 Jul 1987</span></div><div class="row"><span class="k">Who</span><span class="v">Nani, Ravi</span></div><div class="row"><span class="k">Where</span><span class="v">Shimla</span></div><div class="row"><span class="k">Look</span><span class="chiprow"><span class="chip">Original</span><span class="chip on">Natural</span><span class="chip">Strong</span></span></div></div></div>'],
+  crop:["Fixing the crop",t=>st+bar('Fix the crop',{back:1,s:1,act:'Done'})+'<div class="body"><div style="position:absolute;inset:6px 16px 70px;background:#3a2a1e">'+img('lake','fp','left:10%;top:22%;width:80%;height:50%')+
+    '<svg style="position:absolute;inset:0;z-index:3" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="10,22 90,23 89,72 11,71" fill="none" stroke="var(--accent)" stroke-width=".8" vector-effect="non-scaling-stroke" style="stroke-width:2.5px"/></svg>'+
+    '<span class="handle-dot" style="left:calc(10% - 7px);top:calc(22% - 7px)"></span><span class="handle-dot" style="left:calc(90% - 7px);top:calc(23% - 7px)"></span><span class="handle-dot" style="left:calc(89% - 7px);top:calc(72% - 7px)"></span><span class="handle-dot" style="left:calc(11% - 7px);top:calc(71% - 7px)"></span>'+
+    '<div class="loupe" style="left:12px;top:8px"><img alt="" data-src="lake"></div></div><div style="position:absolute;left:16px;right:16px;bottom:16px;display:flex;gap:8px;justify-content:center"><span class="chip">Snap to edges</span><span class="chip">Rotate</span><span class="chip">Reset</span></div></div>'],
+  people:["People",t=>st+bar('People',{act:'Family tree'})+deco(t)+'<div class="body"><div class="card"><b style="font-size:13px">Same person in 4 photos?</b><div class="minis">'+img('woman')+img('woman')+img('woman')+img('woman')+'</div><span class="btn" style="justify-self:start;padding:7px 14px">Name them</span></div>'+
+    '<div class="faces"><div class="face">'+img('woman')+'Nani</div><div class="face">'+img('mic')+'Ravi</div><div class="face">'+img('hiker')+'Kabir</div><div class="face"><div class="mono" style="background:#FF48B0">M</div>Meera</div><div class="face">'+img('dress')+'Asha</div><div class="face"><div class="mono" style="background:#00A95C">D</div>Dad</div></div></div>'+tabs('People')],
+  person:["A person",t=>st+bar('Nani',{back:1,s:1,act:'Play'})+'<div class="body"><div class="pad"><div style="font-size:14px">Born 1941</div><div class="muted" style="font-size:12px">42 photos, from age 4 to 71.</div><div class="chiprow" style="margin:10px 0"><span class="chip">Ravi, son</span><span class="chip">Meera, daughter</span><span class="chip">+ Add family</span></div></div><div class="tiles"><div class="tile"><img alt="" data-src="woman"><span class="tag">Age 4</span></div><div class="tile"><img alt="" data-src="village"><span class="tag">Age 19</span></div><div class="tile"><img alt="" data-src="tree"><span class="tag">Age 37</span></div><div class="tile"><img alt="" data-src="lake"><span class="tag">About 40</span></div><div class="tile"><img alt="" data-src="fire"><span class="tag">Age 53</span></div><div class="tile"><img alt="" data-src="dog"><span class="tag">Age 66</span></div></div><div class="pad" style="margin-top:12px;font-weight:700">On the phone too</div><div class="tiles"><div class="tile" style="padding:0"><img alt="" data-src="cat"></div><div class="tile" style="padding:0"><img alt="" data-src="road"></div></div></div>'],
+  tree:["Family tree",t=>st+bar('Family tree',{back:1,s:1})+'<div class="body"><div class="pad" style="font-size:12px"><span class="muted">No photos yet</span><div class="chiprow" style="margin:6px 0 4px"><span class="chip">Dada</span><span class="chip">Uncle Vikram</span></div></div><div style="position:relative;height:340px"><canvas class="treec" width="580" height="680" style="position:absolute;inset:0;width:290px;height:340px"></canvas>'+
+    [['woman',78,32,'Nani'],['mic',168,32,'Dada',1],['hiker',48,118,'Ravi'],['dress',123,118,'Meera'],['cat',198,118,'Vikram',1],['road',48,258,'Kabir']].map(([k,x,y,n,faint])=>'<div class="face" style="position:absolute;left:'+(x-8)+'px;top:'+y+'px;width:60px;opacity:'+(faint?.45:1)+'">'+img(k,'ph','width:44px;height:44px')+'<span style="font-size:11px">'+n+'</span></div>').join('')+'</div></div>'],
+  timeline:["Timeline",t=>st+bar('Timeline',{more:0})+deco(t)+'<div class="body"><div class="pad" style="font-weight:700;font-size:14px">On this day</div><div class="strip">'+'<div class="print" style="transform:rotate(-1.5deg)"><img alt="" data-src="village"></div><div class="print" style="transform:rotate(1.5deg)"><img alt="" data-src="fire"></div>'+'</div><div class="pad muted" style="font-size:11px">14 Jul 1987, 39 years ago</div><div class="decade">1980s</div><div class="pad muted" style="font-size:12px">1987 · 4 photos</div><div class="tiles"><div class="tile"><img alt="" data-src="road"></div><div class="tile"><img alt="" data-src="lake"></div><div class="tile"><img alt="" data-src="hiker"></div></div></div>'+tabs('Timeline')],
+  find:["Find",t=>st+bar('Find',{back:1,s:1})+'<div class="body"><div class="pad"><div class="field">A name, a place, a year</div><div style="font-weight:700;margin:12px 0 2px">Smart albums</div></div><div class="smart">'+[['woman','Nani','42 photos'],['mic','Ravi','28 photos'],['road','The 1980s','61 photos'],['village','Shimla','19 photos']].map(([k,n,c],i)=>'<div><div class="print" style="transform:rotate('+(i%2?1.2:-1.2)+'deg)"><img alt="" data-src="'+k+'"></div><b>'+n+'</b><small>'+c+'</small></div>').join('')+'</div></div>'],
+  settings:["Settings, the Look",t=>st+bar('Settings',{back:1,s:1})+'<div class="body"><div class="set"><div class="seth">Look</div><div class="themes">'+
+    [['Riso',['#EDEDE9','#3255A4','#FF48B0','#D4432A'],t==='riso'],['Infrared',['#F6ECEE','#D3164F','#FF4F9A','#00A7BC'],t==='ir'],['Night broadcast',['#070B10','#9DFFB8','#FFB000','#D21F25'],t==='crt'],['Cyanotype',['#F5F3EC','#14306E','#1F4CB0','#F2C14E'],t==='cy'],['Kodachrome',['#FBF6EA','#F7B500','#D6282B','#2A1A12'],t==='kc']].slice(0,t==='cy'||t==='kc'?5:3).map(([n,cs,on])=>'<div class="tc'+(on?' on':'')+'"><span class="chips">'+cs.map(c=>'<i style="background:'+c+'"></i>').join('')+'</span>'+n+'</div>').join('')+
+    '</div><div class="seg"><span class="on">Auto</span><span>'+NAMES[t][0]+'</span><span>'+NAMES[t][1]+'</span></div><div class="tog"><span>Tilt light<small>Prints catch the light as you tilt</small></span><span class="sw"></span></div><div class="seth">New scans</div><div class="tog"><span>Save to the gallery too<small>Pictures/Attic, with dates and names</small></span><span class="sw on"></span></div><div class="tog"><span>Clean dust and hairs<small>Never on faces; the original stays</small></span><span class="sw on"></span></div></div></div>'],
+  sheet:["Page details, a sheet",t=>st+bar(ALBUMS[1].t,{back:1,s:1})+'<div class="body"><div class="sheet">'+pr('village',14,16,120,150,-2)+pr('road',132,28,98,128,1.5)+'</div></div><div class="scrim"></div><div class="bsheet"><span class="handle"></span><div class="seth" style="font-size:calc(var(--tsize,27px)*.7)">This page</div><div class="field">When: summer 87</div><div class="field">Who: Nani, Ravi</div><div class="field">Where: Shimla</div><span class="btn">Save</span></div>'],
+  dialog:["A question",t=>st+bar('Albums',{act:'New album',more:1})+'<div class="body">'+world(t,'path')+'</div><div class="scrim"></div><div class="dlg"><h4>Delete Goa trip?</h4><p style="font-size:13px" class="muted">Its 24 photos go too. The copies in your gallery stay.</p><div class="acts"><span>Keep it</span><span style="color:var(--accent)">Delete</span></div></div>'],
+  slideshow:["Slideshow",t=>'<div class="slide">'+'<img alt="" data-src="village"></div><div class="slidecap">Shimla, summer 87</div>'],
+  widget:["The home screen widget",t=>'<div class="home"><div class="wgt">'+img('village')+'<b>On this day</b><small>14 Jul 1987, 39 years ago</small></div><div class="apps"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>'],
+  story:["Telling its stories",t=>st+bar('Tell its stories',{back:1,s:1})+'<div class="body"><div class="bigprint" style="height:280px"><img alt="" data-src="fire"></div><div class="wave" style="margin-top:22px">'+[8,18,30,22,36,14,26,10,32,20,12,24,16].map(h=>'<i style="height:'+h+'px"></i>').join('')+'</div><p style="text-align:center;font-size:13px" class="muted">Listening. Say what you remember.</p><div style="position:absolute;left:16px;right:16px;bottom:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px"><span class="btn q">Done</span><span class="btn">Next photo</span></div></div>'],
+};
+const FEW=['path','camera','page','photo','timeline','settings'];
+const NAMES={riso:['Paper','Midnight'],ir:['Bloom','Safelight'],crt:['Test card','Late night'],cy:['Sun print','Prussian'],kc:['Lightbox','Projector']};
+const SIDES={ir:['bloom','safelight'],crt:['testcard','latenight'],cy:['sunprint','prussian'],kc:['lightbox','projector']};
+
+function build(band,theme,side){
+  const holder=band.querySelector('.grid'); holder.innerHTML='';
+  const keys=holder.dataset.few?FEW:Object.keys(SCREENS);
+  for(const k of keys){ const [cap,fn]=SCREENS[k];
+    const f=document.createElement('figure'); f.className='cell';
+    f.innerHTML='<div class="phone"><div class="screen '+side+'">'+fn(theme)+'</div></div><figcaption>'+cap+'</figcaption>'; holder.appendChild(f); }
+  holder.querySelectorAll('img[data-src]').forEach(el=>{ el.src=PHOTOS[el.dataset.src]; });
+  requestAnimationFrame(()=>{ holder.querySelectorAll('canvas.world').forEach(drawWorld); holder.querySelectorAll('canvas.shutter').forEach(drawShutter); holder.querySelectorAll('canvas.treec').forEach(drawTree); });
+}
+for(const [theme,sides] of Object.entries(SIDES)){
+  const band=document.getElementById({ir:'infrared',crt:'night-broadcast',cy:'cyanotype',kc:'kodachrome'}[theme]); const stage=band.querySelector('.stage');
+  build(band,theme,sides[0]);
+  band.querySelectorAll('.sides button').forEach(b=>b.addEventListener('click',()=>{
+    band.querySelectorAll('.sides button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    sides.forEach(s=>stage.classList.toggle(s,s===b.dataset.side)); build(band,theme,b.dataset.side);
+  }));
+}
+function redrawAll(){ document.querySelectorAll('canvas.world').forEach(drawWorld); document.querySelectorAll('canvas[data-kinds]').forEach(drawKinds); }
+document.querySelectorAll('canvas[data-kinds]').forEach(drawKinds);
+if(document.fonts) document.fonts.ready.then(redrawAll);
+let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(()=>document.querySelectorAll('canvas[data-kinds]').forEach(drawKinds),150); });
+
+/* ---------- Materials, sketched in Riso ---------- */
+(async function(){
+  const INK='#1D1E22',RED='#D4432A',PAPER='#EDEDE9';
+  function dots(g,x,y,w,h,col){ g.save(); g.fillStyle=col; for(let i=x;i<x+w;i+=6) for(let j=y;j<y+h;j+=6){ g.beginPath(); g.arc(i,j,1.6,0,7); g.fill(); } g.restore(); }
+  { const g=document.getElementById('m-shoebox').getContext('2d'); g.fillStyle=PAPER; g.fillRect(0,0,520,420); dots(g,96,214,350,160,'rgba(29,30,34,.45)');
+    g.fillStyle='#C9A27A'; g.fillRect(80,200,350,160); g.lineWidth=4; g.strokeStyle=INK; g.strokeRect(80,200,350,160);
+    const ks=['tree','dog','lake','fire','hiker','cat','road']; const r=rnd(4);
+    for(const k of ks){ const im=await load(k); const x=110+r()*230,y=60+r()*130,w=110,h=80; g.save(); g.translate(x+w/2,y+h/2); g.rotate((r()-.5)*.8); g.fillStyle='rgba(0,0,0,.25)'; g.fillRect(-w/2+5,-h/2+5,w,h); g.fillStyle='#F4F2ED'; g.fillRect(-w/2,-h/2,w,h); cover(g,im,-w/2+6,-h/2+6,w-12,h-12); g.restore(); }
+    g.fillStyle='#C9A27A'; g.fillRect(80,255,350,105); g.strokeRect(80,255,350,105); g.font='700 40px "Reenie Beanie"'; g.fillStyle=RED; g.fillText('photos, 70s–80s',150,318); }
+  { const g=document.getElementById('m-slides').getContext('2d'); g.fillStyle=PAPER; g.fillRect(0,0,520,420); const cx=170,cy=240;
+    g.fillStyle='#2b2d33'; g.beginPath(); g.ellipse(cx,cy,140,120,0,0,7); g.fill(); g.fillStyle=PAPER; g.beginPath(); g.ellipse(cx,cy,48,40,0,0,7); g.fill(); g.lineWidth=4; g.strokeStyle=INK; g.stroke();
+    for(let i=0;i<14;i++){ const a=i/14*Math.PI*2; g.save(); g.translate(cx+Math.cos(a)*94,cy+Math.sin(a)*80); g.rotate(a+Math.PI/2); g.fillStyle='#F4F2ED'; g.fillRect(-14,-11,28,22); g.restore(); }
+    const im=await load('lake'); g.fillStyle='#F4F2ED'; g.fillRect(300,60,190,150); g.strokeStyle=INK; g.strokeRect(300,60,190,150); cover(g,im,318,78,154,114);
+    g.strokeStyle=RED; g.lineWidth=3; g.setLineDash([6,6]); g.beginPath(); g.moveTo(cx+60,cy-70); g.lineTo(300,140); g.stroke(); g.setLineDash([]); g.font='700 34px "Reenie Beanie"'; g.fillStyle=RED; g.fillText('click, next',330,252); }
+  { const g=document.getElementById('m-leather').getContext('2d'); g.fillStyle=PAPER; g.fillRect(0,0,520,420); dots(g,130,64,280,330,'rgba(29,30,34,.45)');
+    g.fillStyle='#5A2E22'; g.fillRect(110,44,280,330); g.lineWidth=4; g.strokeStyle=INK; g.strokeRect(110,44,280,330); g.fillStyle='#4A251B'; g.fillRect(110,44,34,330); g.strokeRect(110,44,34,330);
+    g.strokeStyle='#C9A24A'; g.lineWidth=2; g.strokeRect(164,66,206,286); g.fillStyle='#C9A24A'; g.font='800 30px Anybody'; g.textAlign='center'; g.fillText('Our family',267,154); g.font='500 18px "Instrument Sans"'; g.fillText('1962 – 1989',267,184);
+    const im=await load('village'); g.fillStyle='#F4F2ED'; g.fillRect(212,212,110,90); cover(g,im,219,219,96,76); }
+})();
+</script>
+</body>
+</html>
