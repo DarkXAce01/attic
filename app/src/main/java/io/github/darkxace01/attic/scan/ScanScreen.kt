@@ -252,7 +252,7 @@ private fun ModeChip(text: String, on: Boolean, onClick: () -> Unit) {
     Text(
         text,
         style = MaterialTheme.typography.labelLarge,
-        color = if (on) Palette.Ground else Color.White.copy(alpha = 0.8f),
+        color = if (on) Palette.Ink else Color.White.copy(alpha = 0.8f),
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(if (on) Color.White else OVER_CAMERA)
@@ -413,7 +413,7 @@ private fun Shutter(enabled: Boolean, ready: Boolean, progress: Float, onClick: 
             Modifier
                 .size(62.dp)
                 .clip(CircleShape)
-                .background(if (enabled) Palette.Ink else Palette.SurfaceHigh),
+                .background(if (enabled) Palette.Accent else Palette.SurfaceHigh),
         )
     }
 }

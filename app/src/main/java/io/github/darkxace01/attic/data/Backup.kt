@@ -176,7 +176,7 @@ class Backup(private val context: Context, private val library: Library) {
                 val album = dao.albumMatching(a.getString("title"), a.getLong("createdAt"))
                     ?: AlbumEntity(
                         title = a.getString("title"), createdAt = a.getLong("createdAt"),
-                        dateFrom = a.optLongOrNull("dateFrom"), dateTo = a.optLongOrNull("dateTo"), dateLabel = a.optStringOrNull("dateLabel"),
+                        dateFrom = a.optLongOrNull("dateFrom"), dateTo = a.optLongOrNull("dateTo"), dateLabel = a.optStringOrNull("dateLabel"), look = a.optStringOrNull("look"),
                     ).let { it.copy(id = dao.insertAlbum(it)) }
                 val prints = a.getJSONArray("prints")
                 for (j in 0 until prints.length()) {
@@ -290,7 +290,7 @@ class Backup(private val context: Context, private val library: Library) {
             arr.put(
                 JSONObject()
                     .put("title", a.title).put("createdAt", a.createdAt)
-                    .putOpt("dateFrom", a.dateFrom).putOpt("dateTo", a.dateTo).putOpt("dateLabel", a.dateLabel)
+                    .putOpt("dateFrom", a.dateFrom).putOpt("dateTo", a.dateTo).putOpt("dateLabel", a.dateLabel).putOpt("look", a.look)
                     .put("prints", ps),
             )
         }

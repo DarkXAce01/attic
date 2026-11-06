@@ -149,23 +149,20 @@ framework. We apply them to Compose, and **Roborazzi screenshots play the part o
 every screen at phone size, critique against the rules, fix the top three problems, and repeat for up to three
 rounds.
 
-**The idea that drives the look:** *the app is the lightbox; the albums are the objects.* App screens are a
-quiet, neutral surface for viewing photos. Paper, leather, light and texture belong only to the albums and
-prints themselves.
-
-**Rules for the app's own screens:**
-- True neutrals (not cream), in light and dark. Colour comes from the photos; one accent, used only on the
-  primary action and on data.
-- One typeface with tabular figures for the UI. A second face only if it has one clear job (e.g. album titles).
-- Sentence-case labels at readable sizes. **No** tiny tracked-uppercase or monospace micro-labels, no
-  `01 / 02` section numbering, no rulers or tick-mark decoration, no hairline grids.
-- No gradients, glows, or glass. Opaque surfaces one tone step apart. Shadows only on things that float.
-- Each screen answers one question first, and its biggest element answers it. (Albums: "what do I want to
-  open?" → the albums themselves, big, as objects. Scan: "is it seeing my photos?" → the viewfinder.)
-- Real photos in every screenshot and store graphic (CC0 sample prints in the test fixtures), never gradient
-  placeholders.
-- **One signature motion:** a scanned print lifting off the camera view and settling into its album. Everything
-  else is quick and quiet. No fade-up on every element, no bounce easing.
+**Replaced (Nov 2026).** The old rules here (true neutral greys, one accent, colour only from the
+photos) are retired at the user's request. Attic now has themes that put colour, texture and motion on
+the app itself; the first is **Riso** (`ui/theme/Theme.kt`, `ui/theme/Riso.kt`):
+- Riso paper (`#EDEDE9`) and Riso black for text; spot inks (`Ink`) for everything printed. A second ink
+  is multiplied over the first, a hair off register. Tone is a dot or line screen, never a gradient.
+- The grease pencil red is the hand: marks, the loop, and the one main action on a screen.
+- Type: Anybody (condensed, heavy) for titles; Instrument Sans for reading; Reenie Beanie only for
+  pencil marks and pencil-titled albums.
+- **Photos are never altered by a theme.** They can be cut to a shape (a kite, a sail) but never tinted,
+  dithered or overprinted.
+- Still in force: sentence case, no mono micro-labels, no 01/02 numbering, plain words.
+- Album islands: 13 kinds (album, mountain, branch, balloon, kite, paper boat, cloud, moon, tree,
+  lighthouse, campsite, desert, pond), two inks from 12, three title styles, things in the air, and the
+  leading photo. Hold an album to make it yours. More kinds are welcome as long as they look great.
 
 **Avoid the "warm editorial" look that AI tools now default to:** cream background with a terracotta/rust
 accent, an oversized italic serif headline, mono labels everywhere. That warmth belongs *inside* the albums,

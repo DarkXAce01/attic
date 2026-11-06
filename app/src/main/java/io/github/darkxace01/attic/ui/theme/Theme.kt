@@ -2,43 +2,93 @@ package io.github.darkxace01.attic.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import io.github.darkxace01.attic.R
 
 /**
- * The app is the lightbox: true neutral greys so the photos carry all the colour.
- * One accent, used only for "ready" (a locked print, the shutter) and the main action.
+ * Attic in Riso: the app is a little risograph print shop in the attic. Plain paper, flat spot inks
+ * (see [Ink]) that overprint where they meet, tone made of dots, and the studio's grease pencil red for
+ * marks and the one main action on a screen. The photos themselves are never touched.
  */
 object Palette {
-    val Ground = Color(0xFF0D0D0D)
-    val Surface = Color(0xFF1A1A1A)
-    val SurfaceHigh = Color(0xFF262626)
-    val Ink = Color(0xFFF2F2F2)
-    val Muted = Color(0xFF9E9E9E)
-    val Accent = Color(0xFFE5553A)
-    val OnAccent = Color(0xFF1C0904)
-    val Warning = Color(0xFFF2B8B5)
+    /** Riso paper: cool and plain. */
+    val Ground = Color(0xFFEDEDE9)
+    val Surface = Color(0xFFE2E2DD)
+    val SurfaceHigh = Color(0xFFD4D4CE)
+    /** Riso black: all text. */
+    val Ink = Color(0xFF1D1E22)
+    val Muted = Color(0xFF5F6068)
+    /** Grease pencil. */
+    val Accent = Color(0xFFD4432A)
+    val OnAccent = Color(0xFFFFFFFF)
+    val Warning = Color(0xFFB3261E)
+    /** The photo's own white border, when a print is shown as an object. */
+    val PrintWhite = Color(0xFFF4F2ED)
 }
 
-private val Figures = "tnum"
+/** Real risograph spot inks (their makers' names), for islands, covers and anything printed. */
+enum class Ink(val label: String, val color: Color) {
+    Blue("Medium blue", Color(0xFF3255A4)),
+    Pink("Fluorescent pink", Color(0xFFFF48B0)),
+    Teal("Teal", Color(0xFF00838A)),
+    Yellow("Yellow", Color(0xFFFFE800)),
+    Orange("Orange", Color(0xFFFF6C2F)),
+    Green("Green", Color(0xFF00A95C)),
+    Red("Bright red", Color(0xFFF15060)),
+    Purple("Purple", Color(0xFF765BA7)),
+    Aqua("Aqua", Color(0xFF5EC8E5)),
+    Sunflower("Sunflower", Color(0xFFFFB511)),
+    Burgundy("Burgundy", Color(0xFF914E72)),
+    Black("Black", Color(0xFF1D1E22)),
+}
+
+object Fonts {
+    private fun anybody(weight: Int, width: Float) =
+        Font(R.font.anybody, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight), FontVariation.width(width)))
+
+    /** Anybody, condensed and heavy: titles and album names. */
+    val Display = FontFamily(anybody(860, 64f), anybody(700, 72f), anybody(500, 80f), anybody(300, 115f))
+
+    private fun sans(weight: Int) = Font(R.font.instrument_sans, FontWeight(weight), variationSettings = FontVariation.Settings(FontVariation.weight(weight)))
+
+    /** Instrument Sans: everything you read. */
+    val Body = FontFamily(sans(400), sans(500), sans(600), sans(700))
+
+    /** Reenie Beanie: only for grease-pencil marks and names written on photos. */
+    val Hand = FontFamily(Font(R.font.reenie_beanie))
+}
+
+private const val Figures = "tnum"
 
 val AtticTypography = Typography(
-    titleLarge = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium = TextStyle(fontSize = 17.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium),
-    bodyLarge = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, fontFeatureSettings = Figures),
-    bodyMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp, fontFeatureSettings = Figures),
-    labelLarge = TextStyle(fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.Medium, fontFeatureSettings = Figures),
-    labelMedium = TextStyle(fontSize = 13.sp, lineHeight = 18.sp, fontFeatureSettings = Figures),
+    displayLarge = TextStyle(fontFamily = Fonts.Display, fontWeight = FontWeight(860), fontSize = 56.sp, lineHeight = 52.sp),
+    displayMedium = TextStyle(fontFamily = Fonts.Display, fontWeight = FontWeight(860), fontSize = 44.sp, lineHeight = 42.sp),
+    displaySmall = TextStyle(fontFamily = Fonts.Display, fontWeight = FontWeight(860), fontSize = 34.sp, lineHeight = 34.sp),
+    headlineSmall = TextStyle(fontFamily = Fonts.Display, fontWeight = FontWeight(860), fontSize = 28.sp, lineHeight = 30.sp),
+    titleLarge = TextStyle(fontFamily = Fonts.Display, fontWeight = FontWeight(860), fontSize = 30.sp, lineHeight = 32.sp),
+    titleMedium = TextStyle(fontFamily = Fonts.Body, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 24.sp),
+    titleSmall = TextStyle(fontFamily = Fonts.Body, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp),
+    bodyLarge = TextStyle(fontFamily = Fonts.Body, fontSize = 16.sp, lineHeight = 23.sp, fontFeatureSettings = Figures),
+    bodyMedium = TextStyle(fontFamily = Fonts.Body, fontSize = 14.sp, lineHeight = 20.sp, fontFeatureSettings = Figures),
+    labelLarge = TextStyle(fontFamily = Fonts.Body, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp, fontFeatureSettings = Figures),
+    labelMedium = TextStyle(fontFamily = Fonts.Body, fontWeight = FontWeight.Medium, fontSize = 13.sp, lineHeight = 18.sp, fontFeatureSettings = Figures),
 )
+
+/** Grease pencil handwriting, for marks on photos and pencil-titled albums. */
+val HandStyle = TextStyle(fontFamily = Fonts.Hand, fontSize = 26.sp, lineHeight = 26.sp, color = Palette.Accent)
 
 @Composable
 fun AtticTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = darkColorScheme(
+        colorScheme = lightColorScheme(
             primary = Palette.Accent,
             onPrimary = Palette.OnAccent,
             background = Palette.Ground,
@@ -48,7 +98,9 @@ fun AtticTheme(content: @Composable () -> Unit) {
             surfaceVariant = Palette.SurfaceHigh,
             onSurfaceVariant = Palette.Muted,
             surfaceContainer = Palette.Surface,
+            surfaceContainerLow = Palette.Surface,
             surfaceContainerHigh = Palette.SurfaceHigh,
+            surfaceContainerHighest = Palette.SurfaceHigh,
             outline = Palette.SurfaceHigh,
             error = Palette.Warning,
         ),

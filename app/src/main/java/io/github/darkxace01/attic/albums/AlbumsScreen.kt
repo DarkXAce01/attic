@@ -38,10 +38,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.withFrameNanos
-import io.github.darkxace01.attic.world.AlbumWorld
-import io.github.darkxace01.attic.world.Island
-import io.github.darkxace01.attic.world.WorldAlbum
-import io.github.darkxace01.attic.world.loadIsland
+import io.github.darkxace01.attic.world.riso.DressSheet
+import io.github.darkxace01.attic.world.riso.IslandLook
+import io.github.darkxace01.attic.world.riso.RisoWorld
+import io.github.darkxace01.attic.world.riso.WorldIsland
+import io.github.darkxace01.attic.world.riso.islandBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import io.github.darkxace01.attic.data.AlbumSummary
@@ -77,23 +78,28 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
         val start = withFrameNanos { it }
         while (true) withFrameNanos { clock.floatValue = (it - start) / 1e9f }
     }
-    // Islands are built once per album (and again when it changes), off the main thread.
-    val cache = remember { HashMap<Pair<Long, Int>, Island>() }
-    val islands by produceState(emptyList<WorldAlbum>(), albums) {
-        value = albums.mapIndexed { i, a ->
-            val island = cache.getOrPut(a.id to a.count) { loadIsland(library, a, i) }
-            WorldAlbum(island, a.title, albumLine(a))
+    // Each island's photos are loaded once per album (again when it changes), off the main thread.
+    val cache = remember { HashMap<Triple<Long, Int, Long?>, List<androidx.compose.ui.graphics.ImageBitmap>>() }
+    val islands by produceState(emptyList<WorldIsland>(), albums) {
+        value = albums.map { a ->
+            val look = IslandLook.parse(a.look, a.id)
+            val photos = cache.getOrPut(Triple(a.id, a.count, look.cover)) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { library.islandFiles(a.id, 4, look.cover).mapNotNull { islandBitmap(it) } }
+            }
+            WorldIsland(a.id, a.title, albumLine(a), look, photos)
         }
     }
+    var dressing by remember { mutableStateOf<Long?>(null) }
 
-    AlbumWorld(
+    RisoWorld(
         islands,
         time = { clock.floatValue },
         onOpen = onOpen,
+        onDress = { dressing = it },
         header = {
             Column(Modifier.padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Albums", style = MaterialTheme.typography.titleLarge, color = Palette.Ink, modifier = Modifier.weight(1f))
+                    Text("Albums", style = MaterialTheme.typography.displayMedium, color = Palette.Ink, modifier = Modifier.weight(1f))
                     QuietButton("New album", onClick = { creating = true }, color = Palette.Accent)
                     QuietButton("Settings", onClick = onSettings)
                 }
@@ -112,13 +118,25 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
                         onSetUpBackup = onSettings,
                     )
                 }
-                if (albums.isEmpty()) {
-                    Spacer(Modifier.height(24.dp))
-                    Text("No albums yet. Scan your first page and it'll start one.", style = MaterialTheme.typography.bodyLarge, color = Palette.Muted)
-                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    if (albums.isEmpty()) "No albums yet. Scan your first page and it'll start one." else "Hold an album to make it yours.",
+                    style = MaterialTheme.typography.bodyMedium, color = Palette.Muted,
+                )
             }
         },
     )
+
+    dressing?.let { id ->
+        val w = islands.firstOrNull { it.id == id }
+        if (w != null) {
+            DressSheet(
+                id, w.title, w.meta, w.look, w.photos, time = { clock.floatValue },
+                onChange = { l -> scope.launch { library.setLook(id, l.encode()) } },
+                onDismiss = { dressing = null },
+            )
+        }
+    }
 
     if (creating) {
         TextSheet(

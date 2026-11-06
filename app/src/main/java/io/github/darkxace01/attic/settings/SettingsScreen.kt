@@ -274,6 +274,7 @@ private fun LicencesSheet(onDismiss: () -> Unit) {
         "AndroidX, Jetpack Compose, CameraX, Room" to "Apache License 2.0.",
         "Coil" to "Apache License 2.0. Loading photos.",
         "Instrument Serif, Geist Mono" to "SIL Open Font License 1.1. The studio logo.",
+        "Anybody, Instrument Sans, Reenie Beanie" to "SIL Open Font License 1.1. Attic's type: titles, everything you read, and grease-pencil handwriting.",
         "Print finder" to "Attic's own network, trained only on made-up album pages drawn with photos from the Unsplash Lite dataset (Unsplash License). No one's personal photos.",
         "Date reader" to "Attic's own network, trained only on made-up camera date stamps drawn on photos from the Unsplash Lite dataset.",
         "Face finder (YuNet)" to "MIT License, Copyright (c) 2020 Shiqi Yu. From the OpenCV model zoo. Runs on the phone.",

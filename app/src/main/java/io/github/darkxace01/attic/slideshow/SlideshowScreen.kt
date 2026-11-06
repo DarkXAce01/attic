@@ -121,12 +121,12 @@ fun SlideshowScreen(albumId: Long?, personId: Long?, onDone: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                QuietButton("Close", onClick = onDone)
-                Text("${index % list.size + 1} of ${list.size}", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                QuietButton("Back", onClick = { index = (index - 1 + list.size) % list.size; controls = true })
-                QuietButton(if (paused) "Play" else "Pause", onClick = { paused = !paused; controls = true })
-                QuietButton("Next", onClick = { index = (index + 1) % list.size; controls = true })
-                QuietButton(if (withStories) "Stories on" else "Stories off", color = if (withStories) Palette.Ink else Palette.Muted, onClick = { withStories = !withStories; controls = true })
+                QuietButton("Close", color = Color.White, onClick = onDone)
+                Text("${index % list.size + 1} of ${list.size}", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f), modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                QuietButton("Back", color = Color.White, onClick = { index = (index - 1 + list.size) % list.size; controls = true })
+                QuietButton(if (paused) "Play" else "Pause", color = Color.White, onClick = { paused = !paused; controls = true })
+                QuietButton("Next", color = Color.White, onClick = { index = (index + 1) % list.size; controls = true })
+                QuietButton(if (withStories) "Stories on" else "Stories off", color = if (withStories) Color.White else Color.White.copy(alpha = 0.7f), onClick = { withStories = !withStories; controls = true })
             }
         }
     }

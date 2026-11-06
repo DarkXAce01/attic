@@ -32,6 +32,8 @@ data class AlbumEntity(
     val dateFrom: Long? = null,
     val dateTo: Long? = null,
     val dateLabel: String? = null,
+    /** How its island looks in the album world (see world.riso.IslandLook); null until someone chooses. */
+    val look: String? = null,
 ) {
     val date: PhotoDate? get() = photoDate(dateFrom, dateTo, dateLabel)
 }
@@ -169,6 +171,7 @@ data class AlbumSummary(
     val coverDir: String?,
     val coverFile: String?,
     val coverEnhance: Int?,
+    val look: String? = null,
 )
 
 data class LibraryCounts(val total: Int, val inGallery: Int, val backedUp: Int = 0, val onlyInAttic: Int = 0)
@@ -184,7 +187,7 @@ interface AtticDao {
 
     @Query(
         """
-        SELECT a.id, a.title, a.dateLabel, COUNT(p.id) AS count, COUNT(DISTINCT p.page) AS pages,
+        SELECT a.id, a.title, a.dateLabel, a.look, COUNT(p.id) AS count, COUNT(DISTINCT p.page) AS pages,
             (SELECT scanDir FROM print WHERE albumId = a.id ORDER BY page, position LIMIT 1) AS coverDir,
             (SELECT fileName FROM print WHERE albumId = a.id ORDER BY page, position LIMIT 1) AS coverFile,
             (SELECT enhance FROM print WHERE albumId = a.id ORDER BY page, position LIMIT 1) AS coverEnhance
@@ -301,7 +304,7 @@ interface AtticDao {
 
 @Database(
     entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class, FaceEntity::class, RelationEntity::class],
-    version = 12,
+    version = 13,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -309,7 +312,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -390,6 +393,13 @@ abstract class AtticDatabase : RoomDatabase() {
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `print` ADD COLUMN `negative` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** Album islands. */
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `album` ADD COLUMN `look` TEXT")
             }
         }
 

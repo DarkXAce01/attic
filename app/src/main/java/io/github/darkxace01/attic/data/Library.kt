@@ -157,9 +157,15 @@ class Library(private val context: Context) {
     }
 
     /** The first few photos of an album as shown (enhanced or not), for its island: cover first. */
-    suspend fun islandFiles(albumId: Long, n: Int = 4): List<File> = io {
-        dao.printsInNow(albumId).take(n).map(::displayFile).filter { it.exists() }
+    /** A few of the album's prints for its island, [first] (the chosen cover) before the rest. */
+    suspend fun islandFiles(albumId: Long, n: Int = 4, first: Long? = null): List<File> = io {
+        val all = dao.printsInNow(albumId)
+        val chosen = all.firstOrNull { it.id == first }
+        (listOfNotNull(chosen) + all.filter { it.id != first }).take(n).map(::displayFile).filter { it.exists() }
     }
+
+    /** Saves how album [id]'s island looks. */
+    suspend fun setLook(id: Long, look: String) = io { dao.album(id)?.let { dao.updateAlbum(it.copy(look = look)) } }
 
     fun coverFile(a: AlbumSummary): File? {
         val dir = a.coverDir ?: return null
