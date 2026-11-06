@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attic themes, three more</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@50..150,300..900&family=Instrument+Sans:wdth,wght@75..100,400..700&family=Reenie+Beanie&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=VT323&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+<style>
+/* Attic themes: Infrared, Night broadcast, One bit. The page itself stays on Attic's Riso paper; each
+   theme gets its own pull, with the same four screens so they compare like for like.
+   Layout idea: a proof sheet, one band per theme, phones in a row, a switch for each theme's two sides. */
+:root{
+  --paper:#EDEDE9; --paper-deep:#E0E0DA; --ink:#1D1E22; --muted:#5F6068; --pencil:#D4432A; --blue:#3255A4;
+  --display:"Anybody","Arial Narrow",sans-serif;
+  --body:"Instrument Sans","Segoe UI",system-ui,sans-serif;
+  --hand:"Reenie Beanie","Comic Sans MS",cursive;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:400 17px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+main{max-width:1240px;margin:0 auto;padding:0 20px 120px}
+h1,h2,h3{margin:0;text-wrap:balance}
+p{margin:0;max-width:64ch}
+:focus-visible{outline:3px solid var(--pencil);outline-offset:3px}
+.hand{font-family:var(--hand);color:var(--pencil);font-size:27px;line-height:1}
+
+header.top{padding:64px 0 8px;display:grid;gap:18px}
+header.top h1{font-family:var(--display);font-weight:880;font-stretch:64%;font-size:clamp(52px,9vw,112px);line-height:.86;letter-spacing:-.01em}
+header.top h1 span{color:var(--pencil);mix-blend-mode:multiply}
+.lede{font-size:19px;color:var(--muted)}
+.rules{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.rule{border:2px solid var(--ink);padding:6px 12px;font-size:15px;background:var(--paper)}
+
+/* ---------- One band per theme ---------- */
+.band{margin-top:72px;border:2px solid var(--ink);box-shadow:8px 8px 0 var(--ink);overflow:hidden}
+.bandhead{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end;padding:28px 28px 22px;border-bottom:2px solid var(--ink);background:var(--paper)}
+.bandhead h2{font-family:var(--display);font-weight:860;font-stretch:66%;font-size:clamp(40px,6vw,68px);line-height:.9}
+.bandhead p{color:var(--muted);margin-top:10px}
+.sides{display:flex;border:2px solid var(--ink)}
+.sides button{font:600 15px var(--body);padding:9px 16px;background:var(--paper);color:var(--ink);border:0;cursor:pointer}
+.sides button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.stage{padding:34px 24px 30px;display:grid;gap:26px;transition:background .35s}
+.phones{display:flex;gap:22px;overflow-x:auto;padding:6px 4px 18px;scroll-snap-type:x mandatory}
+.phone-wrap{flex:0 0 auto;display:grid;gap:10px;justify-items:center;scroll-snap-align:start}
+.phone-wrap .cap{font-size:14px;color:var(--cap)}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.note{background:var(--note-bg);color:var(--note-ink);border:2px solid var(--note-line);padding:16px 18px;font-size:15.5px;line-height:1.5}
+.note b{display:block;margin-bottom:4px;font-size:16px}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.sw{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--cap)}
+.sw i{width:26px;height:26px;border:2px solid var(--note-line);display:block}
+
+/* ---------- The phone ---------- */
+.phone{width:290px;height:600px;border-radius:38px;padding:10px;background:#111214;box-shadow:0 1px 0 #333 inset,0 18px 40px rgba(0,0,0,.28);position:relative}
+.screen{position:relative;width:100%;height:100%;border-radius:29px;overflow:hidden;background:var(--bg);color:var(--fg);font:400 13px/1.4 var(--body);display:flex;flex-direction:column}
+.status{height:26px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font-size:11px;font-weight:600;color:var(--fg);position:relative;z-index:3}
+.bar{display:flex;align-items:center;gap:10px;padding:6px 16px 8px;position:relative;z-index:3}
+.bar .back{font-size:18px;line-height:1}
+.title{font-family:var(--tdisplay);font-size:var(--tsize,27px);font-weight:var(--tweight,700);line-height:1;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{margin-top:auto;display:flex;justify-content:space-around;padding:10px 6px 14px;font-size:12px;font-weight:600;position:relative;z-index:3;background:var(--bg)}
+.tabs span{opacity:.6;padding-bottom:4px}
+.tabs span.on{opacity:1;border-bottom:var(--tabmark)}
+.body{flex:1;position:relative;overflow:hidden;z-index:2}
+.layout{display:flex;gap:14px;padding:0 16px 6px;font-size:12px;font-weight:600}
+.layout span{opacity:.55}.layout span.on{opacity:1;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+canvas.world{position:absolute;inset:0;width:100%;height:100%}
+.isl-label{position:absolute;font-family:var(--tdisplay);font-size:var(--lsize,16px);font-weight:var(--tweight,700);line-height:1.05;max-width:130px}
+.isl-label small{display:block;font-family:var(--body);font-size:11px;font-weight:500;color:var(--muted);margin-top:3px}
+
+/* Album page */
+.sheet{position:absolute;left:14px;right:14px;top:8px;bottom:58px;background:var(--surface);border:var(--sheetline);box-shadow:var(--sheetshadow)}
+.print{position:absolute;background:var(--printwhite);padding:5px;box-shadow:var(--printshadow)}
+.print img,.bigprint img{display:block;width:100%;height:100%;object-fit:cover}
+.pageline{position:absolute;left:0;right:0;bottom:22px;text-align:center;font-size:12px;color:var(--muted)}
+.chiprow{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:var(--chipline);padding:5px 10px;font-size:12px;font-weight:600;border-radius:var(--chipr,0)}
+.chip.on{background:var(--fg);color:var(--bg)}
+.main-btn{background:var(--accent);color:var(--onaccent);font-weight:700;font-size:13px;padding:9px 16px;border-radius:var(--btnr,0);box-shadow:var(--btnshadow,none)}
+
+/* Photo */
+.bigprint{margin:4px 22px 0;height:250px;background:var(--printwhite);padding:7px;box-shadow:var(--printshadow);transform:rotate(-1deg)}
+.rows{padding:16px 22px 0;display:grid;gap:10px}
+.row{display:grid;grid-template-columns:56px 1fr;gap:8px;align-items:baseline}
+.row .k{color:var(--muted);font-size:12px}
+.row .v{font-family:var(--hand2,var(--body));font-size:var(--vsize,14px);color:var(--fg)}
+
+/* Camera */
+.cam{flex:1;display:flex;flex-direction:column;position:relative;z-index:2}
+.cam .album{text-align:center;font-family:var(--tdisplay);font-weight:var(--tweight,700);font-size:17px;padding:4px 0 8px}
+.finder{position:relative;margin:0 12px;flex:1;border-radius:var(--finderr,14px);overflow:hidden;background:#20160f}
+.finder .pg{position:absolute;inset:0;background:#3a2a1e}
+.finder .fp{position:absolute;background:#f4f2ed;padding:3px}
+.finder .fp img{display:block;width:100%;height:100%;object-fit:cover}
+.corner{position:absolute;width:16px;height:16px;border-color:var(--ready);border-style:solid;border-width:0}
+.statusline{text-align:center;font-size:13px;font-weight:600;padding:9px 0 4px}
+.modes{display:flex;justify-content:center;gap:16px;font-size:12px;font-weight:600;padding:2px 0 6px}
+.modes span{opacity:.55}.modes span.on{opacity:1;color:var(--accent)}
+.shutterrow{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:4px 20px 16px}
+.pile{width:42px;height:42px;position:relative}
+.pile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border:2px solid var(--printwhite)}
+.details{justify-self:end;font-size:12px;font-weight:600}
+canvas.shutter{width:84px;height:84px}
+
+/* ================= INFRARED ================= */
+.ir{--cap:#5F6068;--note-bg:#fff;--note-ink:#2A1018;--note-line:#2A1018}
+.ir .bloom,.ir.bloom{--bg:#F6ECEE;--fg:#3A0D1C;--muted:#8A5763;--surface:#FBF4F5;--accent:#00A7BC;--onaccent:#fff;--ready:#00A7BC;--printwhite:#FFF9F6;--glow:rgba(226,30,86,.55);--crimson:#D3164F;--magenta:#FF4F9A;--cyan:#00A7BC;--sulphur:#F2DD00}
+.ir .safelight,.ir.safelight{--bg:#170910;--fg:#FBE3EA;--muted:#C58C9C;--surface:#24101A;--accent:#21D4E8;--onaccent:#06181B;--ready:#21D4E8;--printwhite:#F7F1EC;--glow:rgba(255,40,96,.75);--crimson:#FF2A63;--magenta:#FF66B0;--cyan:#21D4E8;--sulphur:#FFE600}
+.ir .screen{--tdisplay:"Bricolage Grotesque",var(--body);--tweight:800;--tabmark:3px solid var(--crimson);
+  --sheetline:0;--sheetshadow:0 0 0 1px color-mix(in srgb,var(--crimson) 35%,transparent),0 0 28px var(--glow);
+  --printshadow:0 0 14px var(--glow);--chipline:1.5px solid var(--crimson);--chipr:20px;--btnr:22px;--btnshadow:0 0 16px color-mix(in srgb,var(--cyan) 60%,transparent);--finderr:18px}
+.ir .title,.ir .isl-label,.ir .cam .album{text-shadow:0 0 6px var(--glow),0 0 18px var(--glow)}
+.ir .stage.bloom{background:#F3E4E8}.ir .stage.safelight{background:#100509}
+.ir .stage.safelight{--cap:#D9A9B6}
+
+/* ================= NIGHT BROADCAST ================= */
+.crt{--cap:#5F6068;--note-bg:#fff;--note-ink:#111;--note-line:#111}
+.crt .testcard,.crt.testcard{--bg:#D5D6D2;--fg:#121316;--muted:#55585F;--surface:#E6E7E3;--accent:#E3262B;--onaccent:#fff;--ready:#E3262B;--printwhite:#F4F2ED;--phos:#121316;--fringe-a:rgba(227,38,43,.55);--fringe-b:rgba(0,150,214,.55);--scan:rgba(0,0,0,.05)}
+.crt .latenight,.crt.latenight{--bg:#070B10;--fg:#DFF5E3;--muted:#7FA08A;--surface:#0E151C;--accent:#FFB000;--onaccent:#1A1000;--ready:#FFB000;--printwhite:#F4F2ED;--phos:#9DFFB8;--fringe-a:rgba(255,40,60,.7);--fringe-b:rgba(40,200,255,.7);--scan:rgba(0,0,0,.32)}
+.crt .screen{--tdisplay:"VT323",monospace;--tsize:34px;--tweight:400;--lsize:21px;--tabmark:3px solid var(--accent);
+  --sheetline:6px solid #1b1d22;--sheetshadow:0 0 0 2px #2b2e35, 0 0 24px color-mix(in srgb,var(--phos) 25%,transparent);
+  --printshadow:0 2px 8px rgba(0,0,0,.4);--chipline:2px solid var(--fg);--btnr:6px;--finderr:26px}
+.crt .title,.crt .isl-label,.crt .cam .album{text-shadow:-1.2px 0 var(--fringe-a),1.2px 0 var(--fringe-b),0 0 10px color-mix(in srgb,var(--phos) 45%,transparent)}
+/* Scanlines and the glass's dark corners: on the app's own surfaces only, under every photo. */
+.crt .body,.crt .cam{z-index:auto}
+.crt .screen::after{content:"";position:absolute;inset:0;z-index:6;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,transparent 0 2px,var(--scan) 2px 3px);box-shadow:inset 0 0 60px rgba(0,0,0,.45)}
+.crt .print,.crt .bigprint,.crt .finder,.crt .pile,.crt canvas.world{position:relative;z-index:7}
+.crt canvas.world{position:absolute}
+.crt .print{position:absolute}
+.crt .bars{display:flex;height:10px;margin:0 16px 8px}
+.crt .bars i{flex:1}
+.crt .stage.testcard{background:#C9CAC5}.crt .stage.latenight{background:#030507;--cap:#8FB89A}
+
+/* ================= ONE BIT ================= */
+.ob{--cap:#5F6068;--note-bg:#fff;--note-ink:#000;--note-line:#000}
+.ob .ink,.ob.ink{--bg:#FFFFFF;--fg:#000000;--muted:#000;--surface:#FFFFFF;--accent:#D4432A;--onaccent:#fff;--ready:#D4432A;--printwhite:#FFFFFF;--dither:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'><rect width='1' height='1' fill='black'/><rect x='2' y='2' width='1' height='1' fill='black'/></svg>");--stripes:repeating-linear-gradient(to bottom,#000 0 1px,#fff 1px 3px)}
+.ob .chalk,.ob.chalk{--bg:#000000;--fg:#FFFFFF;--muted:#fff;--surface:#000000;--accent:#FF5A3C;--onaccent:#000;--ready:#FF5A3C;--printwhite:#FFFFFF;--dither:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'><rect width='1' height='1' fill='white'/><rect x='2' y='2' width='1' height='1' fill='white'/></svg>");--stripes:repeating-linear-gradient(to bottom,#fff 0 1px,#000 1px 3px)}
+.ob .screen{--tdisplay:"Pixelify Sans",var(--body);--tweight:700;--tsize:28px;--tabmark:3px solid var(--fg);
+  --sheetline:2px solid var(--fg);--sheetshadow:5px 5px 0 var(--fg);--printshadow:3px 3px 0 var(--fg);--chipline:2px solid var(--fg);--btnshadow:3px 3px 0 var(--fg);--finderr:0;-webkit-font-smoothing:none}
+.ob .print,.ob .bigprint{border:2px solid var(--fg)}
+.ob .isl-label small,.ob .row .k,.ob .pageline{opacity:1}
+.ob .titlebar{height:14px;margin:0 16px 8px;background:var(--stripes);border:2px solid var(--fg)}
+.ob .stage.ink{background:#fff;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4'><rect width='1' height='1' fill='%23cfcfcf'/></svg>")}
+.ob .stage.chalk{background:#000;--cap:#ddd}
+.ob .sheet{background-color:var(--surface)}
+
+/* ---------- Picking a theme ---------- */
+.picker{margin-top:72px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:40px;align-items:start}
+.picker h2,.next h2{font-family:var(--display);font-weight:860;font-stretch:66%;font-size:clamp(40px,6vw,64px);line-height:.9}
+.picker p,.next p{margin-top:14px}
+.settings{background:var(--paper);border:2px solid var(--ink);box-shadow:8px 8px 0 var(--ink);padding:22px;display:grid;gap:16px}
+.settings h3{font-family:var(--display);font-weight:820;font-stretch:72%;font-size:30px;color:var(--blue)}
+.themes{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.tcard{border:2px solid var(--ink);padding:10px;display:grid;gap:8px;cursor:pointer;background:var(--paper);font:inherit;color:inherit;text-align:left}
+.tcard[aria-pressed="true"]{outline:3px solid var(--pencil);outline-offset:2px}
+.tcard .chips{display:flex;height:34px}
+.tcard .chips i{flex:1}
+.tcard b{font-size:16px}
+.tcard small{color:var(--muted);font-size:13.5px}
+.lookrow{display:flex;border:2px solid var(--ink);width:max-content}
+.lookrow span{padding:8px 14px;font-weight:600;font-size:15px}
+.lookrow span.on{background:var(--ink);color:var(--paper)}
+
+/* ---------- Next ---------- */
+.next{margin-top:80px;display:grid;gap:26px}
+.mats{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px}
+.mat{border:2px solid var(--ink);background:var(--paper);box-shadow:6px 6px 0 var(--ink);display:grid}
+.mat canvas{width:100%;height:220px;display:block;border-bottom:2px solid var(--ink)}
+.mat div{padding:14px 16px 16px;display:grid;gap:6px}
+.mat b{font-family:var(--display);font-weight:820;font-stretch:72%;font-size:26px;line-height:1}
+.mat p{font-size:15.5px;color:var(--muted)}
+.ask{border:2px dashed var(--pencil);padding:18px 20px;display:grid;gap:8px;max-width:820px}
+.ask ol{margin:0;padding-left:22px;display:grid;gap:6px}
+
+@media (max-width:820px){.picker{grid-template-columns:1fr}.bandhead{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<main>
+<header class="top">
+  <div class="hand">three more looks for Attic</div>
+  <h1>Infrared, Night broadcast <span>&amp;</span> One bit</h1>
+  <p class="lede">Riso stays the house style. These three sit next to it under Settings → Look, each with a light and a dark side named its own way, the way Sweepy does it. Each one changes Attic's own screens: its type, colour, texture and the camera. None of them touches a photo. Prints keep their real colours on every theme, and that contrast is half the fun.</p>
+  <div class="rules">
+    <span class="rule">Photos are never tinted, filtered or covered</span>
+    <span class="rule">Same screens, same places for everything</span>
+    <span class="rule">One accent per theme, only for ready and the main action</span>
+    <span class="rule">Auto follows the phone's light and dark</span>
+  </div>
+</header>
+
+<section class="band ir" id="infrared">
+  <div class="bandhead">
+    <div>
+      <h2>Infrared</h2>
+      <p>The world as false-colour infrared film saw it: leaves turn crimson, skies go deep cyan, and bright things bloom with a soft red halation. The islands become crimson forests on cyan water. The main action is the film's cyan.</p>
+    </div>
+    <div class="sides" role="group" aria-label="Infrared side">
+      <button type="button" data-side="bloom" aria-pressed="true">Bloom</button>
+      <button type="button" data-side="safelight" aria-pressed="false">Safelight</button>
+    </div>
+  </div>
+  <div class="stage bloom">
+    <div class="phones"></div>
+    <div class="notes">
+      <div class="note"><b>Halation, not gradients</b>Headings and prints glow faintly crimson, the way infrared film bleeds light round anything bright. The glow sits around a print, never on it.</div>
+      <div class="note"><b>Bloom and Safelight</b>Bloom is pale pink paper with crimson ink. Safelight is the darkroom: near black, warm red glow, cyan for what's ready.</div>
+      <div class="note"><b>Type</b>Bricolage Grotesque, heavy and a little soft, for titles; the house sans for everything else.</div>
+      <div class="swatches" aria-label="Infrared inks">
+        <span class="sw"><i style="background:#D3164F"></i>Crimson</span><span class="sw"><i style="background:#FF4F9A"></i>Magenta</span><span class="sw"><i style="background:#00A7BC"></i>Cyan</span><span class="sw"><i style="background:#F2DD00"></i>Sulphur</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band crt" id="night-broadcast">
+  <div class="bandhead">
+    <div>
+      <h2>Night broadcast</h2>
+      <p>Late-night TV after the programmes end: phosphor letters with a hair of red and blue fringe, scanlines, the dark corners of curved glass, and an on-screen display font. Albums become little TV sets with rabbit ears. The main action is broadcast amber.</p>
+    </div>
+    <div class="sides" role="group" aria-label="Night broadcast side">
+      <button type="button" data-side="testcard" aria-pressed="true">Test card</button>
+      <button type="button" data-side="latenight" aria-pressed="false">Late night</button>
+    </div>
+  </div>
+  <div class="stage testcard">
+    <div class="phones"></div>
+    <div class="notes">
+      <div class="note"><b>Scanlines stay behind the photos</b>The glass, the lines and the fringes are on Attic's own surfaces. Every photo sits above them in its own clean frame, exactly as scanned.</div>
+      <div class="note"><b>Test card and Late night</b>Test card is the daytime grey with the colour bars under each title. Late night is black glass, green-white phosphor and amber.</div>
+      <div class="note"><b>Type</b>VT323, the look of a set's on-screen display, for titles and album names; the house sans for reading.</div>
+      <div class="swatches" aria-label="Night broadcast colours">
+        <span class="sw"><i style="background:#070B10"></i>Glass</span><span class="sw"><i style="background:#9DFFB8"></i>Phosphor</span><span class="sw"><i style="background:#FFB000"></i>Amber</span><span class="sw"><i style="background:#E3262B"></i>Bar red</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band ob" id="one-bit">
+  <div class="bandhead">
+    <div>
+      <h2>One bit</h2>
+      <p>Two colours and nothing between: black and white, with tone made from dither patterns, hard square shadows and striped title bars, like the first computers with a mouse. The one colour allowed is the studio's red pencil, for the main action. Then the photos arrive in full colour.</p>
+    </div>
+    <div class="sides" role="group" aria-label="One bit side">
+      <button type="button" data-side="ink" aria-pressed="true">Ink</button>
+      <button type="button" data-side="chalk" aria-pressed="false">Chalk</button>
+    </div>
+  </div>
+  <div class="stage ink">
+    <div class="phones"></div>
+    <div class="notes">
+      <div class="note"><b>Everything else is grey</b>Islands, shadows and the sea are drawn with ordered dither, a checkerboard of black and white, so the colour photos are the only colour on screen.</div>
+      <div class="note"><b>Ink and Chalk</b>Ink is black on white. Chalk swaps them: white on black, like a slate. The red pencil stays red on both.</div>
+      <div class="note"><b>Type</b>Pixelify Sans for titles, square and crisp; the house sans, unsmoothed, for reading.</div>
+      <div class="swatches" aria-label="One bit colours">
+        <span class="sw"><i style="background:#000"></i>Black</span><span class="sw"><i style="background:#fff"></i>White</span><span class="sw"><i style="background:#D4432A"></i>Pencil</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="picker" id="choosing">
+  <div>
+    <h2>Choosing one</h2>
+    <p>Settings → Look gets the theme above the light and dark choice. The names of the two sides change with the theme, and Auto follows the phone. It changes as you tap, with no restart.</p>
+    <p>Each theme comes with its own island drawings and its own shutter. Album pages, prints and every photo stay where they are.</p>
+  </div>
+  <div class="settings" aria-label="Settings, Look">
+    <h3>Look</h3>
+    <div class="themes" role="group" aria-label="Theme">
+      <button type="button" class="tcard" data-theme-pick="riso" aria-pressed="true"><span class="chips"><i style="background:#EDEDE9"></i><i style="background:#3255A4"></i><i style="background:#FF48B0"></i><i style="background:#D4432A"></i></span><b>Riso</b><small>Spot inks on paper</small></button>
+      <button type="button" class="tcard" data-theme-pick="ir" aria-pressed="false"><span class="chips"><i style="background:#F6ECEE"></i><i style="background:#D3164F"></i><i style="background:#FF4F9A"></i><i style="background:#00A7BC"></i></span><b>Infrared</b><small>False-colour film</small></button>
+      <button type="button" class="tcard" data-theme-pick="crt" aria-pressed="false"><span class="chips"><i style="background:#070B10"></i><i style="background:#9DFFB8"></i><i style="background:#FFB000"></i><i style="background:#E3262B"></i></span><b>Night broadcast</b><small>Phosphor and scanlines</small></button>
+      <button type="button" class="tcard" data-theme-pick="ob" aria-pressed="false"><span class="chips"><i style="background:#fff"></i><i style="background:#000"></i><i style="background:#888;background-image:var(--dither-demo)"></i><i style="background:#D4432A"></i></span><b>One bit</b><small>Black, white, dither</small></button>
+    </div>
+    <div class="lookrow" aria-label="Light or dark"><span class="on">Auto</span><span id="lightname">Paper</span><span id="darkname">Midnight</span></div>
+  </div>
+</section>
+
+<section class="next" id="next">
+  <div>
+    <div class="hand">after the themes</div>
+    <h2>Album materials and the page curl</h2>
+    <p>Materials are about what an album is made of, separate from the app's theme: a theme is the room, a material is the album you pick up in it. Any album can be any material. Three to start with, sketched here:</p>
+  </div>
+  <div class="mats">
+    <div class="mat"><canvas id="m-shoebox" width="520" height="440" aria-label="A shoebox of loose prints"></canvas><div><b>Shoebox</b><p>A loose pile instead of pages. Push prints around with your finger, pick one up, flip it to read the back. For the box of photos nobody ever stuck in.</p></div></div>
+    <div class="mat"><canvas id="m-slides" width="520" height="440" aria-label="A carousel slide tray"></canvas><div><b>Slide tray</b><p>A round projector tray of slides in card mounts. Swipe and it clicks round to the next, the photo thrown big on the wall.</p></div></div>
+    <div class="mat"><canvas id="m-leather" width="520" height="440" aria-label="A leather-bound album with a stamped title"></canvas><div><b>Leather-bound</b><p>A heavy cover with the title stamped into it, black pages, prints held by little paper corners. The pages turn with a real curl.</p></div></div>
+  </div>
+  <div class="ask">
+    <b>What I'd like from you</b>
+    <ol>
+      <li>Which of the three themes to build, and whether the light and dark names work for you.</li>
+      <li>Anything in a theme you'd change: a colour, the font, the islands.</li>
+      <li>Which album material comes first, and whether the real page curl should come with it.</li>
+    </ol>
+  </div>
+</section>
+</main>
+
+<script>
+const PHOTOS = %%PHOTOS%%;
+const KEYS = Object.keys(PHOTOS);
+const imgs = {};
+function load(k){ if(!imgs[k]) imgs[k]=new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=PHOTOS[k];}); return imgs[k]; }
+function cover(ctx,img,x,y,w,h){ const s=Math.max(w/img.width,h/img.height),dw=img.width*s,dh=img.height*s; ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh);ctx.restore(); }
+function rnd(seed){ let s=seed*9301+49297; return ()=>{ s=(s*9301+49297)%233280; return s/233280; }; }
+function css(el,name){ return getComputedStyle(el).getPropertyValue(name).trim(); }
+
+const ALBUMS=[
+  {t:"Nani's red album",m:"1978 · 42 photos",p:"tree"},
+  {t:"Shimla, summer 87",m:"1987 · 31 photos",p:"village"},
+  {t:"Holi at home",m:"1994 · 18 photos",p:"fire"},
+];
+
+/* ---------- Screens, as HTML ---------- */
+function statusbar(){ return '<div class="status"><span>9:41</span><span>●●● ▮</span></div>'; }
+function tabs(on){ return '<div class="tabs">'+["Scan","Albums","People","Timeline"].map(t=>'<span class="'+(t===on?'on':'')+'">'+t+'</span>').join('')+'</div>'; }
+function extras(theme){
+  if(theme==='crt') return '<div class="bars"><i style="background:#C0C0C0"></i><i style="background:#C0C000"></i><i style="background:#00C0C0"></i><i style="background:#00C000"></i><i style="background:#C000C0"></i><i style="background:#C00000"></i><i style="background:#0000C0"></i></div>';
+  if(theme==='ob') return '<div class="titlebar" aria-hidden="true"></div>';
+  return '';
+}
+function albumsScreen(theme){
+  return statusbar()+'<div class="bar"><div class="title">Albums</div><span>⋮</span></div>'+extras(theme)+
+    '<div class="layout"><span class="on">Path</span><span>Ring</span><span>Map</span></div>'+
+    '<div class="body"><canvas class="world" data-world="'+theme+'"></canvas>'+
+    '<div class="isl-label" style="left:150px;top:96px">'+ALBUMS[0].t+'<small>'+ALBUMS[0].m+'</small></div>'+
+    '<div class="isl-label" style="left:18px;top:248px">'+ALBUMS[1].t+'<small>'+ALBUMS[1].m+'</small></div>'+
+    '<div class="isl-label" style="left:150px;top:392px">'+ALBUMS[2].t+'<small>'+ALBUMS[2].m+'</small></div>'+
+    '</div>'+tabs("Albums");
+}
+function pageScreen(theme){
+  const p=(k,l,t,w,h,r)=>'<div class="print" style="left:'+l+'px;top:'+t+'px;width:'+w+'px;height:'+h+'px;transform:rotate('+r+'deg)"><img alt="" data-src="'+k+'"></div>';
+  return statusbar()+'<div class="bar"><span class="back">←</span><div class="title" style="font-size:calc(var(--tsize,27px) * .8)">Shimla, summer 87</div><span class="main-btn" style="padding:6px 12px;font-size:12px">Scan here</span></div>'+extras(theme)+
+    '<div class="body"><div class="sheet">'+p('village',16,18,120,150,-2)+p('road',132,30,98,128,1.5)+p('hiker',22,200,104,138,1)+p('cat',136,190,96,96,-1.5)+
+    '</div><div class="pageline">Page 3 of 14</div></div>';
+}
+function photoScreen(theme){
+  return statusbar()+'<div class="bar"><span class="back">←</span><div class="title" style="font-size:calc(var(--tsize,27px) * .75)">14 Jul 1987</div><span>⋮</span></div>'+extras(theme)+
+    '<div class="body"><div class="bigprint"><img alt="" data-src="village"></div>'+
+    '<div class="rows"><div class="row"><span class="k">When</span><span class="v">14 Jul 1987</span></div>'+
+    '<div class="row"><span class="k">Who</span><span class="v">Nani, Ravi</span></div>'+
+    '<div class="row"><span class="k">Where</span><span class="v">Shimla</span></div>'+
+    '<div class="row"><span class="k">Look</span><span class="chiprow"><span class="chip">Original</span><span class="chip on">Natural</span><span class="chip">Strong</span></span></div></div></div>';
+}
+function camScreen(theme){
+  const fp=(k,l,t,w,h)=>'<div class="fp" style="left:'+l+'%;top:'+t+'%;width:'+w+'%;height:'+h+'%"><img alt="" data-src="'+k+'"></div>'+corners(l,t,w,h);
+  return statusbar()+'<div class="cam"><div class="album">'+ALBUMS[0].t+' ▾</div><div class="finder"><div class="pg"></div>'+
+    fp('tree',8,7,46,40)+fp('dog',58,10,36,34)+fp('lake',12,54,78,38)+
+    '</div><div class="statusline">Hold still</div><div class="modes"><span class="on">Prints</span><span>Glare-free</span><span>Film</span></div>'+
+    '<div class="shutterrow"><div class="pile"><img alt="" data-src="hiker" style="transform:rotate(-8deg)"><img alt="" data-src="cat" style="transform:rotate(5deg)"></div><canvas class="shutter" width="168" height="168" data-shutter="'+theme+'"></canvas><div class="details">Details</div></div></div>';
+}
+function corners(l,t,w,h){
+  const c=(x,y,b)=>'<span class="corner" style="left:calc('+x+'% - 4px);top:calc('+y+'% - 4px);'+b+'"></span>';
+  return c(l,t,'border-left-width:3px;border-top-width:3px')+c(l+w-3,t,'border-right-width:3px;border-top-width:3px;transform:translateX(-8px)')+
+    c(l,t+h-3,'border-left-width:3px;border-bottom-width:3px;transform:translateY(-8px)')+c(l+w-3,t+h-3,'border-right-width:3px;border-bottom-width:3px;transform:translate(-8px,-8px)');
+}
+
+/* ---------- Islands, one way per theme ---------- */
+const SPOTS=[[0.27,0.20],[0.73,0.50],[0.27,0.80]];
+async function drawWorld(cv){
+  const theme=cv.dataset.world, scr=cv.closest('.screen');
+  const W=cv.clientWidth,H=cv.clientHeight,dpr=2; cv.width=W*dpr; cv.height=H*dpr;
+  const gen=(cv._gen||0)+1; cv._gen=gen;
+  for(let i=0;i<3;i++) await load(ALBUMS[i].p);
+  if(cv._gen!==gen) return;
+  const g=cv.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const col=n=>css(scr,n);
+  // The path between the islands.
+  g.save(); g.setLineDash(theme==='ob'?[2,4]:[3,7]); g.lineWidth=2; g.strokeStyle=theme==='ir'?col('--crimson'):theme==='crt'?col('--phos'):col('--fg'); g.globalAlpha=.55;
+  g.beginPath(); SPOTS.forEach(([x,y],i)=>{ const X=x*W,Y=y*H; i?g.lineTo(X,Y):g.moveTo(X,Y); }); g.stroke(); g.restore();
+  if(theme==='crt') drawStatic(g,W,H,col);
+  for(let i=0;i<3;i++){
+    const [x,y]=SPOTS[i], img=await load(ALBUMS[i].p);
+    if(theme==='ir') irIsland(g,x*W,y*H,img,i,col); else if(theme==='crt') tvIsland(g,x*W,y*H,img,i,col); else obIsland(g,x*W,y*H,img,i,col);
+  }
+}
+function irIsland(g,cx,cy,img,seed,col){
+  const r=rnd(seed+3);
+  // Cyan water around it, then crimson land, then a forest of crimson and magenta crowns.
+  g.save(); g.shadowColor=col('--glow'); g.shadowBlur=22;
+  g.fillStyle=col('--cyan'); g.globalAlpha=.28; g.beginPath(); g.ellipse(cx,cy+26,74,26,0,0,7); g.fill();
+  g.globalAlpha=1; g.fillStyle=col('--crimson'); g.beginPath(); g.ellipse(cx,cy+20,60,19,0,0,7); g.fill(); g.restore();
+  for(let k=0;k<16;k++){ const a=r()*Math.PI, d=0.35+r()*0.65; const x=cx+Math.cos(a)*56*d*(r()<.5?-1:1), y=cy+12-r()*10;
+    g.save(); g.shadowColor=col('--glow'); g.shadowBlur=10; g.fillStyle=[col('--crimson'),col('--magenta'),'#B0103F'][k%3];
+    g.beginPath(); g.arc(x,y,7+r()*7,0,7); g.fill(); g.restore(); }
+  // The cover photo, a print standing in the trees: its own colours.
+  printCard(g,cx-32,cy-56,64,62,-3+seed*3,img,'#fff8f6',col('--glow'),14);
+  g.fillStyle=col('--sulphur'); g.beginPath(); g.arc(cx+44,cy-50,5,0,7); g.fill();
+}
+function tvIsland(g,cx,cy,img,seed,col){
+  // A little set on a cabinet, rabbit ears up, the cover photo on its screen.
+  g.save(); g.strokeStyle=col('--fg'); g.lineWidth=2; g.globalAlpha=.85;
+  g.beginPath(); g.moveTo(cx,cy-46); g.lineTo(cx-24-seed*3,cy-82); g.moveTo(cx,cy-46); g.lineTo(cx+22,cy-80); g.stroke();
+  g.fillStyle=col('--fg'); g.beginPath(); g.arc(cx-24-seed*3,cy-82,3,0,7); g.arc(cx+22,cy-80,3,0,7); g.fill(); g.restore();
+  g.fillStyle='#24262c'; round(g,cx-52,cy-46,104,80,12); g.fill();
+  g.fillStyle='#2f3138'; g.fillRect(cx-40,cy+34,80,10); g.fillRect(cx-36,cy+44,6,10); g.fillRect(cx+30,cy+44,6,10);
+  g.save(); round(g,cx-44,cy-38,76,62,14); g.clip(); cover(g,img,cx-44,cy-38,76,62); g.restore();
+  g.save(); g.shadowColor=col('--phos'); g.shadowBlur=16; g.strokeStyle=col('--phos'); g.globalAlpha=.6; g.lineWidth=1.5; round(g,cx-44,cy-38,76,62,14); g.stroke(); g.restore();
+  g.fillStyle=col('--accent'); g.beginPath(); g.arc(cx+42,cy-26,4,0,7); g.fill();
+  g.fillStyle='#55585f'; for(let k=0;k<3;k++){ g.fillRect(cx+38,cy-12+k*8,9,3); }
+}
+function drawStatic(g,W,H,col){ const r=rnd(11); g.save(); g.fillStyle=col('--phos'); for(let k=0;k<160;k++){ g.globalAlpha=r()*.18; g.fillRect(r()*W,r()*H,1.5,1.5);} g.restore(); }
+function obIsland(g,cx,cy,img,seed,col){
+  const fg=col('--fg'),bg=col('--bg'); const r=rnd(seed+5);
+  // Land filled with an ordered dither, outlined hard; dithered trees; a hard shadow under the print.
+  const pat=ditherPattern(g,fg,bg,seed%2?2:1);
+  g.save(); g.fillStyle=pat; g.beginPath(); blob(g,cx,cy+18,64,20,r); g.fill(); g.lineWidth=2; g.strokeStyle=fg; g.stroke(); g.restore();
+  for(let k=0;k<5;k++){ const x=cx-50+k*24+r()*8, y=cy+14-r()*4; g.fillStyle=fg; g.beginPath(); g.moveTo(x,y-22); g.lineTo(x-8,y); g.lineTo(x+8,y); g.closePath(); g.fill(); }
+  g.fillStyle=fg; g.fillRect(cx-30+4,cy-60+4,64,60);
+  g.fillStyle='#fff'; g.fillRect(cx-30,cy-60,64,60); g.lineWidth=2; g.strokeStyle=fg; g.strokeRect(cx-30,cy-60,64,60);
+  cover(g,img,cx-26,cy-56,56,52);
+}
+function ditherPattern(g,fg,bg,level){
+  const c=document.createElement('canvas'); c.width=c.height=4; const x=c.getContext('2d'); x.fillStyle=bg; x.fillRect(0,0,4,4); x.fillStyle=fg;
+  const bayer=[[0,8,2,10],[12,4,14,6],[3,11,1,9],[15,7,13,5]]; const th=level===2?6:4;
+  for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(bayer[i][j]<th) x.fillRect(i,j,1,1);
+  return g.createPattern(c,'repeat');
+}
+function blob(g,cx,cy,rx,ry,r){ const n=12; for(let k=0;k<=n;k++){ const a=k/n*Math.PI*2, d=0.86+r()*0.22; const x=cx+Math.cos(a)*rx*d, y=cy+Math.sin(a)*ry*d; k?g.lineTo(x,y):g.moveTo(x,y);} g.closePath(); }
+function round(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function printCard(g,x,y,w,h,rot,img,white,glow,blur){
+  g.save(); g.translate(x+w/2,y+h/2); g.rotate(rot*Math.PI/180); g.shadowColor=glow; g.shadowBlur=blur; g.fillStyle=white; g.fillRect(-w/2,-h/2,w,h); g.shadowBlur=0;
+  cover(g,img,-w/2+4,-h/2+4,w-8,h-8); g.restore();
+}
+
+/* ---------- Shutters ---------- */
+function drawShutter(cv){
+  const theme=cv.dataset.shutter, scr=cv.closest('.screen'), col=n=>css(scr,n);
+  const g=cv.getContext('2d'); g.setTransform(2,0,0,2,0,0); g.clearRect(0,0,84,84); const c=42,r=27;
+  if(theme==='ir'){
+    g.save(); g.shadowColor=col('--glow'); g.shadowBlur=18; g.fillStyle=col('--crimson'); g.beginPath(); g.arc(c,c,r,0,7); g.fill(); g.restore();
+    g.strokeStyle=col('--cyan'); g.lineWidth=3; g.lineCap='round'; g.beginPath(); g.arc(c,c,r+8,-Math.PI/2,-Math.PI/2+Math.PI*1.3); g.stroke();
+  } else if(theme==='crt'){
+    g.save(); g.shadowColor=col('--accent'); g.shadowBlur=20; g.fillStyle=col('--accent'); g.beginPath(); g.arc(c,c,r,0,7); g.fill(); g.restore();
+    g.fillStyle='rgba(0,0,0,.18)'; for(let y=c-r;y<c+r;y+=3) g.fillRect(c-r,y,2*r,1);
+    g.strokeStyle=col('--fg'); g.lineWidth=2; g.setLineDash([4,4]); g.beginPath(); g.arc(c,c,r+8,0,7); g.stroke();
+  } else {
+    const fg=col('--fg'); g.fillStyle=fg; g.beginPath(); g.arc(c+4,c+4,r,0,7); g.fill();
+    g.fillStyle=col('--accent'); g.beginPath(); g.arc(c,c,r,0,7); g.fill(); g.lineWidth=2.5; g.strokeStyle=fg; g.stroke();
+    g.setLineDash([3,3]); g.lineWidth=2; g.beginPath(); g.arc(c,c,r+9,-Math.PI/2,-Math.PI/2+Math.PI*1.3); g.stroke();
+  }
+}
+
+/* ---------- Build the bands ---------- */
+const BANDS={ir:['bloom','safelight'],crt:['testcard','latenight'],ob:['ink','chalk']};
+const CAPS=[["albums","Albums, down a path"],["page","An album page"],["photo","A photo"],["cam","The camera"]];
+function fillImages(root){ root.querySelectorAll('img[data-src]').forEach(el=>{ el.src=PHOTOS[el.dataset.src]; }); }
+function build(band,theme,side){
+  const holder=band.querySelector('.phones'); holder.innerHTML='';
+  for(const [kind,cap] of CAPS){
+    const html=kind==='albums'?albumsScreen(theme):kind==='page'?pageScreen(theme):kind==='photo'?photoScreen(theme):camScreen(theme);
+    const w=document.createElement('figure'); w.className='phone-wrap'; w.style.margin='0';
+    w.innerHTML='<div class="phone"><div class="screen '+side+'">'+html+'</div></div><figcaption class="cap">'+cap+'</figcaption>';
+    holder.appendChild(w);
+  }
+  fillImages(holder);
+  requestAnimationFrame(()=>{ holder.querySelectorAll('canvas.world').forEach(drawWorld); holder.querySelectorAll('canvas.shutter').forEach(drawShutter); });
+}
+for(const [theme,sides] of Object.entries(BANDS)){
+  const band=document.querySelector('.band.'+theme), stage=band.querySelector('.stage');
+  build(band,theme,sides[0]);
+  band.querySelectorAll('.sides button').forEach(b=>b.addEventListener('click',()=>{
+    band.querySelectorAll('.sides button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    sides.forEach(s=>stage.classList.toggle(s,s===b.dataset.side)); build(band,theme,b.dataset.side);
+  }));
+}
+document.fonts && document.fonts.ready.then(()=>document.querySelectorAll('canvas.world').forEach(drawWorld));
+
+/* ---------- The Look picker ---------- */
+const NAMES={riso:['Paper','Midnight'],ir:['Bloom','Safelight'],crt:['Test card','Late night'],ob:['Ink','Chalk']};
+document.querySelectorAll('.tcard').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tcard').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  const [l,d]=NAMES[b.dataset.themePick]; document.getElementById('lightname').textContent=l; document.getElementById('darkname').textContent=d;
+}));
+
+/* ---------- Materials, sketched in Riso ---------- */
+(async function(){
+  const INK='#1D1E22',RED='#D4432A',BLUE='#3255A4',PAPER='#EDEDE9';
+  function dots(g,x,y,w,h,col){ g.save(); g.fillStyle=col; for(let i=x;i<x+w;i+=6) for(let j=y;j<y+h;j+=6){ g.beginPath(); g.arc(i,j,1.6,0,7); g.fill(); } g.restore(); }
+  // Shoebox
+  { const cv=document.getElementById('m-shoebox'), g=cv.getContext('2d'); g.fillStyle=PAPER; g.fillRect(0,0,520,440);
+    dots(g,96,214,350,170,'rgba(29,30,34,.45)');
+    g.fillStyle='#C9A27A'; g.fillRect(80,200,350,170); g.lineWidth=4; g.strokeStyle=INK; g.strokeRect(80,200,350,170);
+    g.fillStyle='#B48A5A'; g.fillRect(80,200,350,26); g.strokeRect(80,200,350,26);
+    const ks=['tree','dog','lake','fire','hiker','cat','road']; const r=rnd(4);
+    for(let i=0;i<ks.length;i++){ const img=await load(ks[i]); const x=110+r()*230, y=60+r()*140, w=110, h=80; g.save(); g.translate(x+w/2,y+h/2); g.rotate((r()-.5)*0.8);
+      g.fillStyle='#000'; g.globalAlpha=.25; g.fillRect(-w/2+5,-h/2+5,w,h); g.globalAlpha=1; g.fillStyle='#F4F2ED'; g.fillRect(-w/2,-h/2,w,h); cover(g,img,-w/2+6,-h/2+6,w-12,h-12); g.restore(); }
+    g.fillStyle='#C9A27A'; g.fillRect(80,260,350,110); g.strokeRect(80,260,350,110);
+    g.font='700 40px "Reenie Beanie"'; g.fillStyle=RED; g.fillText('photos, 70s–80s',150,326);
+  }
+  // Slide tray
+  { const cv=document.getElementById('m-slides'), g=cv.getContext('2d'); g.fillStyle=PAPER; g.fillRect(0,0,520,440);
+    const cx=170,cy=250; dots(g,cx-150,cy-130,300,280,'rgba(50,85,164,.35)');
+    g.fillStyle='#2b2d33'; g.beginPath(); g.ellipse(cx,cy,140,120,0,0,7); g.fill(); g.fillStyle=PAPER; g.beginPath(); g.ellipse(cx,cy,48,40,0,0,7); g.fill(); g.lineWidth=4; g.strokeStyle=INK; g.stroke();
+    const ks=['tree','dog','lake','fire','hiker','cat','road','village'];
+    for(let i=0;i<14;i++){ const a=i/14*Math.PI*2; const x=cx+Math.cos(a)*94, y=cy+Math.sin(a)*80; g.save(); g.translate(x,y); g.rotate(a+Math.PI/2); g.fillStyle='#F4F2ED'; g.fillRect(-14,-11,28,22); g.restore(); }
+    const img=await load('lake'); g.fillStyle='#F4F2ED'; g.fillRect(300,70,190,150); g.lineWidth=4; g.strokeStyle=INK; g.strokeRect(300,70,190,150); cover(g,img,318,88,154,114);
+    g.strokeStyle=RED; g.lineWidth=3; g.setLineDash([6,6]); g.beginPath(); g.moveTo(cx+60,cy-70); g.lineTo(300,150); g.stroke(); g.setLineDash([]);
+    g.font='700 34px "Reenie Beanie"'; g.fillStyle=RED; g.fillText('click, next',330,262);
+  }
+  // Leather
+  { const cv=document.getElementById('m-leather'), g=cv.getContext('2d'); g.fillStyle=PAPER; g.fillRect(0,0,520,440);
+    dots(g,130,70,280,330,'rgba(29,30,34,.45)');
+    g.fillStyle='#5A2E22'; g.fillRect(110,50,280,330); g.lineWidth=4; g.strokeStyle=INK; g.strokeRect(110,50,280,330);
+    g.fillStyle='#4A251B'; g.fillRect(110,50,34,330); g.strokeRect(110,50,34,330);
+    g.strokeStyle='#C9A24A'; g.lineWidth=2; g.strokeRect(164,72,206,286);
+    g.fillStyle='#C9A24A'; g.font='800 30px Anybody'; g.textAlign='center'; g.fillText('Our family',267,160); g.font='500 18px "Instrument Sans"'; g.fillText('1962 – 1989',267,190);
+    const img=await load('village'); g.fillStyle='#F4F2ED'; g.fillRect(212,218,110,90); cover(g,img,219,225,96,76);
+    g.fillStyle=INK; [[212,218],[322,218],[212,308],[322,308]].forEach(([x,y],i)=>{ g.beginPath(); const sx=i%2?-1:1, sy=i>1?-1:1; g.moveTo(x,y); g.lineTo(x+18*sx,y); g.lineTo(x,y+18*sy); g.closePath(); g.fill(); });
+    g.textAlign='left'; g.font='700 30px "Reenie Beanie"'; g.fillStyle=RED; g.fillText('stamped in gold',360,420);
+  }
+})();
+</script>
+</body>
+</html>
