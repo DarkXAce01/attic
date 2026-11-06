@@ -11,6 +11,8 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 **Scan**
 - Live outlines around every print in view (several per album page). They lock and freeze once you hold
   still; the shutter ring fills, then it captures by itself and waits for the next page
+- The Look: Paper by day, Midnight at night, or Auto to follow the phone (Settings). The camera
+  screen follows it too
 - Calm like a camera app: the album's name at the top, three modes above the shutter (Prints,
   Glare-free, Film), and everything else (taking it by itself, checking each shot, files) behind one
   button. Prints in view get grease-pencil corners, red once held steady

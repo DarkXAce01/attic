@@ -4,6 +4,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -19,18 +23,24 @@ import io.github.darkxace01.attic.R
  * marks and the one main action on a screen. The photos themselves are never touched.
  */
 object Palette {
-    /** Riso paper: cool and plain. */
-    val Ground = Color(0xFFEDEDE9)
-    val Surface = Color(0xFFE2E2DD)
-    val SurfaceHigh = Color(0xFFD4D4CE)
-    /** Riso black: all text. */
-    val Ink = Color(0xFF1D1E22)
-    val Muted = Color(0xFF5F6068)
-    /** Grease pencil. */
-    val Accent = Color(0xFFD4432A)
+    /**
+     * Midnight: the same print shop at night, pale ink on a deep blue paper. Every colour below follows
+     * it, and anything drawn with them is redrawn when it changes.
+     */
+    var dark by mutableStateOf(false)
+
+    /** Riso paper: cool and plain (Paper); a midnight-blue sheet (Midnight). */
+    val Ground get() = if (dark) Color(0xFF14172E) else Color(0xFFEDEDE9)
+    val Surface get() = if (dark) Color(0xFF1C2040) else Color(0xFFE2E2DD)
+    val SurfaceHigh get() = if (dark) Color(0xFF282D56) else Color(0xFFD4D4CE)
+    /** The ink all text is printed in: Riso black on paper, a warm pale ink on midnight. */
+    val Ink get() = if (dark) Color(0xFFEEEAE0) else Color(0xFF1D1E22)
+    val Muted get() = if (dark) Color(0xFFA3A6C4) else Color(0xFF5F6068)
+    /** Grease pencil: the studio red, a touch brighter on dark. */
+    val Accent get() = if (dark) Color(0xFFE5553A) else Color(0xFFD4432A)
     val OnAccent = Color(0xFFFFFFFF)
-    val Warning = Color(0xFFB3261E)
-    /** The photo's own white border, when a print is shown as an object. */
+    val Warning get() = if (dark) Color(0xFFFF7A6B) else Color(0xFFB3261E)
+    /** The photo's own white border, when a print is shown as an object: a print is white in any light. */
     val PrintWhite = Color(0xFFF4F2ED)
 }
 
@@ -87,23 +97,26 @@ val HandStyle = TextStyle(fontFamily = Fonts.Hand, fontSize = 26.sp, lineHeight 
 
 @Composable
 fun AtticTheme(content: @Composable () -> Unit) {
+    val d = Palette.dark
+    val scheme = if (d) darkColorScheme(
+        primary = Palette.Accent, onPrimary = Palette.OnAccent,
+        background = Palette.Ground, onBackground = Palette.Ink,
+        surface = Palette.Surface, onSurface = Palette.Ink,
+        surfaceVariant = Palette.SurfaceHigh, onSurfaceVariant = Palette.Muted,
+        surfaceContainer = Palette.Surface, surfaceContainerLow = Palette.Surface,
+        surfaceContainerHigh = Palette.SurfaceHigh, surfaceContainerHighest = Palette.SurfaceHigh,
+        outline = Palette.SurfaceHigh, error = Palette.Warning,
+    ) else lightColorScheme(
+        primary = Palette.Accent, onPrimary = Palette.OnAccent,
+        background = Palette.Ground, onBackground = Palette.Ink,
+        surface = Palette.Surface, onSurface = Palette.Ink,
+        surfaceVariant = Palette.SurfaceHigh, onSurfaceVariant = Palette.Muted,
+        surfaceContainer = Palette.Surface, surfaceContainerLow = Palette.Surface,
+        surfaceContainerHigh = Palette.SurfaceHigh, surfaceContainerHighest = Palette.SurfaceHigh,
+        outline = Palette.SurfaceHigh, error = Palette.Warning,
+    )
     MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Palette.Accent,
-            onPrimary = Palette.OnAccent,
-            background = Palette.Ground,
-            onBackground = Palette.Ink,
-            surface = Palette.Surface,
-            onSurface = Palette.Ink,
-            surfaceVariant = Palette.SurfaceHigh,
-            onSurfaceVariant = Palette.Muted,
-            surfaceContainer = Palette.Surface,
-            surfaceContainerLow = Palette.Surface,
-            surfaceContainerHigh = Palette.SurfaceHigh,
-            surfaceContainerHighest = Palette.SurfaceHigh,
-            outline = Palette.SurfaceHigh,
-            error = Palette.Warning,
-        ),
+        colorScheme = scheme,
         typography = AtticTypography,
         content = content,
     )

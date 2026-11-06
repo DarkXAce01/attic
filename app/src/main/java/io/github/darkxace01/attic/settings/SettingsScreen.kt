@@ -29,6 +29,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -72,6 +76,11 @@ fun SettingsScreen(onBack: () -> Unit, onLightbox: () -> Unit = {}) {
                 .padding(horizontal = 20.dp)
                 .navigationBarsPadding(),
         ) {
+            Heading("Look")
+            Text("Paper by day, Midnight at night, or Auto to follow the phone.", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+            Spacer(Modifier.height(10.dp))
+            InkChoice(listOf("auto" to "Auto", "paper" to "Paper", "midnight" to "Midnight"), prefs.look) { l -> library.settings.update { it.copy(look = l) } }
+
             Heading("New scans")
             Text("How new scans look at first. You can change any photo later.", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
             Spacer(Modifier.height(10.dp))
@@ -288,6 +297,33 @@ private fun LicencesSheet(onDismiss: () -> Unit) {
                 Spacer(Modifier.height(14.dp))
                 Text(name, style = MaterialTheme.typography.bodyLarge, color = Palette.Ink)
                 Text(what, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
+            }
+        }
+    }
+}
+
+/** A few choices in a row, in ink: the chosen one printed solid, like label tape. */
+@Composable
+private fun InkChoice(options: List<Pair<String, String>>, chosen: String, onChoose: (String) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .border(1.5.dp, Palette.Ink, androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .padding(4.dp),
+    ) {
+        for ((key, label) in options) {
+            val on = key == chosen
+            Box(
+                Modifier
+                    .weight(1f)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(9.dp))
+                    .background(if (on) Palette.Ink else Palette.Ground)
+                    .clickable(enabled = !on) { onChoose(key) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, style = MaterialTheme.typography.labelLarge, color = if (on) Palette.Ground else Palette.Ink)
             }
         }
     }

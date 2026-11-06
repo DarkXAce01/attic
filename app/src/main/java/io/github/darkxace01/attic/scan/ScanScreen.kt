@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -74,11 +75,10 @@ import io.github.darkxace01.attic.ui.theme.Fonts
 import io.github.darkxace01.attic.ui.theme.Palette
 import kotlin.math.abs
 
-/** The frame round the camera: Riso black, so the picture is the brightest thing on screen. */
-private val Frame = Palette.Ink
-/** Paper-coloured text on the frame. */
-private val OnFrame = Palette.Ground
-private val OnFrameQuiet = Palette.Ground.copy(alpha = 0.55f)
+/** The frame round the camera: the page itself, Paper or Midnight, as the Look is. */
+private val Frame get() = Palette.Ground
+private val OnFrame get() = Palette.Ink
+private val OnFrameQuiet get() = Palette.Ink.copy(alpha = 0.55f)
 
 /** The three ways of scanning, like a camera's photo, video and portrait. */
 private enum class Mode(val label: String) { Prints("Prints"), GlareFree("Glare-free"), Film("Film") }
@@ -346,19 +346,35 @@ private fun Outlines(outlines: List<Outline>, modifier: Modifier) {
     }
 }
 
-/** Paper ring, pencil-red middle; the ring fills while it counts down to taking the shot by itself. */
+/**
+ * The shutter, printed: one pencil-red disc over a dot-screen shadow a little off register. Pressing it
+ * sinks the disc onto its shadow. While it counts down to taking the shot by itself, an ink arc fills
+ * round it; once every print in view is held, the disc swells a touch.
+ */
 @Composable
-private fun Shutter(enabled: Boolean, ready: Boolean, progress: Float, onClick: () -> Unit, modifier: Modifier) {
-    Box(modifier.size(78.dp).clip(CircleShape).clickable(enabled = enabled, onClick = onClick), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            val w = 3.5.dp.toPx()
-            val inset = w / 2
-            val arc = androidx.compose.ui.geometry.Size(size.width - w, size.height - w)
-            drawArc(OnFrame.copy(alpha = if (enabled) (if (progress > 0f) 0.35f else 1f) else 0.4f), 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(w))
-            if (progress > 0f) drawArc(Palette.Accent, -90f, 360f * progress, false, Offset(inset, inset), arc, style = Stroke(w))
+internal fun Shutter(enabled: Boolean, ready: Boolean, progress: Float, onClick: () -> Unit, modifier: Modifier) {
+    val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by press.collectIsPressedAsState()
+    val sink by androidx.compose.animation.core.animateFloatAsState(if (pressed) 1f else 0f, tween(90), label = "sink")
+    val swell by androidx.compose.animation.core.animateFloatAsState(if (ready) 1.06f else 1f, tween(220), label = "swell")
+    Canvas(
+        modifier
+            .size(84.dp)
+            .clip(CircleShape)
+            .clickable(interactionSource = press, indication = null, enabled = enabled, onClick = onClick),
+    ) {
+        val r = 29.dp.toPx()
+        val off = Offset(4.dp.toPx(), 4.dp.toPx())
+        drawCircle(io.github.darkxace01.attic.ui.theme.Riso.dots(Palette.Ink, 3.dp.toPx(), 0.6f), r, center + off)
+        drawCircle(if (enabled) Palette.Accent else Palette.Muted, r * swell, center + off * sink)
+        if (progress > 0f) {
+            val ring = r + 9.dp.toPx()
+            drawArc(
+                Palette.Ink, -90f, 360f * progress, false,
+                topLeft = Offset(center.x - ring, center.y - ring), size = androidx.compose.ui.geometry.Size(ring * 2, ring * 2),
+                style = Stroke(3.dp.toPx(), cap = StrokeCap.Round),
+            )
         }
-        val inner by androidx.compose.animation.core.animateDpAsState(if (ready) 64.dp else 60.dp, label = "shutter")
-        Box(Modifier.size(inner).clip(CircleShape).background(if (enabled) Palette.Accent else Palette.Muted))
     }
 }
 

@@ -37,7 +37,7 @@ fun Monogram(name: String, size: Dp, modifier: Modifier = Modifier) {
         }
         Text(
             name.trim().take(1).uppercase(),
-            color = if (ink.luminance() > 0.5f) Palette.Ink else Color.White,
+            color = if (ink.luminance() > 0.5f) Color(0xFF1D1E22) else Color.White,
             style = TextStyle(fontFamily = Fonts.Display, fontWeight = FontWeight(860), fontSize = (size.value * 0.44f).sp),
         )
     }

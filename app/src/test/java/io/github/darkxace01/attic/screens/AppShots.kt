@@ -183,6 +183,34 @@ class AppShots {
         )
     }
 
+    /** Runs [block] in Midnight, then back to Paper for the other shots. */
+    private fun midnight(block: () -> Unit) { Palette.dark = true; try { block() } finally { Palette.dark = false } }
+
+    @Test fun midnightAlbums() = midnight { seed(more = true); context.library.settings.update { it.copy(albumLayout = "ring") }; shot("mid_albums") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }
+    @Test fun midnightPrint() = midnight { val id = seed(); shot("mid_print") { io.github.darkxace01.attic.print.PrintScreen(id, {}, {}, {}, {}, {}) } }
+    @Test fun midnightTimeline() = midnight { seed(); shot("mid_timeline") { io.github.darkxace01.attic.timeline.TimelineScreen(onOpenPrint = {}) } }
+    @Test fun midnightSettings() = midnight { seed(); shot("mid_settings") { io.github.darkxace01.attic.settings.SettingsScreen(onBack = {}) } }
+
+    /** The shutter idle, ready and counting down, on Paper and on Midnight. */
+    @Test fun shutters() {
+        compose.setContent {
+            AtticTheme {
+                androidx.compose.foundation.layout.Column {
+                    for (dark in listOf(false, true)) {
+                        androidx.compose.foundation.layout.Row(Modifier.background(if (dark) androidx.compose.ui.graphics.Color(0xFF14172E) else androidx.compose.ui.graphics.Color(0xFFEDEDE9)).padding(androidx.compose.ui.unit.Dp(16f))) {
+                            Palette.dark = dark
+                            io.github.darkxace01.attic.scan.Shutter(true, false, 0f, {}, Modifier.padding(androidx.compose.ui.unit.Dp(8f)))
+                            io.github.darkxace01.attic.scan.Shutter(true, true, 0f, {}, Modifier.padding(androidx.compose.ui.unit.Dp(8f)))
+                            io.github.darkxace01.attic.scan.Shutter(true, false, 0.6f, {}, Modifier.padding(androidx.compose.ui.unit.Dp(8f)))
+                        }
+                    }
+                }
+            }
+        }
+        compose.onRoot().captureRoboImage("build/shots/app_shutters.png")
+        Palette.dark = false
+    }
+
     @Test fun welcome() { shot("welcome") { io.github.darkxace01.attic.AtticApp() } }
     @Test fun emptyAlbums() { shot("empty") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }
 }

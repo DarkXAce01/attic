@@ -27,6 +27,8 @@ data class Prefs(
     val phonePhotos: Boolean = false,
     /** How the albums are laid out: "path" (down the page), "ring" (a carousel) or "map" (an archipelago). */
     val albumLayout: String = "path",
+    /** The Look: "auto" (follows the phone), "paper" (light) or "midnight" (dark). */
+    val look: String = "auto",
 )
 
 class Settings(context: Context) {
@@ -47,6 +49,7 @@ class Settings(context: Context) {
         negatives = sp.getBoolean("negatives", false),
         phonePhotos = sp.getBoolean("phonePhotos", false),
         albumLayout = sp.getString("albumLayout", "path") ?: "path",
+        look = sp.getString("look", "auto") ?: "auto",
     )
 
     fun update(change: (Prefs) -> Prefs) {
@@ -63,6 +66,7 @@ class Settings(context: Context) {
             .putBoolean("negatives", p.negatives)
             .putBoolean("phonePhotos", p.phonePhotos)
             .putString("albumLayout", p.albumLayout)
+            .putString("look", p.look)
             .apply()
         _prefs.value = p
     }

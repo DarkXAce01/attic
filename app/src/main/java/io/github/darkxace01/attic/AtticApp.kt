@@ -122,7 +122,8 @@ fun AtticApp(incoming: android.net.Uri? = null, onIncomingDone: () -> Unit = {})
     }
 
     // The camera and the slideshow are dark: the phone's own bar icons go light there.
-    val dark = top == Route.Scan || top is Route.Slideshow || top == Route.Lightbox
+    // Midnight, the slideshow and the lightbox are dark: the phone's own bar icons go light there.
+    val dark = Palette.dark || top is Route.Slideshow || top == Route.Lightbox
     val view = androidx.compose.ui.platform.LocalView.current
     androidx.compose.runtime.LaunchedEffect(dark) {
         val window = (context as? android.app.Activity)?.window ?: return@LaunchedEffect
@@ -202,7 +203,7 @@ fun AtticApp(incoming: android.net.Uri? = null, onIncomingDone: () -> Unit = {})
             ) { r -> screen(r) }
         }
         if (top == Route.Scan || top == Route.Albums || top == Route.People || top == Route.Timeline) {
-            TabBar(top, dark = top == Route.Scan, onTab = ::tab)
+            TabBar(top, dark = false, onTab = ::tab)
         } else {
             Spacer(Modifier.navigationBarsPadding())
         }
@@ -309,17 +310,17 @@ private fun NoCamera(refused: Boolean, onAllow: () -> Unit) {
     Column(
         Modifier
             .fillMaxSize()
-            .background(Palette.Ink)
+            .background(Palette.Ground)
             .statusBarsPadding()
             .padding(24.dp),
         verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
     ) {
-        Text("Scanning needs the camera", style = MaterialTheme.typography.titleLarge, color = Palette.Ground)
+        Text("Scanning needs the camera", style = MaterialTheme.typography.titleLarge, color = Palette.Ink)
         Spacer(Modifier.height(10.dp))
         Text(
             if (refused) "It's turned off for Attic. Allow it in the phone's settings, under Permissions, then come back."
             else "Attic uses it only while this screen is open, and the pictures stay on your phone.",
-            style = MaterialTheme.typography.bodyLarge, color = Palette.Ground.copy(alpha = 0.7f),
+            style = MaterialTheme.typography.bodyLarge, color = Palette.Muted,
         )
         Spacer(Modifier.height(24.dp))
         PrimaryButton(if (refused) "Open settings" else "Allow camera", onClick = onAllow, modifier = Modifier.fillMaxWidth())
