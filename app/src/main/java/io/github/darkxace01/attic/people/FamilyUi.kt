@@ -204,6 +204,24 @@ private val FACE = 64.dp
  * The family tree around one person: a row for each generation, lines from parents down to their
  * children, couples joined. People with no photos yet are drawn faintly. Tap someone to go to them.
  */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MissingLine(missing: Family.Missing, byId: Map<Long, io.github.darkxace01.attic.data.PersonSummary>, onOpenPerson: (Long) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 8.dp)) {
+        for ((title, ids) in listOf("No photos yet" to missing.none, "Only one photo" to missing.one)) {
+            if (ids.isEmpty()) continue
+            Text(title, style = MaterialTheme.typography.labelLarge, color = Palette.Muted, modifier = Modifier.padding(top = 6.dp, bottom = 6.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (id in ids) byId[id]?.let { p -> io.github.darkxace01.attic.ui.Chip(p.name) { onOpenPerson(id) } }
+            }
+        }
+        Text(
+            "Someone else in the family may have these in their albums.",
+            style = MaterialTheme.typography.bodySmall, color = Palette.Muted, modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+}
+
 @Composable
 fun FamilyTreeScreen(rootId: Long?, onBack: () -> Unit, onOpenPerson: (Long) -> Unit) {
     val library = LocalContext.current.library
@@ -224,6 +242,9 @@ fun FamilyTreeScreen(rootId: Long?, onBack: () -> Unit, onOpenPerson: (Long) -> 
         }
         val layout = remember(root, rel) { Family.layout(root, rel) }
         val byId = people.associateBy { it.id }
+        // Who's missing: the relatives a cousin's or aunt's album might have photos of.
+        val missing = remember(layout, people) { Family.missing(layout, people.associate { it.id to it.count }) }
+        if (!missing.isEmpty) MissingLine(missing, byId, onOpenPerson)
         val minX = layout.values.minOf { it.x }
         val maxX = layout.values.maxOf { it.x }
         val minG = layout.values.minOf { it.generation }

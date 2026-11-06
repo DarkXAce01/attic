@@ -18,6 +18,16 @@ object Family {
         return Kin(parents, children, spouses, (said + shared).distinct())
     }
 
+    /** Who in the tree has no photos yet, and who has only one, each oldest generation first. */
+    data class Missing(val none: List<Long>, val one: List<Long>) {
+        val isEmpty get() = none.isEmpty() && one.isEmpty()
+    }
+
+    fun missing(layout: Map<Long, Spot>, photos: Map<Long, Int>): Missing {
+        val order = layout.keys.sortedWith(compareBy({ layout.getValue(it).generation }, { layout.getValue(it).x }))
+        return Missing(order.filter { (photos[it] ?: 0) == 0 }, order.filter { photos[it] == 1 })
+    }
+
     /** Where a person sits in the tree: their generation (0 is the person it's drawn for, parents -1) and place along it. */
     data class Spot(val generation: Int, val x: Float)
 

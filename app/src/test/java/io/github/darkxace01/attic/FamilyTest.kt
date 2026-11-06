@@ -42,3 +42,16 @@ class FamilyTest {
         assertTrue(abs(l.getValue(3).x - parentsMid) <= abs(l.getValue(5).x - parentsMid))
     }
 }
+
+class FamilyMissingTest {
+    @org.junit.Test
+    fun noneAndOneOldestGenerationFirst() {
+        val layout = mapOf(
+            1L to io.github.darkxace01.attic.people.Family.Spot(0, 0f), 2L to io.github.darkxace01.attic.people.Family.Spot(-1, 0f),
+            3L to io.github.darkxace01.attic.people.Family.Spot(-1, 1f), 4L to io.github.darkxace01.attic.people.Family.Spot(1, 0f),
+        )
+        val m = io.github.darkxace01.attic.people.Family.missing(layout, mapOf(1L to 12, 2L to 1, 4L to 0))
+        org.junit.Assert.assertEquals(listOf(3L, 4L), m.none)
+        org.junit.Assert.assertEquals(listOf(2L), m.one)
+    }
+}
