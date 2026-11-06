@@ -12,6 +12,7 @@ import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.Faces
 import io.github.darkxace01.attic.vision.Dust
 import io.github.darkxace01.attic.vision.Curl
+import io.github.darkxace01.attic.vision.Border
 import io.github.darkxace01.attic.vision.FaceGroups
 import io.github.darkxace01.attic.vision.DateStamp
 import io.github.darkxace01.attic.vision.PrintHash
@@ -436,7 +437,10 @@ class Library(private val context: Context) {
      * Remakes the crop from the untouched original with new corners (upright-original pixels). For a
      * glare-free print the other shots are cut the same way and merged again.
      */
-    suspend fun recrop(id: Long, quad: Quad) = io {
+    suspend fun recrop(id: Long, quad: Quad) = recrop(id, quad, border = null)
+
+    /** [recrop], with [border] as the outline to put a trimmed border back to (null: not trimmed). */
+    private suspend fun recrop(id: Long, quad: Quad, border: String?) = io {
         val p = dao.print(id) ?: return@io
         val original = loadUprightOriginal(p) ?: return@io
         val sweepFile = sweepFile(p)
@@ -473,14 +477,41 @@ class Library(private val context: Context) {
         val rehashed = withStamp(updated.copy(hashes = PrintHash.allTurns(flat).joinToString(",")), flat)
         flat.release()
         original.release()
-        dao.updatePrint(rehashed)
+        dao.updatePrint(rehashed.copy(borderQuad = border))
     }
 
     /** Turns the print a quarter turn clockwise by rotating its corners, so it's remade from the original. */
     suspend fun rotate(id: Long) {
         val p = io { dao.print(id) } ?: return
         val q = p.cropQuad
-        recrop(id, Quad(q.bl, q.tl, q.tr, q.br))
+        // A trimmed border turns with the print, so it can still be put back.
+        val border = p.borderQuad?.let(::parseQuad)?.let { b -> Quad(b.bl, b.tl, b.tr, b.br).encode() }
+        recrop(id, Quad(q.bl, q.tl, q.tr, q.br), border)
+    }
+
+    // ---- borders ----
+
+    /** The plain border round [p], if it has one (null once it's been trimmed). */
+    suspend fun borderOf(p: PrintEntity): Border.Inset? = io {
+        if (p.borderQuad != null) return@io null
+        val img = readPng(p.file(root)) ?: return@io null
+        runCatching { Border.find(img) }.getOrNull().also { img.release() }
+    }
+
+    /** Cuts the print down to the picture inside its border. Returns false if it has no border. */
+    suspend fun trimBorder(id: Long, unlessWritten: Boolean = false): Boolean {
+        val p = printNow(id) ?: return false
+        val inset = borderOf(p) ?: return false
+        if (unlessWritten && inset.writing) return false
+        recrop(id, Border.inner(p.cropQuad, inset), border = p.quad)
+        return true
+    }
+
+    /** Puts a trimmed border back. */
+    suspend fun restoreBorder(id: Long) {
+        val p = printNow(id) ?: return
+        val outer = p.borderQuad?.let(::parseQuad) ?: return
+        recrop(id, outer, border = null)
     }
 
     /** The original photo, turned upright, as an RGBA Mat. The caller releases it. */

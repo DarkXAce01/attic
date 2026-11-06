@@ -96,6 +96,12 @@ fun SettingsScreen(onBack: () -> Unit) {
             ) { on -> library.settings.update { it.copy(uncurl = on) } }
 
             Toggle(
+                "Trim plain borders",
+                "New scans are cut down to the picture inside a white or black border. A border with writing on it is kept. You can put any border back from the photo.",
+                prefs.trimBorders,
+            ) { on -> library.settings.update { it.copy(trimBorders = on) } }
+
+            Toggle(
                 "Clean up dust and hairs",
                 "Specks, hairs and small scratches are painted out of the Natural and Strong looks. Faces are left alone, and Original stays exactly as scanned. Changing this redoes every photo.",
                 prefs.cleanDust,

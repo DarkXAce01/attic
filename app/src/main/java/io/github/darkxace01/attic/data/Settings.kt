@@ -19,6 +19,8 @@ data class Prefs(
     val cleanDust: Boolean = true,
     /** Curled prints (bowed sides) are straightened when they're flattened. */
     val uncurl: Boolean = true,
+    /** New scans lose their plain borders (never one with writing on it). */
+    val trimBorders: Boolean = false,
 )
 
 class Settings(context: Context) {
@@ -35,6 +37,7 @@ class Settings(context: Context) {
         checkEachShot = sp.getBoolean("checkEachShot", true),
         cleanDust = sp.getBoolean("cleanDust", true),
         uncurl = sp.getBoolean("uncurl", true),
+        trimBorders = sp.getBoolean("trimBorders", false),
     )
 
     fun update(change: (Prefs) -> Prefs) {
@@ -47,6 +50,7 @@ class Settings(context: Context) {
             .putBoolean("checkEachShot", p.checkEachShot)
             .putBoolean("cleanDust", p.cleanDust)
             .putBoolean("uncurl", p.uncurl)
+            .putBoolean("trimBorders", p.trimBorders)
             .apply()
         _prefs.value = p
     }

@@ -77,6 +77,8 @@ data class PrintEntity(
     val stamp: String? = null,
     /** The [quad] the print's faces were found with; null or different: not looked for yet (or recropped since). */
     val facesQuad: String? = null,
+    /** While the print's border is trimmed off: its outline with the border, to put it back. */
+    val borderQuad: String? = null,
 ) {
     val date: PhotoDate? get() = photoDate(dateFrom, dateTo, dateLabel)
     /** The dates the stamp can mean: one, two when it reads both ways, none without a stamp. */
@@ -273,7 +275,7 @@ interface AtticDao {
 
 @Database(
     entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class, FaceEntity::class],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -281,7 +283,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -348,6 +350,13 @@ abstract class AtticDatabase : RoomDatabase() {
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_face_printId` ON `face` (`printId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_face_personId` ON `face` (`personId`)")
+            }
+        }
+
+        /** Trimmed borders. */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `print` ADD COLUMN `borderQuad` TEXT")
             }
         }
 

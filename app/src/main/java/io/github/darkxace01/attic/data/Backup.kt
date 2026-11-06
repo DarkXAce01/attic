@@ -206,6 +206,7 @@ class Backup(private val context: Context, private val library: Library) {
                             place = p.optStringOrNull("place"), caption = p.optStringOrNull("caption"),
                             createdAt = p.getLong("createdAt"), version = version, backedUpVersion = version,
                             backFile = p.optStringOrNull("backFile")?.takeIf { File(local, it).exists() },
+                            borderQuad = p.optStringOrNull("borderQuad"),
                         ),
                     )
                     val people = p.optJSONArray("people") ?: JSONArray()
@@ -265,6 +266,7 @@ class Backup(private val context: Context, private val library: Library) {
                         .putOpt("place", p.place).putOpt("caption", p.caption)
                         .put("createdAt", p.createdAt).put("version", p.version)
                         .putOpt("backFile", p.backFile)
+                        .putOpt("borderQuad", p.borderQuad)
                         .put("people", JSONArray(dao.peopleInNow(p.id)))
                         .put("faces", facesOf(p))
                         .put(

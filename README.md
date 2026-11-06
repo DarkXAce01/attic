@@ -88,6 +88,12 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - Every print also goes into `Pictures/Attic/<album>` as a high-quality JPEG with its real date,
   people, place and caption written into the EXIF, so Google Photos and Immich sort it correctly.
   Edits update the gallery copy in place
+- Curled prints come out straight: when a print lifts off the page its sides photograph as bows, so
+  each side's real edge is traced and the picture is mapped from the four curved sides onto a
+  rectangle. Prints whose edges can't be seen clearly are left as before. A switch in Settings
+- Borders: a print with a plain white, cream or black border (a Polaroid's too) says so, and one tap
+  trims it to the picture, or puts it back. Writing on a border is noticed; Settings can trim plain
+  borders of new scans automatically, never one with writing on it
 - Dust, specks, hairs and small scratches are painted out of the Natural and Strong looks: only small or
   thin things that stand out well above how busy the picture is around them, never on a face. Original
   stays exactly as scanned. A switch in Settings

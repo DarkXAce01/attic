@@ -777,8 +777,13 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         prints.forEach { it.image.release() }
         // New prints go straight into the gallery too, so they're safe the moment they're scanned.
         if (library.settings.now.saveToGallery) saved.forEach { library.export(it.id) }
-        // Faces after, in the background: the next page shouldn't wait for them.
-        viewModelScope.launch(Dispatchers.Default) { library.findMissingFaces() }
+        // Borders and faces after, in the background: the next page shouldn't wait for them.
+        viewModelScope.launch(Dispatchers.Default) {
+            if (library.settings.now.trimBorders) {
+                saved.forEach { p -> if (library.trimBorder(p.id, unlessWritten = true) && library.settings.now.saveToGallery) library.export(p.id) }
+            }
+            library.findMissingFaces()
+        }
         return Stored(saved, thumbs, soft, library.countWithTwins(saved))
     }
 

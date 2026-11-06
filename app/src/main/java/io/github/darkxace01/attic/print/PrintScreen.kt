@@ -200,6 +200,7 @@ private fun PrintPage(
                 style = MaterialTheme.typography.bodyMedium,
                 color = Palette.Muted,
             )
+            BorderLine(p, onTrim = { work { library.trimBorder(printId) } }, onRestore = { work { library.restoreBorder(printId) } })
             Spacer(Modifier.height(10.dp))
             Text(
                 qualityLine(p),
@@ -444,5 +445,23 @@ private fun PeopleSheet(initial: List<String>, onDismiss: () -> Unit, onSave: (L
             Spacer(Modifier.height(18.dp))
             PrimaryButton("Save", onClick = ::save, modifier = Modifier.fillMaxWidth())
         }
+    }
+}
+
+/** The print's plain border: trim it off, or put it back. Nothing when there's no border. */
+@Composable
+private fun BorderLine(p: PrintEntity, onTrim: () -> Unit, onRestore: () -> Unit) {
+    val library = LocalContext.current.library
+    val inset by produceState<io.github.darkxace01.attic.vision.Border.Inset?>(null, p.id, p.version, p.borderQuad) { value = library.borderOf(p) }
+    val text = when {
+        p.borderQuad != null -> "Trimmed to the picture inside its border."
+        inset?.writing == true -> "It has a border with writing on it."
+        inset != null -> "It has a plain border."
+        else -> return
+    }
+    Spacer(Modifier.height(6.dp))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = Modifier.weight(1f))
+        if (p.borderQuad != null) QuietButton("Put it back", onClick = onRestore) else QuietButton("Trim it", onClick = onTrim)
     }
 }
