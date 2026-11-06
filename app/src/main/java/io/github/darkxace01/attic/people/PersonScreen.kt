@@ -1,6 +1,8 @@
 package io.github.darkxace01.attic.people
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,10 +47,13 @@ import kotlinx.coroutines.launch
  * their birth year is known.
  */
 @Composable
-fun PersonScreen(personId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, onSlideshow: () -> Unit = {}, onOpenPerson: (Long) -> Unit = {}, onTree: () -> Unit = {}) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+fun PersonScreen(personId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, onSlideshow: () -> Unit = {}, onOpenPerson: (Long) -> Unit = {}, onTree: () -> Unit = {}, onOpenPhone: (io.github.darkxace01.attic.data.PhonePhoto) -> Unit = {}) {
     val library = LocalContext.current.library
     val person by remember(personId) { library.person(personId) }.collectAsStateWithLifecycle(null)
     val prints by remember(personId) { library.printsOf(personId) }.collectAsStateWithLifecycle(emptyList())
+    val onPhone by remember(personId) { library.phonePhotosOf(personId) }.collectAsStateWithLifecycle(emptyList())
+    var notThem by remember { mutableStateOf<io.github.darkxace01.attic.data.PhonePhoto?>(null) }
     val albums by remember { library.albumsWithDates() }.collectAsStateWithLifecycle(emptyMap())
     val scope = rememberCoroutineScope()
     var renaming by remember { mutableStateOf(false) }
@@ -111,7 +116,35 @@ fun PersonScreen(personId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit
                     }
                 }
             }
+            // Phone photos in albums where their face clearly matches the ones named on prints.
+            if (onPhone.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        "On the phone too",
+                        style = MaterialTheme.typography.titleMedium, color = Palette.Ink,
+                        modifier = Modifier.padding(top = 18.dp, start = 4.dp),
+                    )
+                }
+                items(onPhone.size, key = { "m" + onPhone[it].id }) { i ->
+                    val ph = onPhone[i]
+                    coil3.compose.AsyncImage(
+                        ph.uri, null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.aspectRatio(1f).background(Palette.Surface)
+                            .combinedClickable(onClick = { onOpenPhone(ph) }, onLongClick = { notThem = ph }),
+                    )
+                }
+            }
         }
+    }
+
+    notThem?.let { ph ->
+        io.github.darkxace01.attic.ui.theme.InkDialog(
+            onDismissRequest = { notThem = null },
+            title = { Text("Not ${p.name}?") },
+            text = { Text("Attic thought this phone photo had ${p.name} in it. It won't show it here again.") },
+            confirmButton = { io.github.darkxace01.attic.ui.QuietButton("Not them", onClick = { notThem = null; scope.launch { library.notOnPhone(ph.uri, personId) } }, color = Palette.Accent) },
+            dismissButton = { io.github.darkxace01.attic.ui.QuietButton("Keep", onClick = { notThem = null }) },
+        )
     }
 
     if (renaming) {

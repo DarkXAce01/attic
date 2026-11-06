@@ -58,7 +58,8 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - Three ways to lay them out: down a path, round a ring (one in front, swipe to turn it) or scattered
   on a map you can drag about
 - Inside, every page is rebuilt as it was: each print laid back in its exact spot and tilt, clean and
-  flat. Pages turn over on their spine. Tap a print to open it
+  flat. Pages turn over on their spine. Tap a print to open it. "Open in the gallery" in an album's
+  menu opens its copies in the phone's gallery
 - Pencil red (Grease Pencil Studio's colour) is the one accent
 
 **People**
@@ -67,7 +68,10 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - People tab: the same unnamed face across several photos comes up as one group to name at once
   (tap any that don't belong), then everyone named, most photographed first
 - A person's page: every photo of them, oldest first, with how old they were in each once you add
-  when they were born ("1952" is enough)
+  when they were born ("1952" is enough). Phone photos kept in albums show there too when the face
+  clearly matches the ones named on prints ("On the phone too"; hold one to say it isn't them)
+- A date guess for undated photos: when the people in one look clearly most like their own photos from
+  a few particular years, the photo offers that range. Only ever offered, never filled in by itself
 
 **Remember**
 - Stories: record a spoken memory on any photo; play it back from the photo. Long-press to delete
@@ -86,7 +90,10 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - Slideshow of an album or a person: each photo drifts slowly in toward its faces; a photo with a
   story stays up while the story plays. Cast the screen to a TV to watch together
 - Family tree: on someone's page, add their parents, children, partner, brothers and sisters, and Attic
-  draws the tree a generation to a row. Relatives without photos yet are drawn faintly
+  draws the tree a generation to a row. Relatives without photos yet are drawn faintly, and listed over
+  the tree with those who have only one, since someone else in the family may have them
+- On this day on the home screen: a widget with a print from today in another year (or this week, this
+  month, or a photo for the day). Tap it to open the photo
 - On this day, over the timeline: photos from this day in other years, or this week, or this month, and
   when nothing is dated near today, one photo for the day
 - Then and now: stand where an old photo was taken, line it up over the camera and take it again. Attic
@@ -102,6 +109,14 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 **Keep**
 - Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their
   decade's years; undated photos come last
+- Find: search by name, place, year ("summer 87", "80s"), caption, album, "story" or "undated". It reads
+  what you've written about photos, not what's in them. Smart albums fill themselves: everyone in three
+  or more photos, each decade, each place, the photos with stories. Any of them plays as a slideshow
+- Copies in the gallery (Settings): finds scans you already had on the phone, a print someone sent you
+  years ago, and shows each beside its copy. Nothing in the gallery is changed or deleted
+- Keepsake (Settings): the whole archive as one folder of web pages with a front page, for a USB stick or
+  a relative without the app
+- Tilt light (Settings, off until chosen): prints catch a soft reflection as you tilt the phone
 - Backup to a folder you pick (SD card, USB stick, a synced folder): photos with their details for anyone,
   plus everything Attic needs to restore. Backing up again only adds what changed. Restore from it on a
   new phone. The albums screen says how many photos have no other copy, with the fix next to it

@@ -86,6 +86,8 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
         if (uris.isNotEmpty()) scope.launch {
             val n = library.addPhone(albumId, uris)
             added = when (n) { 0 -> "Those are already in this album."; 1 -> "Added 1 photo. It stays in your gallery too."; else -> "Added $n photos. They stay in your gallery too." }
+            // Faces on them, for their people's pages; not tied to this screen, it can take a while.
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { library.findPhoneFaces() }
             kotlinx.coroutines.delay(3000)
             added = null
         }

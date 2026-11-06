@@ -39,6 +39,29 @@ data class AlbumPhoneEntity(
     val addedAt: Long,
 )
 
+/**
+ * A face on a phone photo kept in an album. Who it is isn't stored: it's worked out from the faces people
+ * have named on prints, so naming more makes it better. [notPerson]: someone said it isn't them.
+ */
+@Entity(tableName = "phone_face", indices = [Index("uri")])
+data class PhoneFaceEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val uri: String,
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float,
+    val vec: ByteArray,
+    val notPerson: Long? = null,
+) {
+    override fun equals(other: Any?) = other is PhoneFaceEntity && other.id == id && other.notPerson == notPerson
+    override fun hashCode() = id.hashCode()
+}
+
+/** A phone photo that's been looked at for faces (whether it had any or not). */
+@Entity(tableName = "phone_seen")
+data class PhoneSeenEntity(@PrimaryKey val uri: String)
+
 @Entity(tableName = "album")
 data class AlbumEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -315,6 +338,12 @@ interface AtticDao {
     @Query("SELECT COUNT(*) FROM album_phone WHERE uri = :uri") fun phoneUriCount(uri: String): Int
     @Query("SELECT pp.printId AS printId, p.name AS name FROM print_person pp JOIN person p ON p.id = pp.personId ORDER BY p.name")
     fun printNames(): Flow<List<PrintName>>
+    @Insert fun insertPhoneFace(f: PhoneFaceEntity): Long
+    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertPhoneSeen(s: PhoneSeenEntity)
+    @Query("SELECT DISTINCT uri FROM album_phone WHERE uri NOT IN (SELECT uri FROM phone_seen)") fun phoneUrisUnseen(): List<String>
+    @Query("SELECT * FROM phone_face") fun phoneFaces(): Flow<List<PhoneFaceEntity>>
+    @Query("SELECT * FROM album_phone") fun allPhoneFlow(): Flow<List<AlbumPhoneEntity>>
+    @Query("UPDATE phone_face SET notPerson = :personId WHERE uri = :uri") fun notOnPhone(uri: String, personId: Long)
     @Query("SELECT * FROM relation") fun relationsNow(): List<RelationEntity>
     @Query("UPDATE relation SET a = :to WHERE a = :from") fun moveRelationsA(from: Long, to: Long)
     @Query("UPDATE relation SET b = :to WHERE b = :from") fun moveRelationsB(from: Long, to: Long)
@@ -333,8 +362,8 @@ interface AtticDao {
 }
 
 @Database(
-    entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class, FaceEntity::class, RelationEntity::class, AlbumPhoneEntity::class],
-    version = 14,
+    entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class, FaceEntity::class, RelationEntity::class, AlbumPhoneEntity::class, PhoneFaceEntity::class, PhoneSeenEntity::class],
+    version = 15,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -342,7 +371,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -423,6 +452,18 @@ abstract class AtticDatabase : RoomDatabase() {
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `print` ADD COLUMN `negative` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** Faces on phone photos in albums. */
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `phone_face` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uri` TEXT NOT NULL, " +
+                        "`left` REAL NOT NULL, `top` REAL NOT NULL, `right` REAL NOT NULL, `bottom` REAL NOT NULL, `vec` BLOB NOT NULL, `notPerson` INTEGER)",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_phone_face_uri` ON `phone_face` (`uri`)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `phone_seen` (`uri` TEXT NOT NULL, PRIMARY KEY(`uri`))")
             }
         }
 

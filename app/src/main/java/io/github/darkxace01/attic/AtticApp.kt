@@ -186,7 +186,7 @@ fun AtticApp(incoming: android.net.Uri? = null, onIncomingDone: () -> Unit = {},
                     is Route.Session -> Box(Modifier.statusBarsPadding()) { SessionScreen(top.albumId, onDone = ::back) }
                     Route.People -> Box(Modifier.statusBarsPadding()) { PeopleScreen(onOpenPerson = { go(Route.Person(it)) }, onTree = { go(Route.FamilyTree(null)) }) }
                     is Route.Person -> Box(Modifier.statusBarsPadding()) { PersonScreen(top.id, onBack = ::back, onOpenPrint = { go(Route.Print(it)) }, onSlideshow = { go(Route.Slideshow(null, top.id)) },
-                        onOpenPerson = { go(Route.Person(it)) }, onTree = { go(Route.FamilyTree(top.id)) }) }
+                        onOpenPerson = { go(Route.Person(it)) }, onTree = { go(Route.FamilyTree(top.id)) }, onOpenPhone = { go(Route.Phone(it)) }) }
                     is Route.ThenNow -> Box(Modifier.statusBarsPadding()) { io.github.darkxace01.attic.thennow.ThenNowScreen(top.printId, onBack = ::back) }
                     is Route.FamilyTree -> Box(Modifier.statusBarsPadding()) {
                         io.github.darkxace01.attic.people.FamilyTreeScreen(top.rootId, onBack = ::back, onOpenPerson = { go(Route.Person(it)) })

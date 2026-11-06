@@ -1020,6 +1020,8 @@ class Library(private val context: Context) {
         Faces(model("faces_detect.onnx"), model("faces_recognise.onnx"))
     }
     private val faceLock = Any()
+    /** How alike a phone photo's face has to be to someone's named faces to count as them. */
+    private val PHONE_SAME = 0.46f
 
     fun facesOf(printId: Long): Flow<List<FaceEntity>> = dao.facesOf(printId)
     fun allFaces(): Flow<List<FaceEntity>> = dao.allFaces()
@@ -1168,6 +1170,42 @@ class Library(private val context: Context) {
         val ad = album?.date
         if (ad != null && (hint.year < ad.from.year || hint.year > ad.to.year)) null else hint
     }
+
+    /**
+     * Looks for faces on the phone photos kept in albums, the ones not looked at yet. Read at a modest size:
+     * enough for faces, a fraction of the work of the full photo.
+     */
+    suspend fun findPhoneFaces() = io {
+        for (uri in dao.phoneUrisUnseen()) synchronized(faceLock) {
+            val bmp = decodeSmall(Uri.parse(uri), 1600)
+            if (bmp != null) {
+                val rgba = org.opencv.core.Mat()
+                org.opencv.android.Utils.bitmapToMat(bmp.copy(android.graphics.Bitmap.Config.ARGB_8888, false), rgba)
+                val found = runCatching { faces.find(rgba, Faces.RGBA) }.getOrElse { emptyList() }
+                rgba.release()
+                for (f in found) dao.insertPhoneFace(PhoneFaceEntity(uri = uri, left = f.left, top = f.top, right = f.right, bottom = f.bottom, vec = FaceGroups.toBytes(f.vec)))
+            }
+            // Unreadable (deleted from the phone) counts as seen too, so it isn't tried every time.
+            dao.insertPhoneSeen(PhoneSeenEntity(uri))
+        }
+    }
+
+    /**
+     * The phone photos in albums that [personId] is in: faces there that look clearly like the faces named
+     * as them on prints. Stricter than suggesting a name on a print, since nobody confirms these one by one.
+     */
+    fun phonePhotosOf(personId: Long): Flow<List<PhonePhoto>> =
+        kotlinx.coroutines.flow.combine(dao.phoneFaces(), dao.allFaces(), dao.allPhoneFlow()) { phoneFaces, faces, phone ->
+            val named = faces.filter { it.personId != null }.groupBy({ it.personId!! }, { FaceGroups.fromBytes(it.vec) })
+            if (personId !in named) return@combine emptyList()
+            val uris = phoneFaces.filter { it.notPerson != personId }
+                .filter { FaceGroups.suggest(FaceGroups.fromBytes(it.vec), named, PHONE_SAME)?.first == personId }
+                .map { it.uri }.toSet()
+            phone.filter { it.uri in uris }.distinctBy { it.uri }.map(::asPhonePhoto).sortedBy { it.taken }
+        }.flowOn(Dispatchers.Default)
+
+    /** Someone said [personId] isn't in this phone photo. */
+    suspend fun notOnPhone(uri: String, personId: Long) = io { dao.notOnPhone(uri, personId) }
 
     suspend fun setBorn(personId: Long, date: PhotoDate?) = io {
         val p = dao.person(personId) ?: return@io

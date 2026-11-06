@@ -148,6 +148,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
             library.fillMissingHashes()
             library.readMissingStamps()
             library.findMissingFaces()
+            library.findPhoneFaces()
             library.upgradeLooks()
         }
         viewModelScope.launch {
