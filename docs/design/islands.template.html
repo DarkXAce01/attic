@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attic islands, redrawn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wdth,wght@50..150,300..900&family=Instrument+Sans:wdth,wght@75..100,400..700&family=Reenie+Beanie&family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=VT323&family=Instrument+Serif:ital@0;1&family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<style>
+/* Attic islands, redrawn. Thirteen little worlds, each a story with the album's photo inside it:
+   a cable car's window, a kite, a sail, a treehouse window, a desert billboard, a raft on a pond.
+   Layout idea: a specimen sheet, one card per island, re-printed in whichever theme you pick. */
+:root{
+  --paper:#EDEDE9; --ink:#1D1E22; --muted:#5F6068; --pencil:#D4432A;
+  --display:"Anybody","Arial Narrow",sans-serif;
+  --body:"Instrument Sans","Segoe UI",system-ui,sans-serif;
+  --hand:"Reenie Beanie","Comic Sans MS",cursive;
+  --card:#EDEDE9; --cardink:#1D1E22; --cardmuted:#5F6068;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:400 17px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+main{max-width:1280px;margin:0 auto;padding:0 20px 110px}
+h1,h2{margin:0;text-wrap:balance}
+p{margin:0;max-width:66ch}
+:focus-visible{outline:3px solid var(--pencil);outline-offset:3px}
+.hand{font-family:var(--hand);color:var(--pencil);font-size:27px;line-height:1}
+header{padding:60px 0 6px;display:grid;gap:16px}
+header h1{font-family:var(--display);font-weight:880;font-stretch:64%;font-size:clamp(52px,9vw,108px);line-height:.86}
+header h1 span{color:var(--pencil)}
+.lede{font-size:19px;color:var(--muted)}
+.bar{position:sticky;top:0;z-index:5;background:var(--paper);padding:14px 0;margin-top:26px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;border-bottom:2px solid var(--ink)}
+.bar b{font-size:15px;margin-right:4px}
+.seg{display:flex;flex-wrap:wrap;border:2px solid var(--ink)}
+.seg button{font:600 15px var(--body);padding:8px 14px;background:var(--paper);color:var(--ink);border:0;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.specimens{margin-top:30px;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px}
+.spec{border:2px solid var(--ink);box-shadow:7px 7px 0 var(--ink);background:var(--card);display:grid;margin:0;transition:background .3s}
+.spec canvas{width:100%;aspect-ratio:1;display:block}
+.spec figcaption{padding:12px 16px 16px;border-top:2px solid var(--ink);display:grid;gap:4px;background:var(--paper)}
+.spec b{font-family:var(--display);font-weight:820;font-stretch:72%;font-size:26px;line-height:1}
+.spec small{color:var(--muted);font-size:15px;line-height:1.45}
+.path{margin-top:70px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:40px;align-items:start}
+.path h2,.end h2{font-family:var(--display);font-weight:860;font-stretch:66%;font-size:clamp(40px,6vw,64px);line-height:.9}
+.path p{margin-top:14px}
+.phone{width:300px;height:620px;border-radius:38px;padding:10px;background:#111214;box-shadow:0 18px 40px rgba(0,0,0,.28)}
+.phone canvas{width:280px;height:600px;border-radius:29px;display:block}
+.end{margin-top:70px;display:grid;gap:16px}
+.ask{border:2px dashed var(--pencil);padding:18px 20px;display:grid;gap:8px;max-width:860px}
+.ask ol{margin:0;padding-left:22px;display:grid;gap:6px}
+@media (max-width:760px){.path{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="hand">islands, round three</div>
+  <h1>Thirteen little worlds, each with <span>its own story</span></h1>
+  <p class="lede">Every kind is its own scene now, and the album's photo lives inside the story: the window of a cable car, the sail of a paper boat, a billboard in the desert, the screen at a campsite film night. Pick a theme above the cards and they all re-print in it. Same scenes, each theme's own hand.</p>
+</header>
+
+<div class="bar" role="group" aria-label="Theme">
+  <b>Print them in</b>
+  <div class="seg" id="themes">
+    <button type="button" data-t="riso" aria-pressed="true">Riso</button>
+    <button type="button" data-t="midnight" aria-pressed="false">Riso Midnight</button>
+    <button type="button" data-t="ir" aria-pressed="false">Infrared</button>
+    <button type="button" data-t="crt" aria-pressed="false">Night broadcast</button>
+    <button type="button" data-t="cy" aria-pressed="false">Cyanotype</button>
+    <button type="button" data-t="kc" aria-pressed="false">Kodachrome</button>
+  </div>
+</div>
+
+<section class="specimens" id="specimens" aria-label="The thirteen islands"></section>
+
+<section class="path">
+  <div>
+    <h2>On the albums screen</h2>
+    <p>Three to a screen down the path, each a different shape and height, so scrolling feels like travelling past things rather than down a list. The title sits beside each, in the style the album's owner chose.</p>
+    <p>Each one moves a little: the kite tugs, the boat rocks, the balloon bobs, the lighthouse beam sweeps, the fire flickers. Slowly, and never while you're scrolling fast.</p>
+  </div>
+  <div class="phone"><canvas id="pathphone" width="560" height="1200" aria-label="The albums screen with three islands"></canvas></div>
+</section>
+
+<section class="end">
+  <div class="ask">
+    <b>What I need from you</b>
+    <ol>
+      <li>Do these feel like they each have their own identity now? Any that fall flat?</li>
+      <li>Any kinds you'd add: a train, a bus, a beach hut, a temple, a ferris wheel?</li>
+      <li>Once you're happy, I build these into the app with all four new themes.</li>
+    </ol>
+  </div>
+</section>
+</main>
+
+<script>
+const PHOTOS = %%PHOTOS%%;
+const imgs={};
+function load(k){ if(!imgs[k]) imgs[k]=new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=PHOTOS[k];}); return imgs[k]; }
+function rnd(seed){ let s=(seed*7919+13)%233280; return ()=>{ s=(s*9301+49297)%233280; return s/233280; }; }
+const D2R=Math.PI/180;
+
+/* ---------- Themes: what each role is printed in, and how ---------- */
+const THEMES={
+  riso:{mode:'riso',bg:'#EDEDE9',ink:'#1D1E22',white:'#F4F2ED',c:{leaf:'#00A95C',leaf2:'#00838A',water:'#3255A4',wood:'#B48A5A',stone:'#3255A4',stone2:'#5F6068',red:'#D4432A',pink:'#FF48B0',yellow:'#FFE800',orange:'#FF6C2F',sand:'#FFB511',sky:'#62A8E5',paper:'#F4F2ED',snow:'#F4F2ED',dark:'#1D1E22',light:'#FFE800'}},
+  midnight:{mode:'riso',bg:'#14172E',ink:'#EEEAE0',white:'#F4F2ED',screen:1,c:{leaf:'#00A95C',leaf2:'#00838A',water:'#3255A4',wood:'#B48A5A',stone:'#4A6BC0',stone2:'#7E8299',red:'#E5553A',pink:'#FF48B0',yellow:'#FFE800',orange:'#FF6C2F',sand:'#FFB511',sky:'#3255A4',paper:'#F4F2ED',snow:'#F4F2ED',dark:'#EEEAE0',light:'#FFE800'}},
+  ir:{mode:'ir',bg:'#F6ECEE',ink:'#3A0D1C',white:'#FFF9F6',glow:'rgba(226,30,86,.5)',c:{leaf:'#D3164F',leaf2:'#FF4F9A',water:'#00A7BC',wood:'#6B1F33',stone:'#8E0E36',stone2:'#B5476A',red:'#D3164F',pink:'#FF4F9A',yellow:'#E9D200',orange:'#FF7A4D',sand:'#F2B8C6',sky:'#00A7BC',paper:'#FFF9F6',snow:'#FFF9F6',dark:'#3A0D1C',light:'#E9D200'}},
+  crt:{mode:'crt',bg:'#070B10',ink:'#9DFFB8',white:'#F4F2ED',accent:'#FFB000',c:{}},
+  cy:{mode:'cy',bg:'#102A63',ink:'#EEF2FA',white:'#F4F2ED',accent:'#F2C14E',c:{}},
+  kc:{mode:'kc',bg:'#FBF6EA',ink:'#2A1A12',white:'#FFFFFF',c:{leaf:'#3E8E3A',leaf2:'#2F6E2C',water:'#2E7FB8',wood:'#8A5A36',stone:'#7C8794',stone2:'#5E6670',red:'#D6282B',pink:'#E85D8A',yellow:'#F7B500',orange:'#F26B1D',sand:'#E8C27A',sky:'#7DB8E0',paper:'#FFFDF6',snow:'#FFFFFF',dark:'#2A1A12',light:'#FFE08A'}},
+};
+let T=THEMES.riso;
+const ACCENT_ROLES=new Set(['red','yellow','orange','light','pink']);
+function col(role){ if(T.mode==='crt'||T.mode==='cy') return ACCENT_ROLES.has(role)?T.accent:T.ink; return T.c[role]||role; }
+function dots(g,color,step){ const c=document.createElement('canvas'); c.width=c.height=step; const x=c.getContext('2d'); x.fillStyle=color; x.beginPath(); x.arc(step/2,step/2,step*.27,0,7); x.fill(); return g.createPattern(c,'repeat'); }
+function hatch(g,color){ const c=document.createElement('canvas'); c.width=c.height=6; const x=c.getContext('2d'); x.strokeStyle=color; x.lineWidth=1; x.beginPath(); x.moveTo(0,6); x.lineTo(6,0); x.stroke(); return g.createPattern(c,'repeat'); }
+/*
+ * Fill a shape the theme's way. Riso: flat ink overprinted (multiply), with a dot screen for shade.
+ * Infrared: ink with a halation glow. Night broadcast: glowing vector outline on black glass.
+ * Cyanotype: white line where the sun got through. Kodachrome: warm paint with a soft drop shadow.
+ */
+function fill(g,role,path,o={}){
+  const c=col(role);
+  g.save();
+  if((T.mode==='crt'||T.mode==='cy') && o.outline){ path(); g.strokeStyle=c; g.lineWidth=3; if(T.mode==='crt'){ g.shadowColor=c; g.shadowBlur=7; } g.stroke(); g.shadowBlur=0; path(); g.fillStyle=T.bg; g.fill(); }
+  else if(T.mode==='crt'){ path(); if(!o.open){ g.fillStyle=T.bg; g.fill(); } g.shadowColor=c; g.shadowBlur=7; g.strokeStyle=c; g.lineWidth=o.lw||1.5; g.stroke(); if(o.shade){ g.globalAlpha=.45; g.fillStyle=hatch(g,c); path(); g.fill(); } }
+  else if(T.mode==='cy'){ path(); if(!o.open){ g.fillStyle=T.bg; g.fill(); } g.strokeStyle=c; g.lineWidth=o.lw||1.4; g.stroke(); if(o.shade){ g.globalAlpha=.55; g.fillStyle=hatch(g,c); path(); g.fill(); } }
+  else {
+    if(o.outline){ g.save(); path(); g.strokeStyle=T.mode==='riso'?T.ink:'rgba(0,0,0,.25)'; g.lineWidth=o.outline*2; g.lineJoin='round'; if(T.mode!=='riso'){ g.restore(); } else { g.stroke(); g.restore(); } }
+    if(T.mode==='riso' && !T.screen && !o.over && !o.outline) g.globalCompositeOperation='multiply';
+    if(T.mode==='ir' && !o.flat){ g.shadowColor=T.glow; g.shadowBlur=o.glow??10; }
+    if(T.mode==='kc' && !o.flat){ g.shadowColor='rgba(60,30,10,.28)'; g.shadowBlur=5; g.shadowOffsetY=2; }
+    g.globalAlpha=o.alpha??1; path(); g.fillStyle=c; g.fill(); g.shadowBlur=0; g.shadowOffsetY=0;
+    if(o.shade && T.mode==='riso'){ path(); g.fillStyle=dots(g,T.screen?'rgba(0,0,0,.45)':'rgba(29,30,34,.5)',5); g.fill(); }
+    if(o.shade && T.mode==='kc'){ path(); g.fillStyle='rgba(0,0,0,.14)'; g.fill(); }
+    if(o.line){ g.globalCompositeOperation='source-over'; g.globalAlpha=1; path(); g.strokeStyle=T.ink; g.lineWidth=o.line; g.stroke(); }
+  }
+  g.restore();
+}
+function stroke(g,role,path,lw=2,o={}){ g.save(); const c=col(role); if(T.mode==='crt'){ g.shadowColor=c; g.shadowBlur=6; } if(T.mode==='ir'&&o.glow){ g.shadowColor=T.glow; g.shadowBlur=8; } g.strokeStyle=c; g.lineWidth=lw; g.lineCap='round'; g.lineJoin='round'; if(o.dash) g.setLineDash(o.dash); g.globalAlpha=o.alpha??1; path(); g.stroke(); g.restore(); }
+function floorShadow(g,x,y,rx,ry){
+  g.save();
+  if(T.mode==='riso') { g.fillStyle=dots(g,T.screen?'rgba(238,234,224,.35)':'rgba(29,30,34,.45)',5); g.beginPath(); g.ellipse(x,y,rx,ry,0,0,7); g.fill(); }
+  else if(T.mode==='ir'){ g.globalAlpha=.28; g.fillStyle=T.c.water; g.shadowColor=T.c.water; g.shadowBlur=16; g.beginPath(); g.ellipse(x,y,rx,ry,0,0,7); g.fill(); }
+  else if(T.mode==='kc'){ g.fillStyle='rgba(60,30,10,.16)'; g.beginPath(); g.ellipse(x,y,rx,ry,0,0,7); g.fill(); }
+  else { g.strokeStyle=T.ink; g.globalAlpha=.5; g.setLineDash([3,5]); g.beginPath(); g.ellipse(x,y,rx,ry,0,0,7); g.stroke(); }
+  g.restore();
+}
+/* The photo, always whole inside its shape: drawn as it is, never tinted, never overprinted. */
+function cover(g,img,x,y,w,h){ if(!img) return; const s=Math.max(w/img.width,h/img.height),dw=img.width*s,dh=img.height*s; g.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh); }
+function photoIn(g,img,path,box,o={}){
+  g.save(); g.globalCompositeOperation='source-over'; path(); g.clip(); cover(g,img,box[0],box[1],box[2],box[3]); g.restore();
+  if(T.mode==='crt'){ g.save(); g.shadowColor=T.ink; g.shadowBlur=10; g.strokeStyle=T.ink; g.lineWidth=1.4; path(); g.stroke(); g.restore(); }
+  else if(T.mode==='cy'){ g.save(); g.strokeStyle=T.ink; g.lineWidth=1.4; path(); g.stroke(); g.restore(); }
+  else if(o.line!==false){ g.save(); g.strokeStyle=T.mode==='riso'?T.ink:'rgba(0,0,0,.35)'; g.lineWidth=T.mode==='riso'?1.6:1; path(); g.stroke(); g.restore(); }
+}
+/* A print: white border, its shadow in the theme's manner, the photo whole. */
+function print(g,img,cx,cy,w,h,rot,o={}){
+  g.save(); g.translate(cx,cy); g.rotate(rot*D2R);
+  const b=o.border??Math.max(4,w*.06);
+  if(T.mode==='riso'){ g.fillStyle=dots(g,T.screen?'rgba(238,234,224,.45)':'rgba(29,30,34,.75)',4); g.fillRect(-w/2+4,-h/2+4,w,h); }
+  if(T.mode==='ir'){ g.shadowColor=T.glow; g.shadowBlur=14; }
+  if(T.mode==='crt'){ g.shadowColor=T.ink; g.shadowBlur=12; }
+  if(T.mode==='kc'){ g.shadowColor='rgba(60,30,10,.3)'; g.shadowBlur=7; g.shadowOffsetY=3; }
+  g.fillStyle=T.white;
+  const r=T.mode==='kc'?7:T.mode==='crt'?6:0;
+  rr(g,-w/2,-h/2,w,h,r); g.fill(); g.shadowBlur=0; g.shadowOffsetY=0;
+  g.save(); rr(g,-w/2+b,-h/2+b,w-2*b,h-2*b,r?3:0); g.clip(); cover(g,img,-w/2+b,-h/2+b,w-2*b,h-2*b); g.restore();
+  if(T.mode==='riso'||T.mode==='cy'){ g.strokeStyle=T.ink; g.lineWidth=1.4; rr(g,-w/2,-h/2,w,h,r); g.stroke(); }
+  g.restore();
+}
+function rr(g,x,y,w,h,r){ g.beginPath(); if(!r){ g.rect(x,y,w,h); return; } g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function circles(g,list){ g.beginPath(); for(const [x,y,r] of list){ g.moveTo(x+r,y); g.arc(x,y,r,0,7); } }
+function star(g,x,y,r){ g.beginPath(); for(let k=0;k<10;k++){ const a=-Math.PI/2+k*Math.PI/5, rad=k%2?r*.45:r; g.lineTo(x+Math.cos(a)*rad,y+Math.sin(a)*rad); } g.closePath(); }
+function bird(g,x,y,s){ stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(x-s,y); g.quadraticCurveTo(x-s/2,y-s*.7,x,y); g.quadraticCurveTo(x+s/2,y-s*.7,x+s,y); },1.6); }
+function waves(g,y,x0,x1,amp,role,lw=2){ stroke(g,role,()=>{ g.beginPath(); for(let x=x0;x<=x1;x+=2){ const yy=y+Math.sin(x/9)*amp; x===x0?g.moveTo(x,yy):g.lineTo(x,yy); } },lw); }
+
+/* ---------- The thirteen. Each draws into 300 x 300, centred. ---------- */
+const KINDS=[
+['book','Album','An open album floating on its own, the cover photo held in by paper corners, a red ribbon trailing and a couple of prints slipping out.',
+ (g,img)=>{
+  floorShadow(g,150,268,96,11);
+  // Loose prints slipping out underneath.
+  fill(g,'paper',()=>{ g.save(); g.translate(78,226); g.rotate(-18*D2R); g.beginPath(); g.rect(-22,-16,44,32); g.restore(); },{line:1.2});
+  fill(g,'paper',()=>{ g.save(); g.translate(228,232); g.rotate(14*D2R); g.beginPath(); g.rect(-20,-15,40,30); g.restore(); },{line:1.2});
+  // Cover, then the page block, then the two pages curving up from the spine.
+  fill(g,'red',()=>{ g.beginPath(); g.moveTo(30,182); g.lineTo(150,210); g.lineTo(270,182); g.lineTo(270,196); g.lineTo(150,224); g.lineTo(30,196); g.closePath(); },{shade:true});
+  for(let k=0;k<3;k++) fill(g,'paper',()=>{ const d=k*4; g.beginPath(); g.moveTo(150,206-d); g.quadraticCurveTo(96,178-d,38,186-d); g.lineTo(38,190-d); g.quadraticCurveTo(96,182-d,150,210-d); g.closePath(); g.moveTo(150,206-d); g.quadraticCurveTo(204,178-d,262,186-d); g.lineTo(262,190-d); g.quadraticCurveTo(204,182-d,150,210-d); g.closePath(); },{line:.8,flat:true});
+  fill(g,'paper',()=>{ g.beginPath(); g.moveTo(150,196); g.quadraticCurveTo(98,150,40,166); g.lineTo(40,96); g.quadraticCurveTo(98,82,150,120); g.closePath(); },{line:1.4});
+  fill(g,'paper',()=>{ g.beginPath(); g.moveTo(150,196); g.quadraticCurveTo(202,150,260,166); g.lineTo(260,96); g.quadraticCurveTo(202,82,150,120); g.closePath(); },{line:1.4});
+  // Handwriting on the left page, in pencil.
+  stroke(g,'red',()=>{ g.beginPath(); for(let k=0;k<3;k++){ const y=118+k*16; g.moveTo(58,y+2); for(let x=58;x<128;x+=6) g.lineTo(x,y+Math.sin(x*1.3+k)*2.2+(x-58)*.05); } },1.6,{alpha:.85});
+  // The cover photo on the right page, with its corners.
+  print(g,img,204,138,82,62,-3,{border:3});
+  for(const [x,y,a] of [[164,108,0],[244,104,90],[246,168,180],[166,172,270]]) fill(g,'dark',()=>{ g.save(); g.translate(x,y); g.rotate(a*D2R); g.beginPath(); g.moveTo(0,0); g.lineTo(14,0); g.lineTo(0,14); g.closePath(); g.restore(); },{flat:true});
+  // The ribbon.
+  stroke(g,'red',()=>{ g.beginPath(); g.moveTo(150,210); g.bezierCurveTo(140,236,166,244,156,276); },5);
+ }],
+['mountain','Mountain','A floating peak with snow on top and pines at its feet. The photo is the window of a cable car swinging up the wire.',
+ (g,img)=>{
+  floorShadow(g,150,280,80,9);
+  fill(g,'stone2',()=>{ g.beginPath(); g.moveTo(52,200); g.lineTo(248,200); g.lineTo(212,226); g.lineTo(196,222); g.lineTo(170,256); g.lineTo(150,250); g.lineTo(126,270); g.lineTo(112,238); g.lineTo(84,230); g.closePath(); },{shade:true});
+  fill(g,'stone',()=>{ g.beginPath(); g.moveTo(48,202); g.lineTo(112,62); g.lineTo(138,104); g.lineTo(168,74); g.lineTo(252,202); g.closePath(); });
+  fill(g,'snow',()=>{ g.beginPath(); g.moveTo(112,62); g.lineTo(94,102); g.lineTo(106,96); g.lineTo(114,108); g.lineTo(124,96); g.lineTo(130,104); g.closePath(); g.moveTo(168,74); g.lineTo(152,98); g.lineTo(162,94); g.lineTo(170,104); g.lineTo(180,92); g.closePath(); },{line:T.mode==='riso'?1:0});
+  for(let k=0;k<6;k++){ const x=62+k*30+(k%2)*8, y=200; fill(g,k%2?'leaf2':'leaf',()=>{ g.beginPath(); g.moveTo(x,y-34-(k%3)*6); g.lineTo(x-11,y); g.lineTo(x+11,y); g.closePath(); }); }
+  // The wire, from the far peak out of the picture; the car hangs from it.
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(168,74); g.lineTo(296,40); },1.6);
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(232,57); g.lineTo(232,78); },2);
+  fill(g,'yellow',()=>{ rr(g,196,78,72,60,8); },{line:1.6,over:true});
+  fill(g,'red',()=>{ g.beginPath(); g.rect(197,124,70,13); },{flat:true,over:true});
+  photoIn(g,img,()=>{ rr(g,203,85,58,38,4); },[203,85,58,38]);
+ }],
+['branch','Branch','A blossoming branch adrift in the air. The photo hangs from it on two strings, a little swing, with two birds keeping it company.',
+ (g,img)=>{
+  floorShadow(g,150,272,84,8);
+  fill(g,'wood',()=>{ g.beginPath(); g.moveTo(18,122); g.bezierCurveTo(90,94,170,112,286,78); g.lineTo(288,88); g.bezierCurveTo(176,124,92,108,20,134); g.closePath(); },{shade:true});
+  fill(g,'wood',()=>{ g.beginPath(); g.moveTo(110,106); g.quadraticCurveTo(116,74,140,58); g.lineTo(144,62); g.quadraticCurveTo(122,80,118,106); g.closePath(); });
+  const r=rnd(3);
+  for(let k=0;k<16;k++){ const x=26+k*16+r()*8, y=110-k*1.6+(k%2?-12:12), a=(k%2?-40:40)+r()*20;
+    fill(g,k%3?'leaf':'leaf2',()=>{ g.save(); g.translate(x,y); g.rotate(a*D2R); g.beginPath(); g.moveTo(-12,0); g.quadraticCurveTo(0,-8,12,0); g.quadraticCurveTo(0,8,-12,0); g.closePath(); g.restore(); }); }
+  for(let k=0;k<7;k++){ const x=40+r()*230, y=88+r()*40; fill(g,'pink',()=>{ circles(g,[[x,y,5]]); }); fill(g,'yellow',()=>{ circles(g,[[x,y,1.8]]); },{flat:true}); }
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(112,110); g.lineTo(112,168); g.moveTo(192,102); g.lineTo(192,166); },1.4);
+  print(g,img,152,200,94,72,1.5);
+  // Two birds on the branch.
+  for(const [x,y,f,role] of [[232,74,1,'red'],[62,104,-1,'yellow']]){
+    fill(g,role,()=>{ g.beginPath(); g.moveTo(x-16*f,y-2); g.lineTo(x-26*f,y-8); g.lineTo(x-24*f,y+2); g.closePath(); g.moveTo(x,y); g.ellipse(x,y,13,9,f>0?-.2:.2,0,7); g.moveTo(x+9*f,y-9); g.arc(x+9*f,y-9,7,0,7); },{over:true,line:1.2});
+    fill(g,'orange',()=>{ g.beginPath(); g.moveTo(x+15*f,y-11); g.lineTo(x+22*f,y-8); g.lineTo(x+15*f,y-6); g.closePath(); },{flat:true,over:true});
+    fill(g,'dark',()=>{ circles(g,[[x+11*f,y-10,1.6]]); },{flat:true,over:true});
+    stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(x-3,y+8); g.lineTo(x-4,y+14); g.moveTo(x+3,y+8); g.lineTo(x+3,y+14); },1.2); }
+ }],
+['balloon','Balloon','A striped hot-air balloon drifting past, the photo hanging under the basket like a banner.',
+ (g,img)=>{
+  floorShadow(g,150,286,60,6);
+  const env=()=>{ g.beginPath(); g.moveTo(150,152); g.bezierCurveTo(98,128,86,96,90,72); g.arc(150,72,60,Math.PI,0); g.bezierCurveTo(214,96,202,128,150,152); g.closePath(); };
+  fill(g,'red',env);
+  if(T.mode==='riso'||T.mode==='ir'||T.mode==='kc'){ g.save(); env(); g.clip(); for(const [dx,role] of [[-38,'yellow'],[0,'paper'],[38,'yellow']]) fill(g,role,()=>{ g.beginPath(); g.ellipse(150+dx,86,12,72,0,0,7); },{flat:true,over:true}); g.restore(); stroke(g,'dark',()=>env(),1.6); }
+  else { for(const dx of [-38,0,38]) stroke(g,'dark',()=>{ g.beginPath(); g.ellipse(150+dx*.6,86,Math.abs(dx)*.5+2,70,0,0,7); },1,{alpha:.7}); }
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(118,140); g.lineTo(136,170); g.moveTo(182,140); g.lineTo(164,170); },1.4);
+  fill(g,'wood',()=>{ rr(g,132,168,36,22,3); },{shade:true,line:1.2});
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(136,190); g.lineTo(120,206); g.moveTo(164,190); g.lineTo(180,206); },1.3);
+  print(g,img,150,236,88,64,-2);
+  for(const [x,y,s] of [[40,54,12],[256,110,9]]) fill(g,'paper',()=>{ circles(g,[[x,y,s],[x+s,y-s*.4,s*.9],[x+s*1.9,y,s*.8]]); },{outline:1.2});
+ }],
+['kite','Kite','A diamond kite with the photo stretched across it, tugging at its string, bows on its tail.',
+ (g,img)=>{
+  floorShadow(g,104,286,46,5);
+  const dia=(i)=>{ g.beginPath(); g.moveTo(170,26+i); g.lineTo(254-i,116); g.lineTo(170,212-i*1.4); g.lineTo(86+i,116); g.closePath(); };
+  fill(g,'red',()=>dia(0),{shade:false});
+  photoIn(g,img,()=>dia(10),[96,36,148,166]);
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(170,26); g.lineTo(170,212); g.moveTo(86,116); g.lineTo(254,116); },1.6,{alpha:.75});
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(170,212); g.bezierCurveTo(150,236,190,250,170,280); },1.6);
+  for(const [x,y,role] of [[166,232,'yellow'],[176,256,'leaf'],[168,276,'pink']]) fill(g,role,()=>{ g.beginPath(); g.moveTo(x,y); g.lineTo(x-10,y-7); g.lineTo(x-10,y+7); g.closePath(); g.moveTo(x,y); g.lineTo(x+10,y-7); g.lineTo(x+10,y+7); g.closePath(); });
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(170,116); g.quadraticCurveTo(80,170,40,296); },1.1,{alpha:.7});
+ }],
+['boat','Paper boat','A folded paper boat on its own little sea. The photo is its sail.',
+ (g,img)=>{
+  fill(g,'water',()=>{ g.beginPath(); g.moveTo(30,226); for(let x=30;x<=270;x+=4) g.lineTo(x,226+Math.sin(x/11)*4); g.lineTo(256,262); g.quadraticCurveTo(150,286,44,262); g.closePath(); },{shade:true});
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(150,214); g.lineTo(150,56); },2.2);
+  fill(g,'red',()=>{ g.beginPath(); g.moveTo(150,56); g.lineTo(176,64); g.lineTo(150,72); g.closePath(); });
+  photoIn(g,img,()=>{ g.beginPath(); g.moveTo(154,70); g.lineTo(154,196); g.lineTo(238,196); g.closePath(); },[154,70,84,126]);
+  fill(g,'paper',()=>{ g.beginPath(); g.moveTo(146,96); g.lineTo(146,196); g.lineTo(86,196); g.closePath(); },{line:1.2});
+  fill(g,'paper',()=>{ g.beginPath(); g.moveTo(62,196); g.lineTo(240,196); g.lineTo(212,232); g.lineTo(90,232); g.closePath(); },{line:1.4});
+  fill(g,'paper',()=>{ g.beginPath(); g.moveTo(112,196); g.lineTo(150,232); g.lineTo(188,196); g.closePath(); },{line:1.2,shade:true});
+  waves(g,244,52,248,3,'paper',1.6);
+  bird(g,70,70,10); bird(g,96,52,7);
+ }],
+['cloud','Cloud','A rain cloud with a washing line strung to a little cloud beside it. The photo hangs on the line by two pegs, drying in the sun.',
+ (g,img)=>{
+  fill(g,'yellow',()=>{ circles(g,[[226,66,26]]); });
+  fill(g,'paper',()=>{ circles(g,[[72,150,34],[110,128,40],[150,146,32],[96,170,30],[134,174,28]]); },{outline:1.6});
+  fill(g,'stone2',()=>{ g.beginPath(); g.ellipse(112,186,62,10,0,0,7); },{alpha:.25,flat:true});
+  fill(g,'paper',()=>{ circles(g,[[226,118,22],[250,112,18],[240,130,18]]); },{outline:1.6});
+  stroke(g,'water',()=>{ g.beginPath(); for(let k=0;k<6;k++){ const x=74+k*14, y=206+(k%2)*12; g.moveTo(x,y); g.lineTo(x-4,y+12); } },2.4);
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(150,140); g.quadraticCurveTo(190,176,226,124); },1.4);
+  print(g,img,190,192,74,56,4);
+  for(const x of [168,208]) fill(g,'wood',()=>{ g.beginPath(); g.rect(x-3,152+(x-168)*.12,7,20); },{line:1});
+  floorShadow(g,140,282,80,7);
+ }],
+['moon','Moon','A crescent moon with a mobile hanging from its tip: stars on threads and, in the middle, the photo.',
+ (g,img)=>{
+  const crescent=()=>{ g.beginPath(); g.arc(122,92,64,0.25*Math.PI,1.75*Math.PI,false); g.arc(150,80,54,1.62*Math.PI,0.42*Math.PI,true); g.closePath(); };
+  fill(g,'yellow',crescent,{shade:true});
+  stroke(g,'dark',()=>{ g.beginPath(); g.arc(74,84,6,0.15*Math.PI,0.85*Math.PI); g.moveTo(70,104); g.quadraticCurveTo(76,110,82,104); },1.8);
+  fill(g,'pink',()=>{ circles(g,[[66,98,4]]); },{alpha:.7,flat:true});
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(160,134); g.lineTo(166,182); g.moveTo(124,152); g.lineTo(124,234); g.moveTo(100,146); g.lineTo(100,246); },1.1,{alpha:.75});
+  print(g,img,170,212,76,60,-2);
+  for(const [x,y,r,role] of [[124,244,9,'yellow'],[100,256,10,'pink'],[236,60,6,'yellow'],[58,180,5,'paper'],[252,180,4,'paper'],[40,40,4,'paper']]) fill(g,role,()=>star(g,x,y,r));
+  floorShadow(g,150,288,60,5);
+ }],
+['tree','Tree','A big round tree on a clump of earth, a treehouse in its branches. The photo is the treehouse window, a rope ladder below.',
+ (g,img)=>{
+  floorShadow(g,150,284,76,8);
+  fill(g,'wood',()=>{ g.beginPath(); g.moveTo(84,236); g.quadraticCurveTo(150,226,216,236); g.quadraticCurveTo(180,276,150,272); g.quadraticCurveTo(116,276,84,236); g.closePath(); },{shade:true});
+  fill(g,'leaf2',()=>{ g.beginPath(); g.ellipse(150,236,68,10,0,0,7); });
+  fill(g,'wood',()=>{ g.beginPath(); g.moveTo(140,236); g.lineTo(144,150); g.lineTo(156,150); g.lineTo(162,236); g.closePath(); });
+  fill(g,'leaf',()=>{ circles(g,[[150,86,52],[100,112,38],[200,110,40],[126,64,34],[180,62,32]]); },{outline:1.4});
+  fill(g,'leaf2',()=>{ circles(g,[[108,128,22],[196,130,24],[150,132,26]]); });
+  for(const [x,y] of [[96,96],[206,92],[160,44],[124,140]]) fill(g,'red',()=>{ circles(g,[[x,y,4]]); },{flat:true});
+  // The treehouse: a plank box with a roof; the photo is its big window.
+  fill(g,'wood',()=>{ g.beginPath(); g.rect(104,112,92,70); },{line:1.4,over:true});
+  fill(g,'red',()=>{ g.beginPath(); g.moveTo(96,114); g.lineTo(150,80); g.lineTo(204,114); g.closePath(); },{line:1.4,over:true});
+  photoIn(g,img,()=>{ g.beginPath(); g.rect(112,120,76,54); },[112,120,76,54]);
+  stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(178,182); g.lineTo(186,234); g.moveTo(192,182); g.lineTo(200,234); for(let k=0;k<5;k++){ const y=192+k*10; g.moveTo(179+k*1.4,y); g.lineTo(193+k*1.4,y); } },1.4);
+ }],
+['lighthouse','Lighthouse','A striped lighthouse on a rock in the sea. Its beam reaches out and lands as the photo, as if showing it to you.',
+ (g,img)=>{
+  // The beam first, behind everything, a soft wedge of light.
+  g.save(); if(T.mode==='riso') g.globalCompositeOperation=T.screen?'screen':'multiply';
+  if(T.mode==='crt'||T.mode==='cy') stroke(g,'light',()=>{ g.beginPath(); g.moveTo(82,82); g.lineTo(190,58); g.moveTo(82,94); g.lineTo(190,168); },1.2,{dash:[4,4]});
+  else fill(g,'light',()=>{ g.beginPath(); g.moveTo(82,82); g.lineTo(190,56); g.lineTo(190,170); g.lineTo(82,94); g.closePath(); },{alpha:.5,flat:true});
+  g.restore();
+  print(g,img,234,112,96,110,2,{border:4});
+  fill(g,'water',()=>{ g.beginPath(); g.ellipse(110,262,96,18,0,0,7); },{shade:true});
+  fill(g,'stone2',()=>{ circles(g,[[62,246,22],[92,240,28],[126,250,20],[150,258,14]]); },{shade:true});
+  fill(g,'paper',()=>{ g.beginPath(); g.moveTo(66,232); g.lineTo(74,108); g.lineTo(98,108); g.lineTo(106,232); g.closePath(); },{line:1.4});
+  for(let k=0;k<3;k++) fill(g,'red',()=>{ const y=124+k*36; g.beginPath(); g.moveTo(74.6-k*1.8+0,y); g.lineTo(97.4+k*1.8,y); g.lineTo(98.6+k*1.8,y+16); g.lineTo(73.4-k*1.8,y+16); g.closePath(); },{flat:true});
+  fill(g,'dark',()=>{ g.beginPath(); g.rect(68,100,36,8); },{flat:true});
+  fill(g,'yellow',()=>{ g.beginPath(); g.rect(76,80,20,20); },{glow:18,line:1.2});
+  fill(g,'red',()=>{ g.beginPath(); g.moveTo(72,80); g.lineTo(86,62); g.lineTo(100,80); g.closePath(); },{line:1.2});
+  waves(g,280,30,190,2.5,'water',1.6);
+  bird(g,150,40,9);
+ }],
+['tent','Campsite','A film night at the campsite: a sheet strung between two poles shows the photo, the tent pitched beside it, a fire crackling.',
+ (g,img)=>{
+  floorShadow(g,150,284,104,9);
+  fill(g,'leaf2',()=>{ g.beginPath(); g.ellipse(150,244,112,24,0,0,7); },{shade:false});
+  fill(g,'wood',()=>{ g.beginPath(); g.moveTo(40,248); g.quadraticCurveTo(150,300,260,248); g.quadraticCurveTo(150,276,40,248); g.closePath(); },{shade:true});
+  stroke(g,'wood',()=>{ g.beginPath(); g.moveTo(120,240); g.lineTo(120,54); g.moveTo(262,232); g.lineTo(262,54); },3);
+  // The sheet: white, sagging a little at the top, the photo shown on it.
+  fill(g,'paper',()=>{ g.beginPath(); g.moveTo(122,60); g.quadraticCurveTo(191,70,260,60); g.lineTo(260,166); g.lineTo(122,166); g.closePath(); },{line:1.2});
+  photoIn(g,img,()=>{ g.beginPath(); g.moveTo(128,70); g.quadraticCurveTo(191,79,254,70); g.lineTo(254,160); g.lineTo(128,160); g.closePath(); },[128,64,126,96],{line:false});
+  fill(g,'pink',()=>{ g.beginPath(); g.moveTo(34,236); g.lineTo(72,170); g.lineTo(110,236); g.closePath(); },{shade:true});
+  fill(g,'dark',()=>{ g.beginPath(); g.moveTo(62,236); g.lineTo(72,200); g.lineTo(82,236); g.closePath(); },{flat:true});
+  stroke(g,'wood',()=>{ g.beginPath(); g.moveTo(166,246); g.lineTo(204,236); g.moveTo(168,236); g.lineTo(204,246); },4);
+  fill(g,'orange',()=>{ g.beginPath(); g.moveTo(170,238); g.quadraticCurveTo(170,214,186,198); g.quadraticCurveTo(186,216,200,238); g.closePath(); },{glow:16});
+  fill(g,'yellow',()=>{ g.beginPath(); g.moveTo(178,238); g.quadraticCurveTo(180,222,188,214); g.quadraticCurveTo(190,226,194,238); g.closePath(); },{flat:true});
+  for(const [x,y] of [[40,40],[70,24],[24,96],[290,30]]) fill(g,'yellow',()=>star(g,x,y,4));
+ }],
+['desert','Desert','A floating mesa of dunes under a huge sun, a saguaro, and a roadside billboard showing the photo.',
+ (g,img)=>{
+  fill(g,'orange',()=>{ circles(g,[[86,98,52]]); });
+  floorShadow(g,150,284,100,8);
+  fill(g,'red',()=>{ g.beginPath(); g.moveTo(34,226); g.lineTo(266,226); g.lineTo(234,248); g.lineTo(200,244); g.lineTo(176,272); g.lineTo(140,262); g.lineTo(110,276); g.lineTo(92,246); g.lineTo(58,244); g.closePath(); },{shade:true});
+  fill(g,'sand',()=>{ g.beginPath(); g.moveTo(30,228); g.quadraticCurveTo(84,184,140,212); g.quadraticCurveTo(200,176,270,228); g.closePath(); });
+  fill(g,'sand',()=>{ g.beginPath(); g.moveTo(60,228); g.quadraticCurveTo(110,206,170,228); g.closePath(); },{shade:true});
+  // The saguaro.
+  for(const [x,y,w,h] of [[52,150,16,76],[36,170,12,32],[72,160,12,30],[40,192,20,8],[64,184,16,8]]) fill(g,'leaf',()=>{ rr(g,x,y,w,h,Math.min(w,h)/2); },{flat:true});
+  // The billboard: two posts, a frame, little lamps on top, the photo across it.
+  stroke(g,'wood',()=>{ g.beginPath(); g.moveTo(150,214); g.lineTo(150,150); g.moveTo(240,214); g.lineTo(240,150); },4);
+  fill(g,'dark',()=>{ g.beginPath(); g.rect(114,70,162,88); },{flat:true});
+  photoIn(g,img,()=>{ g.beginPath(); g.rect(119,75,152,78); },[119,75,152,78],{line:false});
+  for(const x of [140,195,250]){ stroke(g,'dark',()=>{ g.beginPath(); g.moveTo(x,70); g.lineTo(x,62); g.lineTo(x+8,60); },1.4); fill(g,'yellow',()=>{ circles(g,[[x+10,60,3]]); },{glow:10}); }
+ }],
+['pond','Pond','A round lily pond. The photo floats on it like a raft, with a frog sitting on the corner; lotus flowers and reeds all round.',
+ (g,img)=>{
+  floorShadow(g,150,280,100,8);
+  fill(g,'wood',()=>{ g.beginPath(); g.ellipse(150,214,116,46,0,0,Math.PI); g.lineTo(34,214); g.closePath(); },{shade:true});
+  fill(g,'leaf2',()=>{ g.beginPath(); g.ellipse(150,206,118,44,0,0,7); });
+  fill(g,'water',()=>{ g.beginPath(); g.ellipse(150,204,104,36,0,0,7); },{shade:false});
+  for(let k=0;k<7;k++){ const x=60+k*5, h=40+(k%3)*12; stroke(g,'leaf',()=>{ g.beginPath(); g.moveTo(x,190); g.quadraticCurveTo(x-6,190-h/2,x+2,190-h); },2.2); }
+  fill(g,'wood',()=>{ g.beginPath(); for(const x of [62,70]) { g.moveTo(x+4,146); g.ellipse(x,146,4,10,0,0,7); } });
+  for(const [x,y,s] of [[226,196,15],[198,224,11],[88,222,13]]) fill(g,'leaf',()=>{ g.beginPath(); g.ellipse(x,y,s,s*.45,0,.25,Math.PI*2-.25); g.lineTo(x,y); g.closePath(); });
+  for(const [x,y] of [[226,188],[90,214]]) fill(g,'pink',()=>{ g.beginPath(); for(let k=0;k<5;k++){ const a=Math.PI+k*Math.PI/4; g.moveTo(x,y); g.ellipse(x+Math.cos(a)*5,y+Math.sin(a)*5,6,3,a,0,7); } });
+  // The raft: the photo lying on the water, a ripple round it.
+  stroke(g,'paper',()=>{ g.beginPath(); g.ellipse(150,206,58,20,0,0,7); },1.4,{alpha:.8});
+  g.save(); g.translate(150,198); g.transform(1,0,-.35,.55,0,0); print(g,img,0,0,96,90,0,{border:4}); g.restore();
+  fill(g,'leaf',()=>{ g.beginPath(); g.ellipse(184,176,13,9,0,0,7); });
+  fill(g,'paper',()=>{ circles(g,[[178,168,4],[190,168,4]]); },{line:1});
+  fill(g,'dark',()=>{ circles(g,[[178,168,1.6],[190,168,1.6]]); },{flat:true});
+  bird(g,236,60,9);
+ }],
+];
+const PHOTO_FOR={book:'tree',mountain:'village',branch:'woman',balloon:'road',kite:'lake',boat:'hiker',cloud:'dog',moon:'cat',tree:'mic',lighthouse:'dress',tent:'fire',desert:'dust',pond:'beach'};
+
+async function drawSpecimen(cv,kind,fn){
+  const im=await load(PHOTO_FOR[kind]||'tree');
+  const s=cv.clientWidth||300; cv.width=600; cv.height=600; const g=cv.getContext('2d'); g.setTransform(2,0,0,2,0,0);
+  g.fillStyle=T.bg; g.fillRect(0,0,300,300);
+  if(T.mode==='crt'){ g.fillStyle='rgba(0,0,0,.3)'; for(let y=0;y<300;y+=3) g.fillRect(0,y,300,1); }
+  fn(g,im);
+}
+function render(){
+  document.documentElement.style.setProperty('--card',T.bg);
+  document.querySelectorAll('canvas[data-kind]').forEach(cv=>{ const k=KINDS.find(x=>x[0]===cv.dataset.kind); drawSpecimen(cv,k[0],k[3]); });
+  drawPath();
+}
+const holder=document.getElementById('specimens');
+for(const [k,name,desc] of KINDS){ const f=document.createElement('figure'); f.className='spec'; f.innerHTML='<canvas data-kind="'+k+'" aria-label="'+name+' island"></canvas><figcaption><b>'+name+'</b><small>'+desc+'</small></figcaption>'; holder.appendChild(f); }
+document.querySelectorAll('#themes button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#themes button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); T=THEMES[b.dataset.t]; render();
+}));
+
+/* ---------- Three on the path, as the albums screen ---------- */
+async function drawPath(){
+  const cv=document.getElementById('pathphone'), g=cv.getContext('2d'); g.setTransform(2,0,0,2,0,0);
+  g.fillStyle=T.bg; g.fillRect(0,0,280,600);
+  if(T.mode==='crt'){ g.fillStyle='rgba(0,0,0,.3)'; for(let y=0;y<600;y+=3) g.fillRect(0,y,280,1); }
+  const fg=T.ink, muted=T.mode==='riso'&&!T.screen?'#5F6068':fg;
+  const disp=T.mode==='crt'?'34px VT323':T.mode==='cy'?'italic 32px "Instrument Serif"':T.mode==='kc'?'900 28px Archivo':T.mode==='ir'?'800 28px "Bricolage Grotesque"':'880 34px Anybody';
+  g.fillStyle=fg; g.font=disp; g.fillText('Albums',18,58);
+  g.font='600 12px "Instrument Sans"'; g.fillText('Path',18,86); g.globalAlpha=.5; g.fillText('Ring',58,86); g.fillText('Map',96,86); g.globalAlpha=1;
+  const picks=[['tent',"Holi at home",'1994 · 18 photos',-30,96,'left'],['kite','Shimla, summer 87','1987 · 31 photos',100,270,'right'],['lighthouse','Goa trip','2003 · 24 photos',-20,424,'left']];
+  for(const [k,title,meta,x,y,side] of picks){
+    const K=KINDS.find(q=>q[0]===k), im=await load(PHOTO_FOR[k]);
+    g.save(); g.translate(x,y); g.scale(.62,.62); K[3](g,im); g.restore();
+    const tx=side==='left'?272:16; g.textAlign=side==='left'?'right':'left';
+    g.fillStyle=fg; g.font=disp.replace(/\d+px/,'20px'); wrap(g,title,tx,y+(side==='left'?150:40),110,21);
+    g.font='500 11px "Instrument Sans"'; g.fillStyle=muted; g.globalAlpha=.8; g.fillText(meta,tx,y+(side==='left'?196:86)); g.globalAlpha=1; g.textAlign='left';
+  }
+}
+function wrap(g,text,x,y,w,lh){ const words=text.split(' '); let line=''; for(const wd of words){ const t=line?line+' '+wd:wd; if(g.measureText(t).width>w&&line){ g.fillText(line,x,y); y+=lh; line=wd; } else line=t; } g.fillText(line,x,y); }
+
+render();
+if(document.fonts) document.fonts.ready.then(render);
+</script>
+</body>
+</html>
