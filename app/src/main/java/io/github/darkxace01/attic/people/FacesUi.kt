@@ -131,9 +131,9 @@ fun NameSheet(faces: List<FaceEntity>, onDismiss: () -> Unit, suggestion: Person
         onDismiss()
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Ground, dragHandle = { io.github.darkxace01.attic.ui.theme.PencilHandle() }, scrimColor = Palette.Ink.copy(alpha = 0.4f)) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp).imePadding().navigationBarsPadding()) {
-            Text(if (faces.size == 1) "Who is this?" else "Who are these?", style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
+            Text(if (faces.size == 1) "Who is this?" else "Who are these?", style = MaterialTheme.typography.headlineSmall, color = Palette.Ink)
             if (faces.size > 1) {
                 Text("Tap anyone who isn't them to leave them out.", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
             }

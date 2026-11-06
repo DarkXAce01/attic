@@ -1,7 +1,6 @@
 package io.github.darkxace01.attic.albums
 
 import android.net.Uri
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,7 +30,7 @@ fun OpenSharedAlbum(uri: Uri, onOpen: (Long) -> Unit, onDone: () -> Unit) {
             .onFailure { failed = it.message?.takeIf { m -> m.endsWith(".") } ?: "Couldn't open that file. Is it an Attic album?" }
     }
     val r = result
-    AlertDialog(
+    io.github.darkxace01.attic.ui.theme.InkDialog(
         onDismissRequest = { if (r != null || failed != null) onDone() },
         title = {
             Text(

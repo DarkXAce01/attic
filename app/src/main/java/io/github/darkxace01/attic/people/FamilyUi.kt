@@ -27,7 +27,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -130,7 +129,7 @@ fun FamilySection(personId: Long, name: String, onOpenPerson: (Long) -> Unit, on
         scope.launch { library.relate(personId, other, kind) }
     }
     removing?.let { (r, other) ->
-        AlertDialog(
+        io.github.darkxace01.attic.ui.theme.InkDialog(
             onDismissRequest = { removing = null },
             containerColor = Palette.Surface,
             text = { Text("Take $other out of $name's family? Their photos stay.", color = Palette.Ink) },
@@ -160,9 +159,9 @@ private fun RelativeSheet(name: String, people: List<PersonSummary>, onDismiss: 
     val kinds = listOf("parent" to "Parent", "child" to "Child", RelationEntity.SPOUSE to "Husband or wife", RelationEntity.SIBLING to "Brother or sister")
     var kind by remember { mutableStateOf("parent") }
     var typed by remember { mutableStateOf("") }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Ground, dragHandle = { io.github.darkxace01.attic.ui.theme.PencilHandle() }, scrimColor = Palette.Ink.copy(alpha = 0.4f)) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp).imePadding().navigationBarsPadding()) {
-            Text("Add to $name's family", style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
+            Text("Add to $name's family", style = MaterialTheme.typography.headlineSmall, color = Palette.Ink)
             Spacer(Modifier.height(14.dp))
             Text("They are $name's", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
             Spacer(Modifier.height(8.dp))

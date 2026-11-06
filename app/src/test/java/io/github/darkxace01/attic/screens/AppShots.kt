@@ -161,6 +161,28 @@ class AppShots {
     @Test fun ring() { seed(more = true); context.library.settings.update { it.copy(albumLayout = "ring") }; shot("ring") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }
     @Test fun map() { seed(more = true); context.library.settings.update { it.copy(albumLayout = "map") }; shot("map") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }
 
+    @OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+    private fun screenShot(name: String, content: @Composable () -> Unit) {
+        compose.mainClock.autoAdvance = false
+        compose.setContent { AtticTheme { Box(Modifier.fillMaxSize().background(Palette.Ground)) { content() } } }
+        repeat(20) { compose.mainClock.advanceTimeBy(100); Thread.sleep(40); org.robolectric.shadows.ShadowLooper.idleMainLooper() }
+        com.github.takahirom.roborazzi.captureScreenRoboImage("build/shots/app_$name.png")
+    }
+
+    @Test fun sheet() = screenShot("sheet") {
+        io.github.darkxace01.attic.ui.DateSheet("When was this taken?", io.github.darkxace01.attic.data.PhotoDate.parse("summer 1987"), inherited = null, onDismiss = {}, onSave = {})
+    }
+
+    @Test fun dialog() = screenShot("dialog") {
+        io.github.darkxace01.attic.ui.theme.InkDialog(
+            onDismissRequest = {},
+            title = { androidx.compose.material3.Text("Delete this photo?") },
+            text = { androidx.compose.material3.Text("The scan is deleted from Attic and your gallery. The paper print is fine, so you can scan it again.") },
+            confirmButton = { io.github.darkxace01.attic.ui.QuietButton("Delete", color = Palette.Warning, onClick = {}) },
+            dismissButton = { io.github.darkxace01.attic.ui.QuietButton("Keep", onClick = {}) },
+        )
+    }
+
     @Test fun welcome() { shot("welcome") { io.github.darkxace01.attic.AtticApp() } }
     @Test fun emptyAlbums() { shot("empty") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }
 }

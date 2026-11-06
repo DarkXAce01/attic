@@ -275,7 +275,7 @@ private fun LicencesSheet(onDismiss: () -> Unit) {
         "Making prints bigger (Real-ESRGAN)" to "BSD 3-Clause License, Copyright (c) 2021 Xintao Wang. The general x4v3 model. Runs on the phone.",
         "Attic" to "GNU General Public License 3.0. The source is on GitHub: DarkXAce01/attic.",
     )
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Ground, dragHandle = { io.github.darkxace01.attic.ui.theme.PencilHandle() }, scrimColor = Palette.Ink.copy(alpha = 0.4f)) {
         Column(
             Modifier
                 .padding(horizontal = 20.dp)
@@ -283,7 +283,7 @@ private fun LicencesSheet(onDismiss: () -> Unit) {
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState()),
         ) {
-            Text("Open-source licences", style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
+            Text("Open-source licences", style = MaterialTheme.typography.headlineSmall, color = Palette.Ink)
             for ((name, what) in items) {
                 Spacer(Modifier.height(14.dp))
                 Text(name, style = MaterialTheme.typography.bodyLarge, color = Palette.Ink)

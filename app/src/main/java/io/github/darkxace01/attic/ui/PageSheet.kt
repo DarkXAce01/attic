@@ -78,7 +78,7 @@ fun PageSheet(albumId: Long, page: Int, onDismiss: () -> Unit) {
         }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Ground, dragHandle = { io.github.darkxace01.attic.ui.theme.PencilHandle() }, scrimColor = Palette.Ink.copy(alpha = 0.4f)) {
         Column(
             Modifier
                 .padding(horizontal = 20.dp)
@@ -87,7 +87,7 @@ fun PageSheet(albumId: Long, page: Int, onDismiss: () -> Unit) {
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState()),
         ) {
-            Text("Page $page", style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
+            Text("Page $page", style = MaterialTheme.typography.headlineSmall, color = Palette.Ink)
             Text(
                 if (b.count == 1) "For its photo. All optional." else "For all ${b.count} photos on it. All optional.",
                 style = MaterialTheme.typography.bodyMedium,

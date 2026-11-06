@@ -114,7 +114,7 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
                         androidx.compose.material3.IconButton(onClick = { menu = true }) {
                             androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.MoreVert, "More", tint = Palette.Ink)
                         }
-                        androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = Palette.Ground, shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp), border = androidx.compose.foundation.BorderStroke(1.5.dp, Palette.Ink), shadowElevation = 0.dp) {
                             androidx.compose.material3.DropdownMenuItem(text = { Text("Add a shared album") }, onClick = { menu = false; pickShared.launch(arrayOf("application/zip", "application/octet-stream", "application/x-zip-compressed")) })
                             androidx.compose.material3.DropdownMenuItem(text = { Text("Settings") }, onClick = { menu = false; onSettings() })
                         }

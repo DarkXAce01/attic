@@ -121,8 +121,11 @@ fun Chip(text: String, selected: Boolean = false, onClick: () -> Unit) {
 
 @Composable
 fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = Palette.Muted,
-    unfocusedBorderColor = Palette.SurfaceHigh,
+    // An ink outline on paper; darker while typing.
+    focusedBorderColor = Palette.Ink,
+    unfocusedBorderColor = Palette.Ink.copy(alpha = 0.45f),
+    focusedContainerColor = Palette.Ground,
+    unfocusedContainerColor = Palette.Ground,
     cursorColor = Palette.Accent,
     focusedTextColor = Palette.Ink,
     unfocusedTextColor = Palette.Ink,
@@ -143,9 +146,9 @@ fun TextSheet(
 ) {
     var value by remember { mutableStateOf(initial) }
     val focus = remember { FocusRequester() }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Ground, dragHandle = { io.github.darkxace01.attic.ui.theme.PencilHandle() }, scrimColor = Palette.Ink.copy(alpha = 0.4f)) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp).imePadding().navigationBarsPadding()) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
+            Text(title, style = MaterialTheme.typography.headlineSmall, color = Palette.Ink)
             Spacer(Modifier.height(14.dp))
             OutlinedTextField(
                 value = value,
@@ -180,7 +183,7 @@ fun DateSheet(
     var text by remember { mutableStateOf(initial?.label ?: "") }
     val parsed = PhotoDate.parse(text)
     val focus = remember { FocusRequester() }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Ground, dragHandle = { io.github.darkxace01.attic.ui.theme.PencilHandle() }, scrimColor = Palette.Ink.copy(alpha = 0.4f)) {
         Column(
             Modifier
                 .padding(horizontal = 20.dp)
@@ -189,7 +192,7 @@ fun DateSheet(
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState()),
         ) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
+            Text(title, style = MaterialTheme.typography.headlineSmall, color = Palette.Ink)
             Spacer(Modifier.height(4.dp))
             Text(
                 "As exact as you know it: 14 Jul 1998, Jul 1998, summer 1987, about 1985, early 90s, 1970s.",
@@ -252,11 +255,11 @@ fun AlbumPickerSheet(
     onNew: (String) -> Unit,
 ) {
     var newTitle by remember { mutableStateOf("") }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = Palette.Ground, dragHandle = { io.github.darkxace01.attic.ui.theme.PencilHandle() }, scrimColor = Palette.Ink.copy(alpha = 0.4f)) {
         Column(Modifier.padding(bottom = 20.dp).imePadding().navigationBarsPadding()) {
             Text(
                 "Scan into",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.headlineSmall,
                 color = Palette.Ink,
                 modifier = Modifier.padding(horizontal = 20.dp),
             )

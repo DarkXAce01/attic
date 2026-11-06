@@ -131,7 +131,7 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
             QuietButton("Scan here", onClick = onScanHere, color = Palette.Accent)
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More", tint = Palette.Ink) }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = Palette.Ground, shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp), border = androidx.compose.foundation.BorderStroke(1.5.dp, Palette.Ink), shadowElevation = 0.dp) {
                     DropdownMenuItem(text = { Text("Add from your phone") }, onClick = { menu = false; addFromPhone() })
                     if (prints.isNotEmpty() || phone.isNotEmpty()) DropdownMenuItem(text = { Text("Play as a slideshow") }, onClick = { menu = false; onSlideshow() })
                     DropdownMenuItem(text = { Text("Tell its stories") }, onClick = { menu = false; onTellStories() })
@@ -245,7 +245,7 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
         )
     }
     removing?.let { ph ->
-        androidx.compose.material3.AlertDialog(
+        io.github.darkxace01.attic.ui.theme.InkDialog(
             onDismissRequest = { removing = null },
             title = { Text("Take it out of ${a.title}?") },
             text = { Text("It stays in your phone's gallery, just not in this album.") },
@@ -255,7 +255,7 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
         )
     }
     if (confirmDelete) {
-        androidx.compose.material3.AlertDialog(
+        io.github.darkxace01.attic.ui.theme.InkDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Delete ${a.title}?") },
             text = {

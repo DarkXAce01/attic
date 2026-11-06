@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -149,7 +148,7 @@ fun StoriesSection(p: PrintEntity) {
     }
 
     deleting?.let { s ->
-        AlertDialog(
+        io.github.darkxace01.attic.ui.theme.InkDialog(
             onDismissRequest = { deleting = null },
             title = { Text("Delete this story?") },
             text = { Text("The recording is gone for good, unless it's in a backup.") },

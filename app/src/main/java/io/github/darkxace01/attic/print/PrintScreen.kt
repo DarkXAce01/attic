@@ -281,7 +281,7 @@ private fun PrintPage(
     }
 
     if (confirmDelete) {
-        androidx.compose.material3.AlertDialog(
+        io.github.darkxace01.attic.ui.theme.InkDialog(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Delete this photo?") },
             text = { Text("The scan is deleted from Attic and your gallery. The paper print is fine, so you can scan it again.") },
@@ -465,9 +465,9 @@ private fun PeopleSheet(initial: List<String>, onDismiss: () -> Unit, onSave: (L
     val chosen = remember { mutableStateListOf<String>().apply { addAll(initial) } }
     val typed = remember { mutableStateOf("") }
     fun save() { addTyped(chosen, typed); onSave(chosen.toList()) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Surface) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Ground, dragHandle = { io.github.darkxace01.attic.ui.theme.PencilHandle() }, scrimColor = Palette.Ink.copy(alpha = 0.4f)) {
         Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 20.dp).imePadding().navigationBarsPadding()) {
-            Text("Who's in this photo?", style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
+            Text("Who's in this photo?", style = MaterialTheme.typography.headlineSmall, color = Palette.Ink)
             Spacer(Modifier.height(14.dp))
             PeoplePicker(chosen, typed, onDone = ::save)
             Spacer(Modifier.height(18.dp))
