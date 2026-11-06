@@ -1,5 +1,6 @@
 package io.github.darkxace01.attic.timeline
 
+import io.github.darkxace01.attic.data.PhonePhoto
 import io.github.darkxace01.attic.data.PhotoDate
 import io.github.darkxace01.attic.data.PrintEntity
 import java.time.LocalDate
@@ -12,14 +13,16 @@ import kotlin.math.abs
  * day, the same one all day.
  */
 object OnThisDay {
-    data class Memory(val title: String, val prints: List<Pair<PrintEntity, PhotoDate?>>)
+    /** Scans first, then the phone's own photos from the same days. */
+    data class Memory(val title: String, val prints: List<Pair<PrintEntity, PhotoDate?>>, val phone: List<PhonePhoto> = emptyList())
 
     /** Days either side of today that still count as "this week". */
     private const val WEEK = 3
     private const val MAX = 12
 
-    fun pick(prints: List<PrintEntity>, albumDates: Map<Long, PhotoDate?>, today: LocalDate): Memory? {
+    fun pick(prints: List<PrintEntity>, albumDates: Map<Long, PhotoDate?>, today: LocalDate, phone: List<PhonePhoto> = emptyList()): Memory? {
         if (prints.isEmpty()) return null
+        val oldPhone = phone.filter { it.taken.year < today.year }
         val dated = prints.map { it to (it.date ?: albumDates[it.albumId]) }
         val past = dated.mapNotNull { (p, d) -> d?.takeIf { it.from.year < today.year }?.let { p to it } }
         val days = past.filter { it.second.from == it.second.to }
@@ -33,8 +36,13 @@ object OnThisDay {
         }
         val oldestFirst = compareBy<Pair<PrintEntity, PhotoDate>>({ it.second.from }, { it.first.id })
 
-        days.filter { sameDay(it.second.from) }.takeIf { it.isNotEmpty() }?.let { return Memory("On this day", it.sortedWith(oldestFirst).take(MAX)) }
-        days.filter { daysOff(it.second.from) <= WEEK }.takeIf { it.isNotEmpty() }?.let { return Memory("This week, years ago", it.sortedWith(oldestFirst).take(MAX)) }
+        fun memory(title: String, scans: List<Pair<PrintEntity, PhotoDate>>, ph: List<PhonePhoto>): Memory? {
+            if (scans.isEmpty() && ph.isEmpty()) return null
+            val s = scans.sortedWith(oldestFirst).take(MAX)
+            return Memory(title, s, ph.sortedWith(compareBy({ it.taken }, { it.id })).take(MAX - s.size))
+        }
+        memory("On this day", days.filter { sameDay(it.second.from) }, oldPhone.filter { sameDay(it.taken) })?.let { return it }
+        memory("This week, years ago", days.filter { daysOff(it.second.from) <= WEEK }, oldPhone.filter { daysOff(it.taken) <= WEEK })?.let { return it }
         past.filter { (_, d) -> d.from.year == d.to.year && d.from.monthValue == d.to.monthValue && d.from.monthValue == today.monthValue }
             .takeIf { it.isNotEmpty() }?.let { return Memory("This month, years ago", it.sortedWith(oldestFirst).take(MAX)) }
         // Nothing dated near today: one photo for the day, steady all day, a different one tomorrow.

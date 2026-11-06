@@ -23,6 +23,8 @@ import io.github.darkxace01.attic.vision.Rectify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -71,14 +73,21 @@ class Library(private val context: Context) {
 
     /** The whole library on one timeline: see [Timeline]. */
     fun timeline(): Flow<List<Timeline.Row>> =
-        kotlinx.coroutines.flow.combine(dao.allPrintsFlow(), dao.albumsFlow()) { prints, albums ->
-            Timeline.rows(prints, albums.associate { it.id to it.date })
+        kotlinx.coroutines.flow.combine(dao.allPrintsFlow(), dao.albumsFlow(), phonePhotos()) { prints, albums, phone ->
+            Timeline.rows(prints, albums.associate { it.id to it.date }, phone)
         }.flowOn(Dispatchers.Default)
+
+    /** The phone's own photos, when they've been asked for (see [PhonePhotos]). */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun phonePhotos(): Flow<List<PhonePhoto>> =
+        settings.prefs.map { it.phonePhotos }.distinctUntilChanged().flatMapLatest { on ->
+            if (on) PhonePhotos.watch(context) else kotlinx.coroutines.flow.flowOf(emptyList())
+        }
 
     /** What to bring back today: see [io.github.darkxace01.attic.timeline.OnThisDay]. */
     fun onThisDay(today: java.time.LocalDate): Flow<io.github.darkxace01.attic.timeline.OnThisDay.Memory?> =
-        kotlinx.coroutines.flow.combine(dao.allPrintsFlow(), dao.albumsFlow()) { prints, albums ->
-            io.github.darkxace01.attic.timeline.OnThisDay.pick(prints, albums.associate { it.id to it.date }, today)
+        kotlinx.coroutines.flow.combine(dao.allPrintsFlow(), dao.albumsFlow(), phonePhotos()) { prints, albums, phone ->
+            io.github.darkxace01.attic.timeline.OnThisDay.pick(prints, albums.associate { it.id to it.date }, today, phone)
         }.flowOn(Dispatchers.Default)
 
     /** The file to show and export: the enhanced version when there is one. */

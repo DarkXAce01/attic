@@ -47,4 +47,21 @@ class TimelineTest {
         val year = (Timeline.rows(listOf(july, summer, jan), emptyMap())[1] as Timeline.Row.Group).prints
         assertEquals(listOf(jan.id, summer.id, july.id), year.map { it.id })
     }
+
+    @Test
+    fun phonePhotosJoinTheirYear() {
+        val old = print(PhotoDate.year(2012))
+        val phone = listOf(
+            io.github.darkxace01.attic.data.PhonePhoto(2, "content://m/2", java.time.LocalDate.of(2012, 8, 1), 1, 1),
+            io.github.darkxace01.attic.data.PhonePhoto(1, "content://m/1", java.time.LocalDate.of(2012, 3, 1), 1, 1),
+            io.github.darkxace01.attic.data.PhonePhoto(3, "content://m/3", java.time.LocalDate.of(2024, 1, 5), 1, 1),
+        )
+        val rows = Timeline.rows(listOf(old), emptyMap(), phone)
+        assertEquals(listOf("2010s (3)", "2012: 3", "2020s (1)", "2024: 1"), rows.map {
+            when (it) { is Timeline.Row.Decade -> "${it.decade}s (${it.count})"; is Timeline.Row.Group -> "${it.title}: ${it.count}" }
+        })
+        val y2012 = rows[1] as Timeline.Row.Group
+        assertEquals(listOf(old.id), y2012.prints.map { it.id })
+        assertEquals(listOf(1L, 2L), y2012.phone.map { it.id })
+    }
 }

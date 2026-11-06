@@ -84,6 +84,8 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - Ask the family: one web page of the faces nobody has named and the photos with no date or place. A
   relative opens it in any browser, fills in what they know and sends back a small answers file; Attic
   reads it in without overwriting anything already filled in
+- Phone photos on the timeline, if you want them: today's photos alongside the old scans, read where they
+  are in the phone's gallery, never copied. On this day mixes them in too
 
 **Keep**
 - Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their

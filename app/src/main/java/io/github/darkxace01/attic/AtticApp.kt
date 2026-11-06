@@ -65,6 +65,7 @@ private sealed interface Route {
     data class Person(val id: Long) : Route
     data class FamilyTree(val rootId: Long?) : Route
     data class ThenNow(val printId: Long) : Route
+    data class Phone(val photo: io.github.darkxace01.attic.data.PhonePhoto) : Route
     data object Settings : Route
 }
 
@@ -103,7 +104,8 @@ fun AtticApp() {
                 Route.Albums -> Box(Modifier.statusBarsPadding()) {
                     AlbumsScreen(onOpen = { go(Route.Album(it)) }, onSettings = { go(Route.Settings) })
                 }
-                Route.Timeline -> Box(Modifier.statusBarsPadding()) { TimelineScreen(onOpenPrint = { go(Route.Print(it)) }) }
+                Route.Timeline -> Box(Modifier.statusBarsPadding()) { TimelineScreen(onOpenPrint = { go(Route.Print(it)) }, onOpenPhone = { go(Route.Phone(it)) }) }
+                is Route.Phone -> Box(Modifier.statusBarsPadding()) { io.github.darkxace01.attic.timeline.PhonePhotoScreen(top.photo, onBack = ::back) }
                 Route.Settings -> Box(Modifier.statusBarsPadding()) { SettingsScreen(onBack = ::back, onLightbox = { go(Route.Lightbox) }) }
                 is Route.Slideshow -> io.github.darkxace01.attic.slideshow.SlideshowScreen(top.albumId, top.personId, onDone = ::back)
                 Route.Lightbox -> io.github.darkxace01.attic.settings.LightboxScreen(onDone = ::back)

@@ -23,6 +23,8 @@ data class Prefs(
     val trimBorders: Boolean = false,
     /** Scanning film negatives on a lightbox: each print is developed into a positive. */
     val negatives: Boolean = false,
+    /** The phone's own photos on the timeline too (read where they are, never copied). */
+    val phonePhotos: Boolean = false,
 )
 
 class Settings(context: Context) {
@@ -41,6 +43,7 @@ class Settings(context: Context) {
         uncurl = sp.getBoolean("uncurl", true),
         trimBorders = sp.getBoolean("trimBorders", false),
         negatives = sp.getBoolean("negatives", false),
+        phonePhotos = sp.getBoolean("phonePhotos", false),
     )
 
     fun update(change: (Prefs) -> Prefs) {
@@ -55,6 +58,7 @@ class Settings(context: Context) {
             .putBoolean("uncurl", p.uncurl)
             .putBoolean("trimBorders", p.trimBorders)
             .putBoolean("negatives", p.negatives)
+            .putBoolean("phonePhotos", p.phonePhotos)
             .apply()
         _prefs.value = p
     }

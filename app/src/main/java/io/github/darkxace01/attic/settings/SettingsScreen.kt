@@ -125,6 +125,13 @@ fun SettingsScreen(onBack: () -> Unit, onLightbox: () -> Unit = {}) {
                 }
             }
 
+            Heading("Timeline")
+            Toggle(
+                "Phone photos on the timeline",
+                "Today's photos alongside the old ones, read where they are in the phone's gallery. Attic never copies or changes them.",
+                prefs.phonePhotos,
+            ) { on -> library.settings.update { it.copy(phonePhotos = on) } }
+
             Heading("Ask the family")
             io.github.darkxace01.attic.help.AskFamilySection()
 

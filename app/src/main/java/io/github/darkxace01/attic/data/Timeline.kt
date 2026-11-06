@@ -12,25 +12,36 @@ object Timeline {
         data class Decade(val decade: Int, val count: Int) : Row
 
         /** A year, a decade's loose photos, or the undated ones. */
-        data class Group(val key: String, val title: String, val prints: List<PrintEntity>) : Row
+        data class Group(val key: String, val title: String, val prints: List<PrintEntity>, val phone: List<PhonePhoto> = emptyList()) : Row {
+            val count get() = prints.size + phone.size
+        }
     }
 
     /** Longest a date can be and still belong to one year: a year, plus slack for a season across new year. */
     private const val YEAR_DAYS = 400
 
-    fun rows(prints: List<PrintEntity>, albumDates: Map<Long, PhotoDate?>): List<Row> {
+    /** [phone]: the phone's own photos, which always know their day; they follow the scans of their year. */
+    fun rows(prints: List<PrintEntity>, albumDates: Map<Long, PhotoDate?>, phone: List<PhonePhoto> = emptyList()): List<Row> {
         val dated = prints.map { p -> p to (p.date ?: albumDates[p.albumId]) }
         val undated = dated.filter { it.second == null }.map { it.first }
         val withDate = dated.mapNotNull { (p, d) -> d?.let { p to it } }
         val byDecade = withDate.groupBy { (_, d) -> d.representative.year / 10 * 10 }
+        val phoneByDecade = phone.groupBy { it.taken.year / 10 * 10 }
 
         val out = mutableListOf<Row>()
-        for (decade in byDecade.keys.sorted()) {
-            val inDecade = byDecade.getValue(decade)
-            out += Row.Decade(decade, inDecade.size)
+        for (decade in (byDecade.keys + phoneByDecade.keys).sorted()) {
+            val inDecade = byDecade[decade].orEmpty()
+            val phoneHere = phoneByDecade[decade].orEmpty()
+            out += Row.Decade(decade, inDecade.size + phoneHere.size)
             val (exact, loose) = inDecade.partition { (_, d) -> d.to.toEpochDay() - d.from.toEpochDay() <= YEAR_DAYS }
-            for ((year, list) in exact.groupBy { (_, d) -> d.representative.year }.toSortedMap()) {
-                out += Row.Group("y$year", "$year", list.sortedWith(order).map { it.first })
+            val scansByYear = exact.groupBy { (_, d) -> d.representative.year }
+            val phoneByYear = phoneHere.groupBy { it.taken.year }
+            for (year in (scansByYear.keys + phoneByYear.keys).sorted()) {
+                out += Row.Group(
+                    "y$year", "$year",
+                    scansByYear[year].orEmpty().sortedWith(order).map { it.first },
+                    phoneByYear[year].orEmpty().sortedWith(compareBy({ it.taken }, { it.id })),
+                )
             }
             if (loose.isNotEmpty()) {
                 out += Row.Group("d$decade", "Sometime in the ${decade}s", loose.sortedWith(order).map { it.first })

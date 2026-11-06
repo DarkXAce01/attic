@@ -7,6 +7,11 @@
     <!-- Stories: spoken memories about a photo, recorded and kept on the phone. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- Phone photos on the timeline, if asked for: read where they are, never copied or sent anywhere. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
     <!-- No INTERNET permission: nothing ever leaves the phone. Nor any network permission a library asks for. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 

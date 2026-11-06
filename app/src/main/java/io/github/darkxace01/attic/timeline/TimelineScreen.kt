@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +30,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.darkxace01.attic.albums.PrintTile
+import io.github.darkxace01.attic.data.PhonePhoto
+import io.github.darkxace01.attic.data.PhonePhotos
 import io.github.darkxace01.attic.data.Timeline
 import io.github.darkxace01.attic.library
 import io.github.darkxace01.attic.ui.TopBar
@@ -36,14 +39,25 @@ import io.github.darkxace01.attic.ui.theme.Palette
 
 /** Every photo from every album, by decade and year, oldest first. */
 @Composable
-fun TimelineScreen(onOpenPrint: (Long) -> Unit) {
-    val library = LocalContext.current.library
+fun TimelineScreen(onOpenPrint: (Long) -> Unit, onOpenPhone: (PhonePhoto) -> Unit = {}) {
+    val context = LocalContext.current
+    val library = context.library
+    val prefs by library.settings.prefs.collectAsStateWithLifecycle()
+    val askPhotos = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions(),
+    ) { granted -> if (granted.values.any { it }) library.settings.update { it.copy(phonePhotos = true) } }
     val rows by remember { library.timeline() }.collectAsStateWithLifecycle(null)
     val today = remember { java.time.LocalDate.now() }
     val memory by remember(today) { library.onThisDay(today) }.collectAsStateWithLifecycle(null)
 
     Column(Modifier.fillMaxSize()) {
-        TopBar("Timeline", onBack = null)
+        TopBar("Timeline", onBack = null) {
+            if (!prefs.phonePhotos || !PhonePhotos.allowed(context)) {
+                io.github.darkxace01.attic.ui.QuietButton("Add phone photos", onClick = {
+                    if (PhonePhotos.allowed(context)) library.settings.update { it.copy(phonePhotos = true) } else askPhotos.launch(PhonePhotos.permissions)
+                })
+            }
+        }
         val list = rows ?: return@Column
         if (list.isEmpty()) {
             Text(
@@ -61,7 +75,7 @@ fun TimelineScreen(onOpenPrint: (Long) -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             memory?.let { m ->
-                item(span = { GridItemSpan(maxLineSpan) }, key = "memory") { MemoryStrip(m, today, onOpenPrint) }
+                item(span = { GridItemSpan(maxLineSpan) }, key = "memory") { MemoryStrip(m, today, onOpenPrint, onOpenPhone) }
             }
             for (row in list) {
                 when (row) {
@@ -76,13 +90,14 @@ fun TimelineScreen(onOpenPrint: (Long) -> Unit) {
                     is Timeline.Row.Group -> {
                         item(span = { GridItemSpan(maxLineSpan) }, key = "group${row.key}") {
                             Text(
-                                row.title + "  ·  " + (if (row.prints.size == 1) "1 photo" else "${row.prints.size} photos"),
+                                row.title + "  ·  " + (if (row.count == 1) "1 photo" else "${row.count} photos"),
                                 style = MaterialTheme.typography.labelLarge,
                                 color = Palette.Muted,
                                 modifier = Modifier.padding(top = 10.dp, bottom = 2.dp),
                             )
                         }
                         items(row.prints, key = { "p${it.id}" }) { p -> PrintTile(p, library.displayFile(p)) { onOpenPrint(p.id) } }
+                        items(row.phone, key = { "m${it.id}" }) { ph -> PhoneTile(ph) { onOpenPhone(ph) } }
                     }
                 }
             }
@@ -92,7 +107,7 @@ fun TimelineScreen(onOpenPrint: (Long) -> Unit) {
 
 /** Today's memory over the timeline: big prints in a row, each with how long ago it was. */
 @Composable
-private fun MemoryStrip(m: OnThisDay.Memory, today: java.time.LocalDate, onOpenPrint: (Long) -> Unit) {
+private fun MemoryStrip(m: OnThisDay.Memory, today: java.time.LocalDate, onOpenPrint: (Long) -> Unit, onOpenPhone: (PhonePhoto) -> Unit) {
     val library = LocalContext.current.library
     Column(Modifier.padding(bottom = 6.dp)) {
         Text(m.title, style = MaterialTheme.typography.titleMedium, color = Palette.Ink, modifier = Modifier.padding(bottom = 8.dp))
@@ -107,6 +122,42 @@ private fun MemoryStrip(m: OnThisDay.Memory, today: java.time.LocalDate, onOpenP
                     if (line.isNotEmpty()) Text(line, style = MaterialTheme.typography.labelMedium, color = Palette.Muted, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
                 }
             }
+            items(m.phone, key = { "m${it.id}" }) { ph ->
+                Column(Modifier.width(200.dp).clip(RoundedCornerShape(14.dp)).clickable { onOpenPhone(ph) }) {
+                    AsyncImage(ph.uri, null, contentScale = ContentScale.Crop, modifier = Modifier.width(200.dp).height(150.dp).clip(RoundedCornerShape(14.dp)).background(Palette.Surface))
+                    val d = io.github.darkxace01.attic.data.PhotoDate.day(ph.taken)
+                    Text(listOfNotNull(d.label, OnThisDay.ago(d, today)).joinToString(", "), style = MaterialTheme.typography.labelMedium, color = Palette.Muted, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
+                }
+            }
         }
+    }
+}
+
+/** A photo from the phone's gallery: edge to edge, where a scanned print sits on its card. */
+@Composable
+private fun PhoneTile(ph: PhonePhoto, onClick: () -> Unit) {
+    AsyncImage(
+        ph.uri, null, contentScale = ContentScale.Crop,
+        modifier = Modifier.aspectRatio(1f).background(Palette.Surface).clickable(onClick = onClick),
+    )
+}
+
+/** One of the phone's photos, big, with its day; it opens in the phone's gallery for anything more. */
+@Composable
+fun PhonePhotoScreen(ph: PhonePhoto, onBack: () -> Unit) {
+    val context = LocalContext.current
+    Column(Modifier.fillMaxSize()) {
+        TopBar(io.github.darkxace01.attic.data.PhotoDate.day(ph.taken).label, onBack = onBack) {
+            io.github.darkxace01.attic.ui.QuietButton("Open in gallery", onClick = {
+                runCatching {
+                    context.startActivity(
+                        android.content.Intent(android.content.Intent.ACTION_VIEW)
+                            .setDataAndType(android.net.Uri.parse(ph.uri), "image/*")
+                            .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                    )
+                }
+            })
+        }
+        AsyncImage(ph.uri, null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding(bottom = 16.dp))
     }
 }
