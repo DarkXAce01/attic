@@ -1,5 +1,6 @@
 package io.github.darkxace01.attic.world
 
+import io.github.darkxace01.attic.ui.theme.themeShadow
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.darkxace01.attic.library
@@ -84,7 +85,9 @@ fun RebuiltPage(
                 // The pages underneath, a few edges showing to the right and below, and the book's shadow
                 // printed as a dot screen, a little off, the way the islands' are.
                 val u = 1.dp.toPx()
-                drawRect(io.github.darkxace01.attic.ui.theme.Riso.dots(io.github.darkxace01.attic.ui.theme.Palette.Ink, 3 * u, 0.5f), topLeft = Offset(10 * u, 12 * u), size = size)
+                if (io.github.darkxace01.attic.ui.theme.Palette.style == io.github.darkxace01.attic.ui.theme.Style.Riso)
+                    drawRect(io.github.darkxace01.attic.ui.theme.Riso.dots(io.github.darkxace01.attic.ui.theme.Palette.Ink, 3 * u, 0.5f), topLeft = Offset(10 * u, 12 * u), size = size)
+                else themeShadow(Offset(4 * u, 4 * u), size, lift = 0f, fill = io.github.darkxace01.attic.ui.theme.Palette.Surface)
                 for (k in 3 downTo 1) {
                     drawRect(io.github.darkxace01.attic.ui.theme.Palette.Ink, topLeft = Offset(k * 2.4f * u, k * 1.8f * u), size = size)
                     drawRect(io.github.darkxace01.attic.ui.theme.Palette.Surface, topLeft = Offset(k * 2.4f * u - u, k * 1.8f * u - u), size = size)

@@ -20,6 +20,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) take(intent)
         // The Look is known before the first frame, so Attic never opens in the wrong one.
         Palette.dark = isDark(library.settings.now.look)
+        Palette.style = io.github.darkxace01.attic.ui.theme.Style.parse(library.settings.now.theme)
         // Paper all the way up: dark status and navigation icons whatever the phone's own theme.
         enableEdgeToEdge(
             statusBarStyle = androidx.activity.SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
@@ -29,7 +30,8 @@ class MainActivity : ComponentActivity() {
             val prefs by library.settings.prefs.collectAsStateWithLifecycle()
             val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
             val dark = when (prefs.look) { "paper" -> false; "midnight" -> true; else -> systemDark }
-            androidx.compose.runtime.SideEffect { Palette.dark = dark }
+            val style = io.github.darkxace01.attic.ui.theme.Style.parse(prefs.theme)
+            androidx.compose.runtime.SideEffect { Palette.dark = dark; Palette.style = style }
             AtticTheme { AtticApp(
                     incoming = incoming.value, onIncomingDone = { incoming.value = null },
                     openPrint = openPrint.value, onOpenPrintDone = { openPrint.value = null },

@@ -1,5 +1,6 @@
 package io.github.darkxace01.attic.screens
 
+import io.github.darkxace01.attic.ui.theme.themeGround
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
@@ -58,6 +59,31 @@ class RisoShots {
             }
         }
         compose.onRoot().captureRoboImage("build/shots/riso_kinds.png")
+    }
+
+    /** Every kind in every theme, both sides: riso_kinds_<theme>_<side>.png. */
+    @Test
+    fun everyKindEveryTheme() {
+        val kinds = IslandKind.entries
+        compose.setContent {
+            Canvas(Modifier.fillMaxSize()) {
+                themeGround()
+                val cols = 3
+                val rows = (kinds.size + cols - 1) / cols
+                val cw = size.width / cols; val ch = size.height / rows
+                for ((i, k) in kinds.withIndex()) {
+                    val (a, b) = IslandLook.PAIRS[i % IslandLook.PAIRS.size]
+                    val c = Offset(cw * (i % cols + 0.5f), ch * (i / cols + 0.5f))
+                    drawIsland(IslandLook(k, a, b), photos.drop(i % 6), c, cw * 0.36f, 1.3f + i, i)
+                }
+            }
+        }
+        for (style in io.github.darkxace01.attic.ui.theme.Style.entries) for (dark in listOf(false, true)) {
+            Palette.style = style; Palette.dark = dark
+            compose.waitForIdle()
+            compose.onRoot().captureRoboImage("build/shots/riso_kinds_${style.name}_${if (dark) "dark" else "light"}.png")
+        }
+        Palette.style = io.github.darkxace01.attic.ui.theme.Style.Riso; Palette.dark = false
     }
 
     @Test

@@ -32,13 +32,19 @@ fun Monogram(name: String, size: Dp, modifier: Modifier = Modifier) {
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val r = this.size.minDimension / 2 * 0.94f
-            drawCircle(Riso.dots(Palette.Ink, 3.dp(this), 0.55f), r, center + Offset(r * 0.09f, r * 0.09f))
-            drawCircle(ink, r, center - Offset(r * 0.03f, r * 0.03f))
+            if (Palette.style == Style.Riso) {
+                drawCircle(Riso.dots(Palette.Ink, 3.dp(this), 0.55f), r, center + Offset(r * 0.09f, r * 0.09f))
+                drawCircle(ink, r, center - Offset(r * 0.03f, r * 0.03f))
+            } else {
+                val o = center - Offset(r * 0.03f, r * 0.03f)
+                themeShadow(o - Offset(r, r), androidx.compose.ui.geometry.Size(2 * r, 2 * r), r, r * 0.12f, ink)
+                drawCircle(ink, r, o)
+            }
         }
         Text(
             name.trim().take(1).uppercase(),
             color = if (ink.luminance() > 0.5f) Color(0xFF1D1E22) else Color.White,
-            style = TextStyle(fontFamily = Fonts.Display, fontWeight = FontWeight(860), fontSize = (size.value * 0.44f).sp),
+            style = displayStyle(size.value * 0.44f).copy(shadow = null),
         )
     }
 }

@@ -29,6 +29,8 @@ data class Prefs(
     val albumLayout: String = "path",
     /** The Look: "auto" (follows the phone), "paper" (light) or "midnight" (dark). */
     val look: String = "auto",
+    /** The theme (a [io.github.darkxace01.attic.ui.theme.Style] name); [look] picks its light or dark side. */
+    val theme: String = "Riso",
     /** A reflection moves over prints as the phone tilts. Off until chosen. */
     val tiltLight: Boolean = false,
 )
@@ -52,6 +54,7 @@ class Settings(context: Context) {
         phonePhotos = sp.getBoolean("phonePhotos", false),
         albumLayout = sp.getString("albumLayout", "path") ?: "path",
         look = sp.getString("look", "auto") ?: "auto",
+        theme = sp.getString("theme", "Riso") ?: "Riso",
         tiltLight = sp.getBoolean("tiltLight", false),
     )
 
@@ -70,6 +73,7 @@ class Settings(context: Context) {
             .putBoolean("phonePhotos", p.phonePhotos)
             .putString("albumLayout", p.albumLayout)
             .putString("look", p.look)
+            .putString("theme", p.theme)
             .putBoolean("tiltLight", p.tiltLight)
             .apply()
         _prefs.value = p

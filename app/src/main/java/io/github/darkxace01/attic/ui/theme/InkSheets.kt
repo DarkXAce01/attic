@@ -58,10 +58,11 @@ fun InkDialog(
                 .padding(end = 8.dp, bottom = 8.dp)
                 .drawBehind {
                     val s = 8.dp.toPx()
-                    drawRoundRect(Riso.dots(Palette.Ink, 3.dp.toPx(), 0.5f), topLeft = Offset(s, s), size = size, cornerRadius = CornerRadius(18.dp.toPx()))
+                    if (Palette.style == Style.Riso) drawRoundRect(Riso.dots(Palette.Ink, 3.dp.toPx(), 0.5f), topLeft = Offset(s, s), size = size, cornerRadius = CornerRadius(18.dp.toPx()))
+                    else themeShadow(Offset.Zero, size, 18.dp.toPx(), 0f, Palette.Ground)
                 }
                 .background(Palette.Ground, shape)
-                .border(2.dp, Palette.Ink, shape)
+                .border(if (Palette.style == Style.Riso) 2.dp else if (Palette.style == Style.Cyanotype) 1.5.dp else 0.dp, if (Palette.style == Style.Riso || Palette.style == Style.Cyanotype) Palette.Ink else Color.Transparent, shape)
                 .padding(start = 22.dp, end = 12.dp, top = 22.dp, bottom = 10.dp),
         ) {
             title?.let {

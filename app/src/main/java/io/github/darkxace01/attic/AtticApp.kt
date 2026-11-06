@@ -1,5 +1,6 @@
 package io.github.darkxace01.attic
 
+import io.github.darkxace01.attic.ui.theme.ground
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
@@ -141,7 +142,7 @@ fun AtticApp(incoming: android.net.Uri? = null, onIncomingDone: () -> Unit = {},
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Palette.Ground)) {
+    Column(Modifier.fillMaxSize().ground()) {
         Box(Modifier.weight(1f)) {
             val screen: @Composable (Route) -> Unit = { top ->
                 when (top) {

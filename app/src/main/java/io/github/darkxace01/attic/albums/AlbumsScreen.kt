@@ -1,5 +1,6 @@
 package io.github.darkxace01.attic.albums
 
+import io.github.darkxace01.attic.ui.theme.ground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -162,7 +163,7 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
 
     when {
         albums.isEmpty() || layout == "path" -> RisoWorld(islands, time = { clock.floatValue }, onOpen = onOpen, onDress = { dressing = it }, header = header)
-        else -> Column(Modifier.fillMaxSize().background(Palette.Ground)) {
+        else -> Column(Modifier.fillMaxSize().ground()) {
             header()
             val world = Modifier.fillMaxWidth().weight(1f)
             if (layout == "ring") io.github.darkxace01.attic.world.riso.RisoRing(islands, { clock.floatValue }, onOpen, { dressing = it }, world)

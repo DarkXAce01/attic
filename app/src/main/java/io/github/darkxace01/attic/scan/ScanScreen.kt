@@ -73,6 +73,8 @@ import io.github.darkxace01.attic.ui.PageSheet
 import io.github.darkxace01.attic.ui.signature.GreasePencilLoop
 import io.github.darkxace01.attic.ui.theme.Fonts
 import io.github.darkxace01.attic.ui.theme.Palette
+import io.github.darkxace01.attic.ui.theme.Style
+import io.github.darkxace01.attic.ui.theme.glowCircle
 import kotlin.math.abs
 
 /** The frame round the camera: the page itself, Paper or Midnight, as the Look is. */
@@ -365,8 +367,37 @@ internal fun Shutter(enabled: Boolean, ready: Boolean, progress: Float, onClick:
     ) {
         val r = 29.dp.toPx()
         val off = Offset(4.dp.toPx(), 4.dp.toPx())
-        drawCircle(io.github.darkxace01.attic.ui.theme.Riso.dots(Palette.Ink, 3.dp.toPx(), 0.6f), r, center + off)
-        drawCircle(if (enabled) Palette.Accent else Palette.Muted, r * swell, center + off * sink)
+        val u = 1.dp.toPx()
+        val at = center + Offset(0f, 2 * u * sink)
+        when (Palette.style) {
+            Style.Riso -> {
+                drawCircle(io.github.darkxace01.attic.ui.theme.Riso.dots(Palette.Ink, 3.dp.toPx(), 0.6f), r, center + off)
+                drawCircle(if (enabled) Palette.Accent else Palette.Muted, r * swell, center + off * sink)
+            }
+            // A crimson disc blooming, the way bright things do on infrared film.
+            Style.Infrared -> glowCircle(at, r * swell, if (enabled) Palette.Second else Palette.Muted, Palette.Second.copy(alpha = 0.7f), 16 * u * (1.2f - sink))
+            // A lit phosphor dot behind a dashed ring, with the tube's lines across it.
+            Style.Broadcast -> {
+                glowCircle(at, r * swell, if (enabled) Palette.Accent else Palette.Muted, Palette.Accent.copy(alpha = 0.8f), 18 * u * (1.2f - sink))
+                var y = at.y - r
+                while (y < at.y + r) {
+                    val dy = y - at.y; val half = kotlin.math.sqrt((r * r - dy * dy).coerceAtLeast(0f))
+                    drawLine(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.2f), Offset(at.x - half, y), Offset(at.x + half, y), u)
+                    y += 3 * u
+                }
+                drawCircle(Palette.Ink, r + 8 * u, center, style = Stroke(2 * u, pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(4 * u, 4 * u))))
+            }
+            // A plain disc inside a drawn ring: a sun print of a shutter.
+            Style.Cyanotype -> {
+                drawCircle(Palette.Ink, r + 7 * u, center, style = Stroke(2 * u))
+                drawCircle(if (enabled) Palette.Accent else Palette.Muted, r * swell * (1f - 0.04f * sink), center)
+            }
+            // The yellow box and the red letters.
+            Style.Kodachrome -> {
+                glowCircle(center, r + 6 * u, Palette.Second, androidx.compose.ui.graphics.Color(0x553C1E0A), 6 * u * (1f - sink), 3 * u * (1f - sink))
+                drawCircle(if (enabled) androidx.compose.ui.graphics.Color(0xFFD6282B) else Palette.Muted, (r - 2 * u) * swell, center)
+            }
+        }
         if (progress > 0f) {
             val ring = r + 9.dp.toPx()
             drawArc(

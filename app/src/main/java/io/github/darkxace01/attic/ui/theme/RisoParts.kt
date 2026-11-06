@@ -32,7 +32,17 @@ fun OverprintText(
     textAlign: TextAlign? = null,
 ) {
     Box(modifier) {
-        Text(text, style = style, color = ink, maxLines = maxLines, textAlign = textAlign, modifier = Modifier.offset(by, by))
+        when (Palette.style) {
+            Style.Riso -> Text(text, style = style, color = ink, maxLines = maxLines, textAlign = textAlign, modifier = Modifier.offset(by, by))
+            // The tube's colour fringe: red a hair left, blue a hair right of every letter.
+            Style.Broadcast -> {
+                val a = if (Palette.dark) 0.7f else 0.55f
+                val plain = style.copy(shadow = null)
+                Text(text, style = plain, color = Color(0xFFFF283C).copy(alpha = a), maxLines = maxLines, textAlign = textAlign, modifier = Modifier.offset((-1.2).dp, 0.dp))
+                Text(text, style = plain, color = Color(0xFF28C8FF).copy(alpha = a), maxLines = maxLines, textAlign = textAlign, modifier = Modifier.offset(1.2.dp, 0.dp))
+            }
+            else -> {}
+        }
         Text(text, style = style, color = Palette.Ink, maxLines = maxLines, textAlign = textAlign)
     }
 }
@@ -44,7 +54,8 @@ fun OverprintText(
 fun Modifier.printCard(border: Dp = 5.dp, shadow: Dp = 6.dp, shadowInk: Color = Palette.Ink): Modifier = this
     .drawBehind {
         val s = shadow.toPx()
-        drawRect(Riso.dots(shadowInk, 3.dp.toPx(), 0.5f), topLeft = Offset(s, s), size = size)
+        if (Palette.style == Style.Riso) drawRect(Riso.dots(shadowInk, 3.dp.toPx(), 0.5f), topLeft = Offset(s, s), size = size)
+        else themeShadow(Offset.Zero, size, lift = 0f)
     }
     .background(Palette.PrintWhite)
     .padding(border)

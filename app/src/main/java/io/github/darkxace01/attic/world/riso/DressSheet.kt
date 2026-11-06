@@ -104,10 +104,13 @@ fun DressSheet(
                 }
             }
 
-            Heading("First ink")
-            InkRow(look.a) { set(look.copy(a = it)) }
-            Heading("Second ink")
-            InkRow(look.b) { set(look.copy(b = it)) }
+            // The inks are Riso's: the other themes print each scene in their own colours.
+            if (Palette.style == io.github.darkxace01.attic.ui.theme.Style.Riso) {
+                Heading("First ink")
+                InkRow(look.a) { set(look.copy(a = it)) }
+                Heading("Second ink")
+                InkRow(look.b) { set(look.copy(b = it)) }
+            }
 
             Heading("Title")
             ChipRow(TitleStyle.entries.map { it.label }, look.title.ordinal) { set(look.copy(title = TitleStyle.entries[it])) }

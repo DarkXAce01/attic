@@ -1,5 +1,6 @@
 package io.github.darkxace01.attic.world.riso
 
+import io.github.darkxace01.attic.ui.theme.ground
 import android.graphics.BitmapFactory
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -55,7 +56,7 @@ fun RisoWorld(
     modifier: Modifier = Modifier,
     header: @Composable () -> Unit = {},
 ) {
-    LazyColumn(modifier.fillMaxSize().background(Palette.Ground), contentPadding = PaddingValues(bottom = 40.dp)) {
+    LazyColumn(modifier.fillMaxSize().ground(), contentPadding = PaddingValues(bottom = 40.dp)) {
         item { header() }
         itemsIndexed(islands, key = { _, w -> w.id }) { i, w -> IslandRow(w, i, time, onOpen, onDress) }
     }
@@ -98,7 +99,7 @@ fun AlbumTitle(title: String, meta: String, style: TitleStyle, modifier: Modifie
         when (style) {
             TitleStyle.Printed -> Text(
                 title, textAlign = align, color = Palette.Ink,
-                style = TextStyle(fontFamily = Fonts.Display, fontWeight = FontWeight(860), fontSize = 28.sp, lineHeight = 27.sp),
+                style = io.github.darkxace01.attic.ui.theme.displayStyle(28f, 27f),
             )
             TitleStyle.Pencil -> Text(
                 title, textAlign = align, color = Palette.Accent,

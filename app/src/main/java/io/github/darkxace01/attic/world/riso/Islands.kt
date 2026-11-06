@@ -13,6 +13,9 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import io.github.darkxace01.attic.ui.theme.Ink
@@ -91,7 +94,19 @@ data class IslandLook(
  * neighbouring islands from moving in step.
  */
 fun DrawScope.drawIsland(look: IslandLook, photos: List<ImageBitmap>, c: Offset, u: Float, t: Float, seed: Int = 0) {
-    IslandPainter(this, look, photos, c, u, t, seed).draw()
+    val painter = IslandPainter(this, look, photos, c, u, t, seed)
+    // The album in Riso stays the one it has always been; every other island is a scene (see Scene).
+    if (look.kind == IslandKind.Book && Palette.style == io.github.darkxace01.attic.ui.theme.Style.Riso) painter.book()
+    else drawIntoCanvas { canvas ->
+        val k = u / 120f
+        val cv = canvas.nativeCanvas
+        cv.save()
+        cv.translate(c.x - 150f * k, c.y - 160f * k)
+        cv.scale(k, k)
+        Scene(cv, look, photos.firstOrNull()?.asAndroidBitmap(), k, t, seed).draw()
+        cv.restore()
+    }
+    painter.extras()
 }
 
 private class IslandPainter(
@@ -562,12 +577,12 @@ private class IslandPainter(
                 val flap = 0.05f + 0.035f * sin(t * 8f + i * 2f)
                 val o = p(x, y)
                 val w = Path().apply { moveTo(o.x - len(0.08f), o.y - len(flap)); quadraticTo(o.x - len(0.03f), o.y - len(0.01f), o.x, o.y); quadraticTo(o.x + len(0.03f), o.y - len(0.01f), o.x + len(0.08f), o.y - len(flap)) }
-                s.drawPath(w, Ink.Black.color, style = Stroke(len(0.018f), cap = StrokeCap.Round))
+                s.drawPath(w, Palette.Ink, style = Stroke(len(0.018f), cap = StrokeCap.Round))
             }
             Extra.Stars -> for (i in 0 until 7) {
                 val x = -1.05f + (i * 0.37f) % 2.1f; val y = -1.15f + (i * 0.53f) % 0.6f
                 val k = 0.5f + 0.5f * sin(t * 2.5f + i * 1.7f)
-                s.drawCircle(Ink.Yellow.color, len(0.02f + 0.025f * k), p(x, y), blendMode = BlendMode.Multiply)
+                s.drawCircle(Ink.Yellow.color, len(0.02f + 0.025f * k), p(x, y), blendMode = if (Palette.dark) BlendMode.SrcOver else BlendMode.Multiply)
             }
             Extra.Confetti -> for (i in 0 until 14) {
                 val x = -1f + (i * 0.29f) % 2f + sin(t + i) * 0.04f
@@ -580,7 +595,7 @@ private class IslandPainter(
                 val x = -0.9f + (i * 0.43f) % 1.8f + sin(t * 0.7f + i) * 0.1f
                 val y = -0.9f + (i * 0.31f) % 1.2f + cos(t * 0.5f + i * 2) * 0.08f
                 val k = (0.5f + 0.5f * sin(t * 3f + i * 2.1f)).let { it * it }
-                s.drawCircle(Ink.Yellow.color, len(0.05f), p(x, y), alpha = k * 0.6f, blendMode = BlendMode.Multiply)
+                s.drawCircle(Ink.Yellow.color, len(0.05f), p(x, y), alpha = k * 0.6f, blendMode = if (Palette.dark) BlendMode.SrcOver else BlendMode.Multiply)
                 s.drawCircle(Palette.Accent, len(0.015f), p(x, y), alpha = k)
             }
         }

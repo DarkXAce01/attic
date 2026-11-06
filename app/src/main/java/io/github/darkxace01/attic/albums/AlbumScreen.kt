@@ -1,5 +1,6 @@
 package io.github.darkxace01.attic.albums
 
+import io.github.darkxace01.attic.ui.theme.ground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -128,7 +129,7 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
     val a = album ?: return
     val pages = prints.groupBy { it.page }.toSortedMap()
 
-    Column(Modifier.fillMaxSize().background(Palette.Ground)) {
+    Column(Modifier.fillMaxSize().ground()) {
         TopBar(a.title, onBack = onBack, onTitleClick = { renaming = true }) {
             QuietButton("Scan here", onClick = onScanHere, color = Palette.Accent)
             Box {

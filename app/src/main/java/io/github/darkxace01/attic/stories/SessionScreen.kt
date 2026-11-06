@@ -1,5 +1,6 @@
 package io.github.darkxace01.attic.stories
 
+import io.github.darkxace01.attic.ui.theme.ground
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -132,7 +133,7 @@ fun SessionScreen(albumId: Long, onDone: () -> Unit) {
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Palette.Ground)) {
+    Box(Modifier.fillMaxSize().ground()) {
         HorizontalPager(pager, userScrollEnabled = started && !finished, modifier = Modifier.fillMaxSize()) { i ->
             AsyncImage(
                 model = library.displayFile(list[i]),

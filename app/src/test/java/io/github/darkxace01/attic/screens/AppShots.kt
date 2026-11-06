@@ -1,5 +1,7 @@
 package io.github.darkxace01.attic.screens
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import io.github.darkxace01.attic.ui.tiltLight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.size
@@ -217,6 +219,32 @@ class AppShots {
         }
         compose.onRoot().captureRoboImage("build/shots/app_shutters.png")
         Palette.dark = false
+    }
+
+    /** Albums, a print, settings and the shutter in each new theme, both sides: app_theme_<theme>_<side>_<screen>.png. */
+    @Test fun themes() {
+        val first = seed(more = true)
+        val screens = listOf<Pair<String, @Composable () -> Unit>>(
+            "albums" to { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) },
+            "print" to { io.github.darkxace01.attic.print.PrintScreen(first, {}, {}, {}, {}, {}) },
+            "settings" to { io.github.darkxace01.attic.settings.SettingsScreen(onBack = {}) },
+            "shutter" to {
+                androidx.compose.foundation.layout.Row(Modifier.padding(androidx.compose.ui.unit.Dp(24f))) {
+                    io.github.darkxace01.attic.scan.Shutter(true, false, 0f, {}, Modifier.padding(androidx.compose.ui.unit.Dp(8f)))
+                    io.github.darkxace01.attic.scan.Shutter(true, true, 0.6f, {}, Modifier.padding(androidx.compose.ui.unit.Dp(8f)))
+                }
+            },
+        )
+        var on by androidx.compose.runtime.mutableIntStateOf(0)
+        compose.mainClock.autoAdvance = false
+        coil3.SingletonImageLoader.setUnsafe(coil3.ImageLoader.Builder(context).coroutineContext(kotlinx.coroutines.Dispatchers.Unconfined).components { add(coil3.decode.BitmapFactoryDecoder.Factory()) }.build())
+        compose.setContent { AtticTheme { Box(Modifier.fillMaxSize().background(Palette.Ground)) { androidx.compose.runtime.key(on) { screens[on].second() } } } }
+        for (style in io.github.darkxace01.attic.ui.theme.Style.entries.drop(1)) for (dark in listOf(false, true)) for ((n, sc) in screens.withIndex()) {
+            Palette.style = style; Palette.dark = dark; on = n
+            repeat(30) { compose.mainClock.advanceTimeBy(100); Thread.sleep(60); org.robolectric.shadows.ShadowLooper.idleMainLooper() }
+            compose.onRoot().captureRoboImage("build/shots/app_theme_${style.name}_${if (dark) "dark" else "light"}_${sc.first}.png")
+        }
+        Palette.style = io.github.darkxace01.attic.ui.theme.Style.Riso; Palette.dark = false
     }
 
     @Test fun search() { seed(); shot("search") { io.github.darkxace01.attic.timeline.SearchScreen(onBack = {}, onOpenPrint = {}, onSlideshow = {}) } }
