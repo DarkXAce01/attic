@@ -23,6 +23,22 @@ import kotlinx.coroutines.flow.Flow
 import java.io.File
 import java.time.LocalDate
 
+/**
+ * A photo from the phone's own gallery kept in an album: only where it is, never a copy. An album can be
+ * nothing but these, a way of keeping photos together.
+ */
+@Entity(tableName = "album_phone", indices = [Index("albumId"), Index(value = ["albumId", "uri"], unique = true)])
+data class AlbumPhoneEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val albumId: Long,
+    val uri: String,
+    /** The day it was taken, as an epoch day; null if the photo doesn't say. */
+    val taken: Long?,
+    val width: Int,
+    val height: Int,
+    val addedAt: Long,
+)
+
 @Entity(tableName = "album")
 data class AlbumEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -172,6 +188,8 @@ data class AlbumSummary(
     val coverFile: String?,
     val coverEnhance: Int?,
     val look: String? = null,
+    /** Photos from the phone kept in it. */
+    val phone: Int = 0,
 )
 
 data class LibraryCounts(val total: Int, val inGallery: Int, val backedUp: Int = 0, val onlyInAttic: Int = 0)
@@ -187,7 +205,8 @@ interface AtticDao {
 
     @Query(
         """
-        SELECT a.id, a.title, a.dateLabel, a.look, COUNT(p.id) AS count, COUNT(DISTINCT p.page) AS pages,
+        SELECT a.id, a.title, a.dateLabel, a.look, COUNT(p.id) AS count,
+            (SELECT COUNT(*) FROM album_phone WHERE albumId = a.id) AS phone, COUNT(DISTINCT p.page) AS pages,
             (SELECT scanDir FROM print WHERE albumId = a.id ORDER BY page, position LIMIT 1) AS coverDir,
             (SELECT fileName FROM print WHERE albumId = a.id ORDER BY page, position LIMIT 1) AS coverFile,
             (SELECT enhance FROM print WHERE albumId = a.id ORDER BY page, position LIMIT 1) AS coverEnhance
@@ -285,6 +304,12 @@ interface AtticDao {
     @Query("DELETE FROM relation WHERE id = :id") fun deleteRelation(id: Long)
     @Query("DELETE FROM relation WHERE a = :person OR b = :person") fun deleteRelationsOf(person: Long)
     @Query("SELECT * FROM relation") fun relations(): Flow<List<RelationEntity>>
+    @Insert(onConflict = OnConflictStrategy.IGNORE) fun insertPhone(items: List<AlbumPhoneEntity>)
+    @Query("SELECT * FROM album_phone WHERE albumId = :albumId ORDER BY COALESCE(taken, addedAt / 86400000), id") fun phoneIn(albumId: Long): Flow<List<AlbumPhoneEntity>>
+    @Query("SELECT * FROM album_phone WHERE albumId = :albumId ORDER BY COALESCE(taken, addedAt / 86400000), id") fun phoneInNow(albumId: Long): List<AlbumPhoneEntity>
+    @Query("DELETE FROM album_phone WHERE id = :id") fun deletePhone(id: Long)
+    @Query("SELECT * FROM album_phone WHERE id = :id") fun phoneByIdNow(id: Long): AlbumPhoneEntity?
+    @Query("SELECT COUNT(*) FROM album_phone WHERE uri = :uri") fun phoneUriCount(uri: String): Int
     @Query("SELECT * FROM relation") fun relationsNow(): List<RelationEntity>
     @Query("UPDATE relation SET a = :to WHERE a = :from") fun moveRelationsA(from: Long, to: Long)
     @Query("UPDATE relation SET b = :to WHERE b = :from") fun moveRelationsB(from: Long, to: Long)
@@ -303,8 +328,8 @@ interface AtticDao {
 }
 
 @Database(
-    entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class, FaceEntity::class, RelationEntity::class],
-    version = 13,
+    entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class, FaceEntity::class, RelationEntity::class, AlbumPhoneEntity::class],
+    version = 14,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -312,7 +337,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -393,6 +418,18 @@ abstract class AtticDatabase : RoomDatabase() {
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `print` ADD COLUMN `negative` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** Photos from the phone in albums. */
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `album_phone` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `albumId` INTEGER NOT NULL, " +
+                        "`uri` TEXT NOT NULL, `taken` INTEGER, `width` INTEGER NOT NULL, `height` INTEGER NOT NULL, `addedAt` INTEGER NOT NULL)",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_album_phone_albumId` ON `album_phone` (`albumId`)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_album_phone_albumId_uri` ON `album_phone` (`albumId`, `uri`)")
             }
         }
 

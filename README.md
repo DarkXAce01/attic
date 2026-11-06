@@ -11,7 +11,9 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 **Scan**
 - Live outlines around every print in view (several per album page). They lock and freeze once you hold
   still; the shutter ring fills, then it captures by itself and waits for the next page
-- A live strip showing each print flattened, then the real saved crops right after a capture
+- Calm like a camera app: the album's name at the top, three modes above the shutter (Prints,
+  Glare-free, Film), and everything else (taking it by itself, checking each shot, files) behind one
+  button. Prints in view get grease-pencil corners, red once held steady
 - Detection that finds prints on striped, flowered and dark pages, under glare, with or without white
   borders, and tells a page full of prints from a photo with rectangles in it
 - Prints are found by a small neural network trained for exactly this (see `ml/`), on the phone
@@ -35,6 +37,8 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - The camera fills the screen with the album, the modes and what's happening floating over it; the
   album so far sits bottom left as a little pile of its last prints
 - Scans go into the album you pick at the top of the scan screen, one capture per page
+- Albums don't have to be paper albums: "Add from your phone" keeps photos from the gallery in an album
+  (by reference, never copied), on a page of their own after the scanned ones. Hold one to take it out
 - From files: flatbed scans or photos of prints already on the phone, split and flattened the same way
 - Negatives: film laid on a lightbox (or another phone showing Attic's Lightbox screen) is developed
   into the picture, the orange of colour film taken out. Fixing the crop develops it again

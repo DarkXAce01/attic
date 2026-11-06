@@ -29,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -83,8 +84,12 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
     val islands by produceState(emptyList<WorldIsland>(), albums) {
         value = albums.map { a ->
             val look = IslandLook.parse(a.look, a.id)
-            val photos = cache.getOrPut(Triple(a.id, a.count, look.cover)) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { library.islandFiles(a.id, 4, look.cover).mapNotNull { islandBitmap(it) } }
+            val photos = cache.getOrPut(Triple(a.id, a.count * 10_000 + a.phone, look.cover)) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    // Scanned prints lead; photos from the phone fill in, or are the whole island.
+                    val scans = library.islandFiles(a.id, 4, look.cover).mapNotNull { islandBitmap(it) }
+                    scans + if (scans.size < 4 && a.phone > 0) library.islandPhone(a.id, 4 - scans.size).map { it.asImageBitmap() } else emptyList()
+                }
             }
             WorldIsland(a.id, a.title, albumLine(a), look, photos)
         }

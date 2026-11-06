@@ -292,7 +292,8 @@ fun AlbumPickerSheet(
 fun albumLine(a: AlbumSummary): String {
     val parts = mutableListOf<String>()
     a.dateLabel?.let(parts::add)
-    parts += if (a.pages == 1) "1 page" else "${a.pages} pages"
-    parts += if (a.count == 1) "1 photo" else "${a.count} photos"
+    if (a.pages > 0) parts += if (a.pages == 1) "1 page" else "${a.pages} pages"
+    if (a.count > 0 || a.phone == 0) parts += if (a.count == 1) "1 photo" else "${a.count} photos"
+    if (a.phone > 0) parts += if (a.count == 0) (if (a.phone == 1) "1 photo from your phone" else "${a.phone} photos from your phone") else "${a.phone} from your phone"
     return parts.joinToString(" · ")
 }

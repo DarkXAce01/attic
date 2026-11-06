@@ -91,6 +91,87 @@ class Library(private val context: Context) {
             io.github.darkxace01.attic.timeline.OnThisDay.pick(prints, albums.associate { it.id to it.date }, today, phone)
         }.flowOn(Dispatchers.Default)
 
+    // ---- photos from the phone, kept in albums by reference ----
+
+    /** Album [albumId]'s photos from the phone, oldest first, as the timeline shows phone photos. */
+    fun phoneIn(albumId: Long): Flow<List<PhonePhoto>> = dao.phoneIn(albumId).map { list -> list.map(::asPhonePhoto) }
+
+    private fun asPhonePhoto(e: AlbumPhoneEntity) = PhonePhoto(
+        e.id, e.uri,
+        e.taken?.let(java.time.LocalDate::ofEpochDay) ?: java.time.Instant.ofEpochMilli(e.addedAt).atZone(ZoneId.systemDefault()).toLocalDate(),
+        e.width, e.height,
+    )
+
+    /**
+     * Keeps [uris] (from the photo picker) in album [albumId]. Nothing is copied: Attic holds on to the
+     * permission to read each one where it is. One already in the album isn't added twice.
+     */
+    suspend fun addPhone(albumId: Long, uris: List<Uri>): Int = io {
+        val now = System.currentTimeMillis()
+        val items = uris.distinct().map { uri ->
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            val (w, h) = phoneSize(uri)
+            AlbumPhoneEntity(albumId = albumId, uri = uri.toString(), taken = phoneTaken(uri)?.toEpochDay(), width = w, height = h, addedAt = now)
+        }
+        val before = dao.phoneInNow(albumId).size
+        dao.insertPhone(items)
+        dao.phoneInNow(albumId).size - before
+    }
+
+    /** Takes a phone photo out of its album. The photo itself stays in the phone's gallery. */
+    suspend fun removePhone(id: Long) = io {
+        val e = dao.phoneByIdNow(id) ?: return@io
+        dao.deletePhone(id)
+        // Let go of the permission once no album holds the photo.
+        if (dao.phoneUriCount(e.uri) == 0) runCatching {
+            context.contentResolver.releasePersistableUriPermission(Uri.parse(e.uri), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
+    /** The day a phone photo was taken: the media index first, the photo's own EXIF next. */
+    private fun phoneTaken(uri: Uri): java.time.LocalDate? {
+        val zone = ZoneId.systemDefault()
+        val ms = runCatching {
+            context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.DATE_TAKEN), null, null, null)?.use { c ->
+                if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else null
+            }
+        }.getOrNull()?.takeIf { it > 0 }
+        if (ms != null) return java.time.Instant.ofEpochMilli(ms).atZone(zone).toLocalDate()
+        return runCatching {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                val exif = ExifInterface(input)
+                val t = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL) ?: exif.getAttribute(ExifInterface.TAG_DATETIME)
+                t?.let { java.time.LocalDate.parse(it.take(10), DateTimeFormatter.ofPattern("yyyy:MM:dd")) }
+            }
+        }.getOrNull()
+    }
+
+    private fun phoneSize(uri: Uri): Pair<Int, Int> = runCatching {
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeStream(input, null, o)
+            o.outWidth to o.outHeight
+        }
+    }.getOrNull() ?: (0 to 0)
+
+    /** A few of album [albumId]'s phone photos for its island, decoded small; ones no longer there are skipped. */
+    suspend fun islandPhone(albumId: Long, n: Int): List<android.graphics.Bitmap> = io {
+        dao.phoneInNow(albumId).asSequence().mapNotNull { decodeSmall(Uri.parse(it.uri), 360) }.take(n).toList()
+    }
+
+    private fun decodeSmall(uri: Uri, side: Int): android.graphics.Bitmap? = runCatching {
+        val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, o) }
+        val longer = maxOf(o.outWidth, o.outHeight).coerceAtLeast(1)
+        var sample = 1
+        while (longer / (sample * 2) >= side) sample *= 2
+        val bmp = context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample }) }
+            ?: return@runCatching null
+        // Phone photos are often stored sideways with an EXIF turn: stand it up.
+        val turn = context.contentResolver.openInputStream(uri)?.use { ExifInterface(it).rotationDegrees } ?: 0
+        if (turn == 0) bmp else android.graphics.Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, android.graphics.Matrix().apply { postRotate(turn.toFloat()) }, true)
+    }.getOrNull()
+
     /** The file to show and export: the enhanced version when there is one. */
     fun displayFile(p: PrintEntity): File = enhancedFile(p, p.enhance).takeIf { it.exists() } ?: p.file(root)
 
@@ -221,6 +302,12 @@ class Library(private val context: Context) {
 
     suspend fun deleteAlbum(id: Long) = io {
         dao.printsInNow(id).forEach { deletePrintNow(it) }
+        dao.phoneInNow(id).forEach { e ->
+            dao.deletePhone(e.id)
+            if (dao.phoneUriCount(e.uri) == 0) runCatching {
+                context.contentResolver.releasePersistableUriPermission(Uri.parse(e.uri), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+        }
         dao.deleteAlbum(id)
         if (prefs.getLong("scanningAlbum", -1) == id) prefs.edit().remove("scanningAlbum").apply()
     }

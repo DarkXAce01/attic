@@ -117,6 +117,7 @@ fun AtticApp() {
                         onScanHere = { scanVm.scanInto(top.id); tab(Route.Scan) },
                         onTellStories = { go(Route.Session(top.id)) },
                         onSlideshow = { go(Route.Slideshow(top.id, null)) },
+                        onOpenPhone = { go(Route.Phone(it)) },
                     )
                 }
                 is Route.Print -> Box(Modifier.statusBarsPadding()) {
