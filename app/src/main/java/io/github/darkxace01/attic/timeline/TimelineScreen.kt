@@ -26,6 +26,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import io.github.darkxace01.attic.ui.theme.printCard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,7 +53,7 @@ fun TimelineScreen(onOpenPrint: (Long) -> Unit, onOpenPhone: (PhonePhoto) -> Uni
     val memory by remember(today) { library.onThisDay(today) }.collectAsStateWithLifecycle(null)
 
     Column(Modifier.fillMaxSize()) {
-        TopBar("Timeline", onBack = null) {
+        TopBar("Timeline", onBack = null, ink = io.github.darkxace01.attic.ui.theme.Ink.Aqua.color) {
             if (!prefs.phonePhotos || !PhonePhotos.allowed(context)) {
                 io.github.darkxace01.attic.ui.QuietButton("Add phone photos", onClick = {
                     if (PhonePhotos.allowed(context)) library.settings.update { it.copy(phonePhotos = true) } else askPhotos.launch(PhonePhotos.permissions)
@@ -80,11 +82,14 @@ fun TimelineScreen(onOpenPrint: (Long) -> Unit, onOpenPhone: (PhonePhoto) -> Uni
             for (row in list) {
                 when (row) {
                     is Timeline.Row.Decade -> item(span = { GridItemSpan(maxLineSpan) }, key = "decade${row.decade}") {
-                        Text(
+                        // Each decade overprinted in its own ink: the 70s in orange, the 80s in pink...
+                        val inks = listOf(io.github.darkxace01.attic.ui.theme.Ink.Orange, io.github.darkxace01.attic.ui.theme.Ink.Pink, io.github.darkxace01.attic.ui.theme.Ink.Teal, io.github.darkxace01.attic.ui.theme.Ink.Blue, io.github.darkxace01.attic.ui.theme.Ink.Sunflower, io.github.darkxace01.attic.ui.theme.Ink.Purple, io.github.darkxace01.attic.ui.theme.Ink.Green)
+                        io.github.darkxace01.attic.ui.theme.OverprintText(
                             "${row.decade}s",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = Palette.Ink,
-                            modifier = Modifier.padding(top = 20.dp, bottom = 2.dp),
+                            MaterialTheme.typography.displayMedium,
+                            inks[Math.floorMod(row.decade / 10, inks.size)].color,
+                            Modifier.padding(top = 22.dp, bottom = 2.dp),
+                            by = 3.dp,
                         )
                     }
                     is Timeline.Row.Group -> {
@@ -113,18 +118,20 @@ private fun MemoryStrip(m: OnThisDay.Memory, today: java.time.LocalDate, onOpenP
         Text(m.title, style = MaterialTheme.typography.titleMedium, color = Palette.Ink, modifier = Modifier.padding(bottom = 8.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(m.prints, key = { it.first.id }) { (p, d) ->
-                Column(Modifier.width(200.dp).clip(RoundedCornerShape(14.dp)).clickable { onOpenPrint(p.id) }) {
+                Column(Modifier.width(200.dp).clickable { onOpenPrint(p.id) }.padding(top = 6.dp, bottom = 4.dp)) {
                     AsyncImage(
                         library.displayFile(p), null, contentScale = ContentScale.Crop,
-                        modifier = Modifier.width(200.dp).height(150.dp).clip(RoundedCornerShape(14.dp)).background(Palette.Surface),
+                        modifier = Modifier.width(186.dp).height(140.dp)
+                            .graphicsLayer { rotationZ = if (p.id % 2 == 0L) -1.5f else 1.5f }
+                            .printCard(),
                     )
                     val line = listOfNotNull(d?.label, OnThisDay.ago(d, today)).joinToString(", ")
                     if (line.isNotEmpty()) Text(line, style = MaterialTheme.typography.labelMedium, color = Palette.Muted, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
                 }
             }
             items(m.phone, key = { "m${it.id}" }) { ph ->
-                Column(Modifier.width(200.dp).clip(RoundedCornerShape(14.dp)).clickable { onOpenPhone(ph) }) {
-                    AsyncImage(ph.uri, null, contentScale = ContentScale.Crop, modifier = Modifier.width(200.dp).height(150.dp).clip(RoundedCornerShape(14.dp)).background(Palette.Surface))
+                Column(Modifier.width(200.dp).clickable { onOpenPhone(ph) }.padding(top = 6.dp, bottom = 4.dp)) {
+                    AsyncImage(ph.uri, null, contentScale = ContentScale.Crop, modifier = Modifier.width(186.dp).height(140.dp).clip(RoundedCornerShape(10.dp)).background(Palette.Surface))
                     val d = io.github.darkxace01.attic.data.PhotoDate.day(ph.taken)
                     Text(listOfNotNull(d.label, OnThisDay.ago(d, today)).joinToString(", "), style = MaterialTheme.typography.labelMedium, color = Palette.Muted, modifier = Modifier.padding(top = 6.dp, start = 2.dp))
                 }

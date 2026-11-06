@@ -1,6 +1,7 @@
 package io.github.darkxace01.attic.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -52,7 +53,7 @@ import io.github.darkxace01.attic.data.PhotoDate
 import io.github.darkxace01.attic.ui.theme.Palette
 
 @Composable
-fun TopBar(title: String, onBack: (() -> Unit)?, onTitleClick: (() -> Unit)? = null, trailing: @Composable () -> Unit = {}) {
+fun TopBar(title: String, onBack: (() -> Unit)?, onTitleClick: (() -> Unit)? = null, ink: androidx.compose.ui.graphics.Color? = null, trailing: @Composable () -> Unit = {}) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -65,14 +66,17 @@ fun TopBar(title: String, onBack: (() -> Unit)?, onTitleClick: (() -> Unit)? = n
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Palette.Ink)
             }
         }
-        Text(
+        val titleModifier = Modifier
+            .weight(1f)
+            .then(if (onTitleClick != null) Modifier.clickable(onClick = onTitleClick) else Modifier)
+        if (ink != null) io.github.darkxace01.attic.ui.theme.OverprintText(title, MaterialTheme.typography.titleLarge, ink, titleModifier, maxLines = 1)
+        else Text(
             title,
             style = MaterialTheme.typography.titleLarge,
             color = Palette.Ink,
             maxLines = 1,
-            modifier = Modifier
-                .weight(1f)
-                .then(if (onTitleClick != null) Modifier.clickable(onClick = onTitleClick) else Modifier),
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            modifier = titleModifier,
         )
         trailing()
     }
@@ -101,13 +105,15 @@ fun QuietButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier
 
 @Composable
 fun Chip(text: String, selected: Boolean = false, onClick: () -> Unit) {
+    // Chosen: printed in black ink, like label tape. Not chosen: an ink outline on paper.
     Text(
         text,
         style = MaterialTheme.typography.labelLarge,
-        color = if (selected) Palette.OnAccent else Palette.Ink,
+        color = if (selected) Palette.Ground else Palette.Ink,
         modifier = Modifier
             .clip(RoundedCornerShape(50))
-            .background(if (selected) Palette.Accent else Palette.SurfaceHigh)
+            .background(if (selected) Palette.Ink else Palette.Ground)
+            .then(if (selected) Modifier else Modifier.border(1.5.dp, Palette.Ink, RoundedCornerShape(50)))
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 8.dp),
     )

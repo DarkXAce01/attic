@@ -62,7 +62,7 @@ fun PeopleScreen(onOpenPerson: (Long) -> Unit, onTree: () -> Unit = {}) {
     val list = people ?: return
 
     Column(Modifier.fillMaxSize()) {
-        TopBar("People", onBack = null) {
+        TopBar("People", onBack = null, ink = io.github.darkxace01.attic.ui.theme.Ink.Pink.color) {
             if (relations.isNotEmpty()) io.github.darkxace01.attic.ui.QuietButton("Family tree", onClick = onTree)
         }
         if (list.isEmpty() && groups.isEmpty()) {

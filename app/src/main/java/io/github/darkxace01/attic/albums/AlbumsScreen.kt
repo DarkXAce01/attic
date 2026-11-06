@@ -108,7 +108,7 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
     val header: @Composable () -> Unit = {
             Column(Modifier.padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Albums", style = MaterialTheme.typography.displayMedium, color = Palette.Ink, modifier = Modifier.weight(1f))
+                    io.github.darkxace01.attic.ui.theme.OverprintText("Albums", MaterialTheme.typography.displayMedium, io.github.darkxace01.attic.ui.theme.Ink.Sunflower.color, Modifier.weight(1f), by = 3.dp)
                     QuietButton("New album", onClick = { creating = true }, color = Palette.Accent)
                     Box {
                         androidx.compose.material3.IconButton(onClick = { menu = true }) {

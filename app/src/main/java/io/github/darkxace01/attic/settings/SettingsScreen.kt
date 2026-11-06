@@ -232,9 +232,12 @@ private fun BackupSection(backup: Backup, countsFlow: kotlinx.coroutines.flow.Fl
 
 @Composable
 private fun Heading(text: String) {
-    Spacer(Modifier.height(24.dp))
-    Text(text, style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(28.dp))
+    // Each section in its own spot ink, overprinted.
+    val ink = io.github.darkxace01.attic.ui.theme.Ink.entries.filter { it != io.github.darkxace01.attic.ui.theme.Ink.Black && it != io.github.darkxace01.attic.ui.theme.Ink.Yellow }
+        .let { it[Math.floorMod(text.hashCode(), it.size)] }
+    io.github.darkxace01.attic.ui.theme.OverprintText(text, MaterialTheme.typography.headlineSmall, ink.color)
+    Spacer(Modifier.height(8.dp))
 }
 
 @Composable
@@ -251,17 +254,7 @@ private fun Toggle(title: String, detail: String, checked: Boolean, onChange: (B
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
         }
         Spacer(Modifier.padding(start = 12.dp))
-        Switch(
-            checked = checked,
-            onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = Palette.Accent,
-                checkedThumbColor = Palette.OnAccent,
-                uncheckedTrackColor = Palette.SurfaceHigh,
-                uncheckedThumbColor = Palette.Muted,
-                uncheckedBorderColor = Palette.SurfaceHigh,
-            ),
-        )
+        io.github.darkxace01.attic.ui.theme.InkSwitch(checked, onChange)
     }
 }
 

@@ -45,6 +45,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import io.github.darkxace01.attic.ui.theme.printCard
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.border
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
@@ -340,7 +345,8 @@ private fun DetailRow(label: String, value: String?, placeholder: String, onClic
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, color = Palette.Muted, modifier = Modifier.width(76.dp))
+        // Labels in grease pencil, like notes on the back of a print.
+        Text(label, style = io.github.darkxace01.attic.ui.theme.HandStyle.copy(fontSize = 27.sp, lineHeight = 24.sp), color = Palette.Ink, modifier = Modifier.width(80.dp).padding(top = 1.dp))
         Text(
             value ?: placeholder,
             style = MaterialTheme.typography.bodyLarge,
@@ -382,16 +388,25 @@ private fun ZoomableImage(p: PrintEntity, onZoomed: (Boolean) -> Unit, file: jav
                 )
             },
     ) {
-        val layer = Modifier
-            .fillMaxSize()
-            .padding(12.dp)
-            .graphicsLayer {
-                scaleX = scale; scaleY = scale
-                translationX = offset.x; translationY = offset.y
-            }
-        // Both are loaded up front so switching is instant, not a reload.
-        if (before != null) FullImage(before, p.version, layer)
-        FullImage(file, p.version, layer.graphicsLayer { alpha = if (comparing) 0f else 1f })
+        // The photo sits on the page as a print: its own shape, a white border and a printed shadow.
+        val aspect = (p.width.toFloat() / p.height.coerceAtLeast(1)).takeIf { it.isFinite() && it > 0f } ?: 0.75f
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(start = 20.dp, end = 26.dp, top = 12.dp, bottom = 20.dp)
+                .wrapContentSize()
+                .aspectRatio(aspect)
+                .graphicsLayer {
+                    scaleX = scale; scaleY = scale
+                    translationX = offset.x; translationY = offset.y
+                }
+                .then(if (scale > 1f) Modifier else Modifier.printCard()),
+        ) {
+            val layer = Modifier.fillMaxSize()
+            // Both are loaded up front so switching is instant, not a reload.
+            if (before != null) FullImage(before, p.version, layer)
+            FullImage(file, p.version, layer.graphicsLayer { alpha = if (comparing) 0f else 1f })
+        }
     }
 }
 
@@ -414,11 +429,12 @@ private fun FullImage(file: java.io.File, version: Int, modifier: Modifier) {
 /** Original, natural or strong, as one quiet segmented row. */
 @Composable
 internal fun LookChoice(level: Int, onChoose: (Int) -> Unit) {
+    // Ink on paper: the chosen look printed in black like label tape, the others outlined.
     Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Palette.Surface)
+            .border(1.5.dp, Palette.Ink, RoundedCornerShape(12.dp))
             .padding(4.dp),
     ) {
         for (l in listOf(Enhance.OFF, Enhance.NATURAL, Enhance.STRONG)) {
@@ -427,7 +443,7 @@ internal fun LookChoice(level: Int, onChoose: (Int) -> Unit) {
                 Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(9.dp))
-                    .background(if (selected) Palette.SurfaceHigh else Palette.Surface)
+                    .background(if (selected) Palette.Ink else Palette.Ground)
                     .clickable(enabled = !selected) { onChoose(l) }
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
@@ -435,7 +451,7 @@ internal fun LookChoice(level: Int, onChoose: (Int) -> Unit) {
                 Text(
                     Enhance.label(l),
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (selected) Palette.Ink else Palette.Muted,
+                    color = if (selected) Palette.Ground else Palette.Ink,
                 )
             }
         }

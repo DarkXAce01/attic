@@ -210,7 +210,7 @@ private fun SheetToggle(title: String, detail: String, on: Boolean, onChange: (B
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
         }
         Spacer(Modifier.width(12.dp))
-        Switch(on, onChange, colors = SwitchDefaults.colors(checkedTrackColor = Palette.Accent, checkedThumbColor = Palette.OnAccent, uncheckedTrackColor = Palette.SurfaceHigh, uncheckedThumbColor = Palette.Muted, uncheckedBorderColor = Palette.SurfaceHigh))
+        io.github.darkxace01.attic.ui.theme.InkSwitch(on, onChange)
     }
 }
 
