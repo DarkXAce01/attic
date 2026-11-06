@@ -54,6 +54,7 @@ import io.github.darkxace01.attic.ui.signature.PromiseLine
 import io.github.darkxace01.attic.ui.signature.StudioFonts
 import io.github.darkxace01.attic.ui.signature.StudioLockup
 import io.github.darkxace01.attic.ui.theme.Palette
+import androidx.compose.foundation.layout.size
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
@@ -140,6 +141,9 @@ fun SettingsScreen(onBack: () -> Unit, onLightbox: () -> Unit = {}) {
                 "Today's photos alongside the old ones, read where they are in the phone's gallery. Attic never copies or changes them.",
                 prefs.phonePhotos,
             ) { on -> library.settings.update { it.copy(phonePhotos = on) } }
+
+            Heading("Copies in the gallery")
+            GalleryCheckSection()
 
             Heading("Ask the family")
             io.github.darkxace01.attic.help.AskFamilySection()
@@ -324,6 +328,62 @@ private fun InkChoice(options: List<Pair<String, String>>, chosen: String, onCho
                 contentAlignment = Alignment.Center,
             ) {
                 Text(label, style = MaterialTheme.typography.labelLarge, color = if (on) Palette.Ground else Palette.Ink)
+            }
+        }
+    }
+}
+
+/** Scans that already have a copy in the phone's gallery, side by side with it. Nothing is ever deleted. */
+@Composable
+private fun GalleryCheckSection() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val library = context.library
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var progress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var twins by remember { mutableStateOf<List<io.github.darkxace01.attic.data.GalleryTwins.Twin>?>(null) }
+    fun check() {
+        progress = 0 to 0
+        scope.launch {
+            twins = library.galleryTwins { done, total -> progress = done to total }
+            progress = null
+        }
+    }
+    val ask = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions(),
+    ) { granted -> if (granted.values.any { it }) check() }
+    Text(
+        "Finds scans you already had on the phone, a print someone once sent you or a photo of one saved years ago. It only shows where they are; nothing is changed or deleted.",
+        style = MaterialTheme.typography.bodyMedium, color = Palette.Muted,
+    )
+    val p = progress
+    when {
+        p != null -> Text(
+            if (p.second == 0) "Looking through the gallery…" else "Looking through the gallery… ${p.first} of ${p.second}",
+            style = MaterialTheme.typography.bodyMedium, color = Palette.Ink, modifier = Modifier.padding(vertical = 12.dp),
+        )
+        else -> QuietButton(if (twins == null) "Check the gallery" else "Check again", onClick = {
+            if (io.github.darkxace01.attic.data.PhonePhotos.allowed(context)) check() else ask.launch(io.github.darkxace01.attic.data.PhonePhotos.permissions)
+        })
+    }
+    val found = twins ?: return
+    Text(
+        when (found.size) { 0 -> "None of your scans are in the gallery."; 1 -> "1 scan is already in the gallery:"; else -> "${found.size} scans are already in the gallery:" },
+        style = MaterialTheme.typography.bodyMedium, color = Palette.Ink, modifier = Modifier.padding(bottom = 8.dp),
+    )
+    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
+        items(found.size) { i ->
+            val t = found[i]
+            Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)) {
+                for (model in listOf<Any>(library.displayFile(t.print), android.net.Uri.parse(t.uri))) {
+                    coil3.compose.AsyncImage(
+                        model, null, contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.size(72.dp).background(Palette.Surface).clickable {
+                            if (model is android.net.Uri) runCatching {
+                                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(model, "image/*").addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION))
+                            }
+                        },
+                    )
+                }
             }
         }
     }

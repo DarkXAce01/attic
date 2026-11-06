@@ -506,6 +506,11 @@ class Library(private val context: Context) {
         }
     }
 
+    /** Prints that already have a copy in the phone's gallery: see [GalleryTwins]. */
+    suspend fun galleryTwins(progress: (Int, Int) -> Unit = { _, _ -> }): List<GalleryTwins.Twin> = io {
+        GalleryTwins(context, dao).find(progress)
+    }
+
     /** Where [p] is, for telling people: "page 3 of Nani's album". */
     suspend fun whereIs(p: PrintEntity): String = io { "page ${p.page} of ${dao.album(p.albumId)?.title ?: "an album"}" }
 
