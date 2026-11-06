@@ -50,6 +50,7 @@ import io.github.darkxace01.attic.ui.theme.Palette
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 
@@ -61,15 +62,16 @@ import kotlinx.coroutines.withContext
 @Composable
 fun SlideshowScreen(albumId: Long?, personId: Long?, onDone: () -> Unit) {
     val library = LocalContext.current.library
-    val source: Flow<List<PrintEntity>> = remember(albumId, personId) {
+    val source: Flow<List<Item>> = remember(albumId, personId) {
         when {
-            personId != null -> library.printsOf(personId)
-            albumId != null -> library.printsIn(albumId)
-            else -> library.printsOf(-1)
+            personId != null -> library.printsOf(personId).map { l -> l.map(::ScanItem) }
+            // An album's scans, then its photos from the phone.
+            albumId != null -> kotlinx.coroutines.flow.combine(library.printsIn(albumId), library.phoneIn(albumId)) { p, ph -> p.map(::ScanItem) + ph.map(::PhoneItem) }
+            else -> library.printsOf(-1).map { l -> l.map(::ScanItem) }
         }
     }
-    val prints by source.collectAsStateWithLifecycle(null)
-    val list = prints ?: return
+    val items by source.collectAsStateWithLifecycle(null)
+    val list = items ?: return
     if (list.isEmpty()) { LaunchedEffect(Unit) { onDone() }; return }
 
     var index by remember { mutableIntStateOf(0) }
@@ -89,11 +91,11 @@ fun SlideshowScreen(albumId: Long?, personId: Long?, onDone: () -> Unit) {
     LaunchedEffect(index, paused, withStories) {
         player.stop()
         if (paused) return@LaunchedEffect
-        val p = list[index % list.size]
-        val story = if (withStories) withContext(Dispatchers.IO) { library.storiesNow(p.id).firstOrNull() } else null
+        val p = (list[index % list.size] as? ScanItem)?.p
+        val story = if (withStories && p != null) withContext(Dispatchers.IO) { library.storiesNow(p.id).firstOrNull() } else null
         if (story != null) {
             delay(900)
-            player.play(p.id, library.storyFile(p, story))
+            player.play(p!!.id, library.storyFile(p, story))
             // Until it's over (or couldn't start), then a breath.
             while (player.playing.value == p.id) delay(200)
             delay(1500)
@@ -112,9 +114,15 @@ fun SlideshowScreen(albumId: Long?, personId: Long?, onDone: () -> Unit) {
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { controls = !controls },
     ) {
         Crossfade(targetState = index % list.size, animationSpec = tween<Float>(1200), label = "slide") { i ->
-            Slide(list[i], drift = if (playing == list[i].id) 20_000 else SLIDE_MS + 1200)
+            when (val item = list[i]) {
+                is ScanItem -> Slide(item.p, drift = if (playing == item.p.id) 20_000 else SLIDE_MS + 1200)
+                is PhoneItem -> PhoneSlide(item.ph)
+            }
         }
-        Caption(list[index % list.size], Modifier.align(Alignment.BottomCenter))
+        when (val item = list[index % list.size]) {
+            is ScanItem -> Caption(item.p, Modifier.align(Alignment.BottomCenter))
+            is PhoneItem -> CaptionLine(io.github.darkxace01.attic.data.PhotoDate.day(item.ph.taken).label, Modifier.align(Alignment.BottomCenter))
+        }
         AnimatedVisibility(controls, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter)) {
             Row(
                 Modifier.fillMaxWidth().statusBarsPadding().background(Color.Black.copy(alpha = 0.55f)).padding(horizontal = 8.dp, vertical = 6.dp),
@@ -164,7 +172,11 @@ private fun Slide(p: PrintEntity, drift: Int) {
 private fun Caption(p: PrintEntity, modifier: Modifier) {
     val library = LocalContext.current.library
     val people by remember(p.id) { library.peopleIn(p.id) }.collectAsStateWithLifecycle(emptyList())
-    val line = listOfNotNull(p.caption, people.joinToString(", ").ifEmpty { null }, p.date?.label, p.place).joinToString(" · ")
+    CaptionLine(listOfNotNull(p.caption, people.joinToString(", ").ifEmpty { null }, p.date?.label, p.place).joinToString(" · "), modifier)
+}
+
+@Composable
+private fun CaptionLine(line: String, modifier: Modifier) {
     if (line.isEmpty()) return
     Column(modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp, vertical = 18.dp)) {
         Text(
@@ -179,3 +191,21 @@ private fun Caption(p: PrintEntity, modifier: Modifier) {
 
 /** How long a photo without a story stays up. */
 private const val SLIDE_MS = 6000
+
+/** What a slideshow shows: a scan, or a photo from the phone kept in the album. */
+private sealed interface Item
+private class ScanItem(val p: PrintEntity) : Item
+private class PhoneItem(val ph: io.github.darkxace01.attic.data.PhonePhoto) : Item
+
+/** A photo from the phone, with the same quiet drift as a scan. */
+@Composable
+private fun PhoneSlide(ph: io.github.darkxace01.attic.data.PhonePhoto) {
+    val zoom = remember(ph.id) { Animatable(1f) }
+    LaunchedEffect(ph.id) { zoom.animateTo(1.1f, tween(SLIDE_MS + 1200, easing = LinearEasing)) }
+    AsyncImage(
+        model = ph.uri,
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.fillMaxSize().padding(12.dp).graphicsLayer { scaleX = zoom.value; scaleY = zoom.value },
+    )
+}

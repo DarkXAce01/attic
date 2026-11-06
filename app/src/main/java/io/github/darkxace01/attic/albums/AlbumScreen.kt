@@ -133,7 +133,7 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
                 IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More", tint = Palette.Ink) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     DropdownMenuItem(text = { Text("Add from your phone") }, onClick = { menu = false; addFromPhone() })
-                    if (prints.isNotEmpty()) DropdownMenuItem(text = { Text("Play as a slideshow") }, onClick = { menu = false; onSlideshow() })
+                    if (prints.isNotEmpty() || phone.isNotEmpty()) DropdownMenuItem(text = { Text("Play as a slideshow") }, onClick = { menu = false; onSlideshow() })
                     DropdownMenuItem(text = { Text("Tell its stories") }, onClick = { menu = false; onTellStories() })
                     if (prints.isNotEmpty()) {
                         DropdownMenuItem(text = { Text("Save as a web page") }, onClick = { menu = false; saveHtml.launch("${a.title}.html") })

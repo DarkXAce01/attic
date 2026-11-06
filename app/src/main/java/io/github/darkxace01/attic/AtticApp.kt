@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -100,6 +101,10 @@ fun AtticApp() {
     var pickingAlbum by remember { mutableStateOf(false) }
     val top = stack.last()
 
+    // How deep the stack was last time, to tell going in from coming back.
+    var lastDepth by remember { mutableStateOf(1) }
+    val depth = stack.size
+    androidx.compose.runtime.SideEffect { lastDepth = depth }
     fun go(r: Route) { stack += r }
     fun back() { if (stack.size > 1) stack.removeAt(stack.lastIndex) }
     fun tab(r: Route) { stack.clear(); stack += r }
@@ -129,51 +134,72 @@ fun AtticApp() {
 
     Column(Modifier.fillMaxSize().background(Palette.Ground)) {
         Box(Modifier.weight(1f)) {
-            when (top) {
-                Route.Scan -> if (hasCamera) ScanScreen(
-                    scanVm,
-                    onOpenAlbum = { go(Route.Album(it)) },
-                    onPickAlbum = { pickingAlbum = true },
-                ) else NoCamera(refused = cameraRefused) {
-                    if (cameraRefused) runCatching {
-                        context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.fromParts("package", context.packageName, null)))
-                    } else askCamera.launch(Manifest.permission.CAMERA)
-                }
-                Route.Albums -> Box(Modifier.statusBarsPadding()) {
-                    AlbumsScreen(onOpen = { go(Route.Album(it)) }, onSettings = { go(Route.Settings) })
-                }
-                Route.Timeline -> Box(Modifier.statusBarsPadding()) { TimelineScreen(onOpenPrint = { go(Route.Print(it)) }, onOpenPhone = { go(Route.Phone(it)) }) }
-                is Route.Phone -> Box(Modifier.statusBarsPadding()) { io.github.darkxace01.attic.timeline.PhonePhotoScreen(top.photo, onBack = ::back) }
-                Route.Settings -> Box(Modifier.statusBarsPadding()) { SettingsScreen(onBack = ::back, onLightbox = { go(Route.Lightbox) }) }
-                is Route.Slideshow -> io.github.darkxace01.attic.slideshow.SlideshowScreen(top.albumId, top.personId, onDone = ::back)
-                Route.Lightbox -> io.github.darkxace01.attic.settings.LightboxScreen(onDone = ::back)
-                is Route.Album -> Box(Modifier.statusBarsPadding()) {
-                    AlbumScreen(
-                        top.id,
-                        onBack = ::back,
-                        onOpenPrint = { go(Route.Print(it)) },
-                        onScanHere = { scanVm.scanInto(top.id); tab(Route.Scan) },
-                        onTellStories = { go(Route.Session(top.id)) },
-                        onSlideshow = { go(Route.Slideshow(top.id, null)) },
-                        onOpenPhone = { go(Route.Phone(it)) },
-                    )
-                }
-                is Route.Print -> Box(Modifier.statusBarsPadding()) {
-                    PrintScreen(top.showing, onShowing = { top.showing = it }, onBack = ::back, onFixCrop = { go(Route.Crop(it)) }, onOpenPrint = { go(Route.Print(it)) },
-                        onScanBack = { scanVm.scanBackOf(it); tab(Route.Scan) },
-                        onThenNow = { go(Route.ThenNow(it)) },
-                    )
-                }
-                is Route.Crop -> Box(Modifier.statusBarsPadding()) { CropScreen(top.id, onDone = ::back) }
-                is Route.Session -> Box(Modifier.statusBarsPadding()) { SessionScreen(top.albumId, onDone = ::back) }
-                Route.People -> Box(Modifier.statusBarsPadding()) { PeopleScreen(onOpenPerson = { go(Route.Person(it)) }, onTree = { go(Route.FamilyTree(null)) }) }
-                is Route.Person -> Box(Modifier.statusBarsPadding()) { PersonScreen(top.id, onBack = ::back, onOpenPrint = { go(Route.Print(it)) }, onSlideshow = { go(Route.Slideshow(null, top.id)) },
-                    onOpenPerson = { go(Route.Person(it)) }, onTree = { go(Route.FamilyTree(top.id)) }) }
-                is Route.ThenNow -> Box(Modifier.statusBarsPadding()) { io.github.darkxace01.attic.thennow.ThenNowScreen(top.printId, onBack = ::back) }
-                is Route.FamilyTree -> Box(Modifier.statusBarsPadding()) {
-                    io.github.darkxace01.attic.people.FamilyTreeScreen(top.rootId, onBack = ::back, onOpenPerson = { go(Route.Person(it)) })
+            val screen: @Composable (Route) -> Unit = { top ->
+                when (top) {
+                    Route.Scan -> if (hasCamera) ScanScreen(
+                        scanVm,
+                        onOpenAlbum = { go(Route.Album(it)) },
+                        onPickAlbum = { pickingAlbum = true },
+                    ) else NoCamera(refused = cameraRefused) {
+                        if (cameraRefused) runCatching {
+                            context.startActivity(android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.fromParts("package", context.packageName, null)))
+                        } else askCamera.launch(Manifest.permission.CAMERA)
+                    }
+                    Route.Albums -> Box(Modifier.statusBarsPadding()) {
+                        AlbumsScreen(onOpen = { go(Route.Album(it)) }, onSettings = { go(Route.Settings) })
+                    }
+                    Route.Timeline -> Box(Modifier.statusBarsPadding()) { TimelineScreen(onOpenPrint = { go(Route.Print(it)) }, onOpenPhone = { go(Route.Phone(it)) }) }
+                    is Route.Phone -> Box(Modifier.statusBarsPadding()) { io.github.darkxace01.attic.timeline.PhonePhotoScreen(top.photo, onBack = ::back) }
+                    Route.Settings -> Box(Modifier.statusBarsPadding()) { SettingsScreen(onBack = ::back, onLightbox = { go(Route.Lightbox) }) }
+                    is Route.Slideshow -> io.github.darkxace01.attic.slideshow.SlideshowScreen(top.albumId, top.personId, onDone = ::back)
+                    Route.Lightbox -> io.github.darkxace01.attic.settings.LightboxScreen(onDone = ::back)
+                    is Route.Album -> Box(Modifier.statusBarsPadding()) {
+                        AlbumScreen(
+                            top.id,
+                            onBack = ::back,
+                            onOpenPrint = { go(Route.Print(it)) },
+                            onScanHere = { scanVm.scanInto(top.id); tab(Route.Scan) },
+                            onTellStories = { go(Route.Session(top.id)) },
+                            onSlideshow = { go(Route.Slideshow(top.id, null)) },
+                            onOpenPhone = { go(Route.Phone(it)) },
+                        )
+                    }
+                    is Route.Print -> Box(Modifier.statusBarsPadding()) {
+                        PrintScreen(top.showing, onShowing = { top.showing = it }, onBack = ::back, onFixCrop = { go(Route.Crop(it)) }, onOpenPrint = { go(Route.Print(it)) },
+                            onScanBack = { scanVm.scanBackOf(it); tab(Route.Scan) },
+                            onThenNow = { go(Route.ThenNow(it)) },
+                        )
+                    }
+                    is Route.Crop -> Box(Modifier.statusBarsPadding()) { CropScreen(top.id, onDone = ::back) }
+                    is Route.Session -> Box(Modifier.statusBarsPadding()) { SessionScreen(top.albumId, onDone = ::back) }
+                    Route.People -> Box(Modifier.statusBarsPadding()) { PeopleScreen(onOpenPerson = { go(Route.Person(it)) }, onTree = { go(Route.FamilyTree(null)) }) }
+                    is Route.Person -> Box(Modifier.statusBarsPadding()) { PersonScreen(top.id, onBack = ::back, onOpenPrint = { go(Route.Print(it)) }, onSlideshow = { go(Route.Slideshow(null, top.id)) },
+                        onOpenPerson = { go(Route.Person(it)) }, onTree = { go(Route.FamilyTree(top.id)) }) }
+                    is Route.ThenNow -> Box(Modifier.statusBarsPadding()) { io.github.darkxace01.attic.thennow.ThenNowScreen(top.printId, onBack = ::back) }
+                    is Route.FamilyTree -> Box(Modifier.statusBarsPadding()) {
+                        io.github.darkxace01.attic.people.FamilyTreeScreen(top.rootId, onBack = ::back, onOpenPerson = { go(Route.Person(it)) })
+                    }
                 }
             }
+            // Deeper screens come in from the right and go back the way they came; tabs just fade.
+            // The camera is never animated: two live viewfinders would fight over it.
+            if (top == Route.Scan) screen(top)
+            else androidx.compose.animation.AnimatedContent(
+                targetState = top,
+                transitionSpec = {
+                    val deeper = depth > lastDepth
+                    val back = depth < lastDepth
+                    val enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) +
+                        if (deeper) androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(260)) { it / 6 }
+                        else if (back) androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(260)) { -it / 10 }
+                        else androidx.compose.animation.EnterTransition.None
+                    val exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160)) +
+                        if (back) androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(260)) { it / 6 }
+                        else androidx.compose.animation.ExitTransition.None
+                    enter togetherWith exit
+                },
+                label = "screen",
+            ) { r -> screen(r) }
         }
         if (top == Route.Scan || top == Route.Albums || top == Route.People || top == Route.Timeline) {
             TabBar(top, dark = top == Route.Scan, onTab = ::tab)
