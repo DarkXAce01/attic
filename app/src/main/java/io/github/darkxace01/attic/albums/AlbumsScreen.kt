@@ -1,5 +1,6 @@
 package io.github.darkxace01.attic.albums
 
+import io.github.darkxace01.attic.ui.tourTarget
 import io.github.darkxace01.attic.ui.theme.ground
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -110,9 +111,9 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
             Column(Modifier.padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     io.github.darkxace01.attic.ui.theme.OverprintText("Albums", MaterialTheme.typography.displayMedium, io.github.darkxace01.attic.ui.theme.Ink.Sunflower.color, Modifier.weight(1f), by = 3.dp)
-                    QuietButton("New album", onClick = { creating = true }, color = Palette.Accent)
+                    QuietButton("New album", onClick = { creating = true }, color = Palette.Accent, modifier = Modifier.tourTarget("albums.new"))
                     Box {
-                        androidx.compose.material3.IconButton(onClick = { menu = true }) {
+                        androidx.compose.material3.IconButton(onClick = { menu = true }, modifier = Modifier.tourTarget("albums.menu")) {
                             androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.MoreVert, "More", tint = Palette.Ink)
                         }
                         androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = Palette.Ground, shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp), border = androidx.compose.foundation.BorderStroke(1.5.dp, Palette.Ink), shadowElevation = 0.dp) {
@@ -279,7 +280,7 @@ private fun AlbumCover(a: AlbumSummary, cover: File?, onClick: () -> Unit) {
  */
 @Composable
 private fun LayoutLine(layout: String, onPick: (String) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp).tourTarget("albums.layouts")) {
         for ((key, label) in listOf("path" to "Path", "ring" to "Ring", "map" to "Map")) {
             val on = key == layout
             Column(

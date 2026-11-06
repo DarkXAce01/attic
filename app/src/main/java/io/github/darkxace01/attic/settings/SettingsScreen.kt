@@ -61,7 +61,7 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onLightbox: () -> Unit = {}) {
+fun SettingsScreen(onBack: () -> Unit, onLightbox: () -> Unit = {}, onTour: () -> Unit = {}) {
     val context = LocalContext.current
     val library = context.library
     val backup = context.backup
@@ -81,12 +81,14 @@ fun SettingsScreen(onBack: () -> Unit, onLightbox: () -> Unit = {}) {
             Heading("Look")
             Text("A theme for everything round your photos. The photos themselves never change.", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
             Spacer(Modifier.height(10.dp))
-            ThemePicker(Palette.style) { s -> library.settings.update { it.copy(theme = s.name) } }
+            io.github.darkxace01.attic.ui.ThemePicker(Palette.style) { s -> library.settings.update { it.copy(theme = s.name) } }
             Spacer(Modifier.height(12.dp))
             val st = Palette.style
             Text("${st.light} by day, ${st.dark} at night, or Auto to follow the phone.", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
             Spacer(Modifier.height(10.dp))
             InkChoice(listOf("auto" to "Auto", "paper" to st.light, "midnight" to st.dark), prefs.look) { l -> library.settings.update { it.copy(look = l) } }
+
+            io.github.darkxace01.attic.ui.QuietButton("Take the tour again", onClick = onTour)
 
             Toggle(
                 "Tilt light",
@@ -345,55 +347,6 @@ private fun InkChoice(options: List<Pair<String, String>>, chosen: String, onCho
                 Text(label, style = MaterialTheme.typography.labelLarge, color = if (on) Palette.Ground else Palette.Ink)
             }
         }
-    }
-}
-
-/**
- * The five themes as little swatches, each in its own colours and face whatever theme is on now, so
- * you can see what you'd get before choosing it.
- */
-@Composable
-private fun ThemePicker(chosen: io.github.darkxace01.attic.ui.theme.Style, onChoose: (io.github.darkxace01.attic.ui.theme.Style) -> Unit) {
-    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        items(io.github.darkxace01.attic.ui.theme.Style.entries.size) { i ->
-            val s = io.github.darkxace01.attic.ui.theme.Style.entries[i]
-            val on = s == chosen
-            val shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
-            Column(
-                Modifier
-                    .then(Modifier.width(132.dp))
-                    .clip(shape)
-                    .border(if (on) 2.5.dp else 1.dp, if (on) Palette.Ink else Palette.SurfaceHigh, shape)
-                    .clickable(enabled = !on) { onChoose(s) },
-            ) {
-                ThemeSwatch(s, Modifier.fillMaxWidth().height(84.dp))
-                Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-                    Text(s.label, style = MaterialTheme.typography.labelLarge, color = Palette.Ink)
-                    Text("${s.light} and ${s.dark}", style = MaterialTheme.typography.labelMedium, color = Palette.Muted)
-                }
-            }
-        }
-    }
-    Spacer(Modifier.height(8.dp))
-    Text(chosen.about, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
-}
-
-/** A theme's two sides split corner to corner, its title face on top and its main colour as a dot. */
-@Composable
-private fun ThemeSwatch(s: io.github.darkxace01.attic.ui.theme.Style, modifier: Modifier) {
-    val light = io.github.darkxace01.attic.ui.theme.Sides.of(s, false)
-    val dark = io.github.darkxace01.attic.ui.theme.Sides.of(s, true)
-    Box(modifier) {
-        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
-            drawRect(androidx.compose.ui.graphics.Color(light.ground))
-            val half = androidx.compose.ui.graphics.Path().apply { moveTo(size.width, 0f); lineTo(size.width, size.height); lineTo(0f, size.height); close() }
-            drawPath(half, androidx.compose.ui.graphics.Color(dark.ground))
-            drawCircle(androidx.compose.ui.graphics.Color(light.accent), size.height * 0.13f, androidx.compose.ui.geometry.Offset(size.width * 0.18f, size.height * 0.74f))
-            drawCircle(androidx.compose.ui.graphics.Color(dark.accent), size.height * 0.13f, androidx.compose.ui.geometry.Offset(size.width * 0.82f, size.height * 0.74f))
-        }
-        val face = io.github.darkxace01.attic.ui.theme.displayStyle(26f, style = s).copy(shadow = null)
-        Text("Aa", style = face, color = androidx.compose.ui.graphics.Color(light.ink), modifier = Modifier.padding(start = 10.dp, top = 6.dp))
-        Text("Aa", style = face, color = androidx.compose.ui.graphics.Color(dark.ink), modifier = Modifier.align(Alignment.TopEnd).padding(end = 10.dp, top = 30.dp))
     }
 }
 

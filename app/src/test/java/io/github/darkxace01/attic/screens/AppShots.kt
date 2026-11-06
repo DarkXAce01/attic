@@ -262,6 +262,21 @@ class AppShots {
             }
         }
     }
+    /** The tour circling New album over a real Albums screen. */
+    @Test fun tourNewAlbum() { seed(more = true); shot("tour_new") {
+        Box(Modifier.fillMaxSize()) {
+            io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {})
+            io.github.darkxace01.attic.ui.TourOverlay(2, {}, {})
+        }
+    } }
+
+    /** The first open in Kodachrome's Projector side, to check the look step reprints itself. */
+    @Test fun welcomeKodachrome() {
+        Palette.style = io.github.darkxace01.attic.ui.theme.Style.Kodachrome; Palette.dark = true
+        try { shot("welcome_kc") { io.github.darkxace01.attic.AtticApp() } }
+        finally { Palette.style = io.github.darkxace01.attic.ui.theme.Style.Riso; Palette.dark = false }
+    }
+
     @Test fun welcome() { shot("welcome") { io.github.darkxace01.attic.AtticApp() } }
     @Test fun emptyAlbums() { shot("empty") { io.github.darkxace01.attic.albums.AlbumsScreen(onOpen = {}, onSettings = {}) } }
 }
