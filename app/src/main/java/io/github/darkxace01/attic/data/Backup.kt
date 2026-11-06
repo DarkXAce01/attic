@@ -231,6 +231,14 @@ class Backup(private val context: Context, private val library: Library) {
                     dao.updatePerson(known.copy(bornFrom = pe.optLongOrNull("bornFrom"), bornTo = pe.optLongOrNull("bornTo"), bornLabel = pe.optStringOrNull("bornLabel")))
                 }
             }
+            val relations = json.optJSONArray("relations") ?: JSONArray()
+            val have = dao.relationsNow()
+            for (k in 0 until relations.length()) {
+                val r = relations.getJSONObject(k)
+                fun idOf(name: String) = dao.personNamed(name)?.id ?: dao.insertPerson(PersonEntity(name = name))
+                val rel = RelationEntity(a = idOf(r.getString("a")), b = idOf(r.getString("b")), kind = r.getString("kind"))
+                if (have.none { it.a == rel.a && it.b == rel.b && it.kind == rel.kind }) dao.insertRelation(rel)
+            }
             library.renderMissing()
             library.fillMissingHashes()
             library.findMissingFaces()
@@ -289,8 +297,16 @@ class Backup(private val context: Context, private val library: Library) {
                 JSONObject().put("name", pe.name).putOpt("bornFrom", pe.bornFrom).putOpt("bornTo", pe.bornTo).putOpt("bornLabel", pe.bornLabel)
             },
         )
+        val names = dao.peopleNow().associate { it.id to it.name }
+        val relations = JSONArray(
+            dao.relationsNow().mapNotNull { r ->
+                val a = names[r.a] ?: return@mapNotNull null
+                val b = names[r.b] ?: return@mapNotNull null
+                JSONObject().put("a", a).put("b", b).put("kind", r.kind)
+            },
+        )
         return JSONObject().put("format", FORMAT).put("formatVersion", 1).put("savedAt", System.currentTimeMillis()).put("albums", arr)
-            .put("people", people)
+            .put("people", people).put("relations", relations)
     }
 
     /** A print's faces, fingerprints and who they are, so names survive a restore without finding them again. */

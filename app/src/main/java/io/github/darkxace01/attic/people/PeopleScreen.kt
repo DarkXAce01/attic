@@ -50,17 +50,20 @@ import io.github.darkxace01.attic.ui.theme.Palette
  * these?"); below, everyone named, most photographed first.
  */
 @Composable
-fun PeopleScreen(onOpenPerson: (Long) -> Unit) {
+fun PeopleScreen(onOpenPerson: (Long) -> Unit, onTree: () -> Unit = {}) {
     val library = LocalContext.current.library
     val people by remember { library.people() }.collectAsStateWithLifecycle(null)
     val faces by remember { library.allFaces() }.collectAsStateWithLifecycle(emptyList())
     // Regrouped whenever a face is found or named.
     val groups by produceState(emptyList<Library.FaceGroup>(), faces.size, faces.count { it.personId != null }) { value = library.unnamedGroups() }
     var naming by remember { mutableStateOf<Library.FaceGroup?>(null) }
+    val relations by remember { library.relations() }.collectAsStateWithLifecycle(emptyList())
     val list = people ?: return
 
     Column(Modifier.fillMaxSize()) {
-        TopBar("People", onBack = null)
+        TopBar("People", onBack = null) {
+            if (relations.isNotEmpty()) io.github.darkxace01.attic.ui.QuietButton("Family tree", onClick = onTree)
+        }
         if (list.isEmpty() && groups.isEmpty()) {
             Text(
                 if (faces.isEmpty()) "Faces are found in your photos as you scan. Name someone once and Attic finds them in the rest."

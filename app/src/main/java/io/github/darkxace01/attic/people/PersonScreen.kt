@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
  * their birth year is known.
  */
 @Composable
-fun PersonScreen(personId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, onSlideshow: () -> Unit = {}) {
+fun PersonScreen(personId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, onSlideshow: () -> Unit = {}, onOpenPerson: (Long) -> Unit = {}, onTree: () -> Unit = {}) {
     val library = LocalContext.current.library
     val person by remember(personId) { library.person(personId) }.collectAsStateWithLifecycle(null)
     val prints by remember(personId) { library.printsOf(personId) }.collectAsStateWithLifecycle(emptyList())
@@ -87,6 +87,8 @@ fun PersonScreen(personId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit
                         else -> if (prints.size == 1) "1 photo." else "${prints.size} photos."
                     }
                     Text(line, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = Modifier.padding(horizontal = 4.dp))
+                    FamilySection(personId, p.name, onOpenPerson, onTree)
+                    if (prints.isNotEmpty()) Spacer(Modifier.height(10.dp))
                 }
             }
             items(prints.size, key = { prints[it].id }) { i ->

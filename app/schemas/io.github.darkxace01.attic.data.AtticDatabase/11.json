@@ -1,0 +1,531 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 11,
+    "identityHash": "11785012de6271f5a75abb3887ccdbf9",
+    "entities": [
+      {
+        "tableName": "album",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `title` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `dateFrom` INTEGER, `dateTo` INTEGER, `dateLabel` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dateFrom",
+            "columnName": "dateFrom",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dateTo",
+            "columnName": "dateTo",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dateLabel",
+            "columnName": "dateLabel",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "print",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `albumId` INTEGER NOT NULL, `scanDir` TEXT NOT NULL, `fileName` TEXT NOT NULL, `page` INTEGER NOT NULL, `position` INTEGER NOT NULL, `width` INTEGER NOT NULL, `height` INTEGER NOT NULL, `sharpness` REAL NOT NULL, `quad` TEXT NOT NULL, `enhance` INTEGER NOT NULL DEFAULT 1, `dateFrom` INTEGER, `dateTo` INTEGER, `dateLabel` TEXT, `place` TEXT, `caption` TEXT, `createdAt` INTEGER NOT NULL, `version` INTEGER NOT NULL, `galleryUri` TEXT, `exportedVersion` INTEGER NOT NULL, `backedUpVersion` INTEGER NOT NULL DEFAULT 0, `hashes` TEXT, `backFile` TEXT, `stamp` TEXT, `facesQuad` TEXT, `borderQuad` TEXT, `negative` INTEGER NOT NULL DEFAULT 0)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "albumId",
+            "columnName": "albumId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "scanDir",
+            "columnName": "scanDir",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fileName",
+            "columnName": "fileName",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "page",
+            "columnName": "page",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "width",
+            "columnName": "width",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "height",
+            "columnName": "height",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sharpness",
+            "columnName": "sharpness",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "quad",
+            "columnName": "quad",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enhance",
+            "columnName": "enhance",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "dateFrom",
+            "columnName": "dateFrom",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dateTo",
+            "columnName": "dateTo",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "dateLabel",
+            "columnName": "dateLabel",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "place",
+            "columnName": "place",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "caption",
+            "columnName": "caption",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "version",
+            "columnName": "version",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "galleryUri",
+            "columnName": "galleryUri",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "exportedVersion",
+            "columnName": "exportedVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "backedUpVersion",
+            "columnName": "backedUpVersion",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "hashes",
+            "columnName": "hashes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "backFile",
+            "columnName": "backFile",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "stamp",
+            "columnName": "stamp",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "facesQuad",
+            "columnName": "facesQuad",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "borderQuad",
+            "columnName": "borderQuad",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "negative",
+            "columnName": "negative",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_print_albumId",
+            "unique": false,
+            "columnNames": [
+              "albumId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_print_albumId` ON `${TABLE_NAME}` (`albumId`)"
+          },
+          {
+            "name": "index_print_dateFrom",
+            "unique": false,
+            "columnNames": [
+              "dateFrom"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_print_dateFrom` ON `${TABLE_NAME}` (`dateFrom`)"
+          }
+        ]
+      },
+      {
+        "tableName": "person",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `bornFrom` INTEGER, `bornTo` INTEGER, `bornLabel` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bornFrom",
+            "columnName": "bornFrom",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "bornTo",
+            "columnName": "bornTo",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "bornLabel",
+            "columnName": "bornLabel",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_person_name",
+            "unique": true,
+            "columnNames": [
+              "name"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_person_name` ON `${TABLE_NAME}` (`name`)"
+          }
+        ]
+      },
+      {
+        "tableName": "print_person",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`printId` INTEGER NOT NULL, `personId` INTEGER NOT NULL, PRIMARY KEY(`printId`, `personId`))",
+        "fields": [
+          {
+            "fieldPath": "printId",
+            "columnName": "printId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personId",
+            "columnName": "personId",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "printId",
+            "personId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_print_person_personId",
+            "unique": false,
+            "columnNames": [
+              "personId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_print_person_personId` ON `${TABLE_NAME}` (`personId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "story",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `printId` INTEGER NOT NULL, `file` TEXT NOT NULL, `durationMs` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "printId",
+            "columnName": "printId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "file",
+            "columnName": "file",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "durationMs",
+            "columnName": "durationMs",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_story_printId",
+            "unique": false,
+            "columnNames": [
+              "printId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_story_printId` ON `${TABLE_NAME}` (`printId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "face",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `printId` INTEGER NOT NULL, `left` REAL NOT NULL, `top` REAL NOT NULL, `right` REAL NOT NULL, `bottom` REAL NOT NULL, `score` REAL NOT NULL, `vec` BLOB NOT NULL, `personId` INTEGER, `ignored` INTEGER NOT NULL DEFAULT 0)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "printId",
+            "columnName": "printId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "left",
+            "columnName": "left",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "top",
+            "columnName": "top",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "right",
+            "columnName": "right",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bottom",
+            "columnName": "bottom",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "score",
+            "columnName": "score",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "vec",
+            "columnName": "vec",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personId",
+            "columnName": "personId",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "ignored",
+            "columnName": "ignored",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_face_printId",
+            "unique": false,
+            "columnNames": [
+              "printId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_face_printId` ON `${TABLE_NAME}` (`printId`)"
+          },
+          {
+            "name": "index_face_personId",
+            "unique": false,
+            "columnNames": [
+              "personId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_face_personId` ON `${TABLE_NAME}` (`personId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "relation",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `a` INTEGER NOT NULL, `b` INTEGER NOT NULL, `kind` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "a",
+            "columnName": "a",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "b",
+            "columnName": "b",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_relation_a",
+            "unique": false,
+            "columnNames": [
+              "a"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_relation_a` ON `${TABLE_NAME}` (`a`)"
+          },
+          {
+            "name": "index_relation_b",
+            "unique": false,
+            "columnNames": [
+              "b"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_relation_b` ON `${TABLE_NAME}` (`b`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '11785012de6271f5a75abb3887ccdbf9')"
+    ]
+  }
+}

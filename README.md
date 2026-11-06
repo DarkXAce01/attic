@@ -75,6 +75,8 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   were, every photo's details, its back, its stories to listen to. Or as an A4 photobook PDF to print
 - Slideshow of an album or a person: each photo drifts slowly in toward its faces; a photo with a
   story stays up while the story plays. Cast the screen to a TV to watch together
+- Family tree: on someone's page, add their parents, children, partner, brothers and sisters, and Attic
+  draws the tree a generation to a row. Relatives without photos yet are drawn faintly
 
 **Keep**
 - Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their

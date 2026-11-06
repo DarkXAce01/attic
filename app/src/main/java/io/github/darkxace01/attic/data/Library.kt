@@ -498,6 +498,31 @@ class Library(private val context: Context) {
     /** Marks freshly saved prints as taken from negatives (their crops are already developed). */
     suspend fun markNegative(ids: List<Long>) = io { if (ids.isNotEmpty()) dao.markNegative(ids) }
 
+    // ---- family ----
+
+    fun relations(): Flow<List<RelationEntity>> = dao.relations()
+
+    /**
+     * Says how [person] and the person called [name] (made if new) are related: [kind] is from [person]'s
+     * side ("parent" makes the other their parent, "child" their child). Saying it twice does nothing.
+     */
+    suspend fun relate(person: Long, name: String, kind: String) = io {
+        val clean = name.trim()
+        if (clean.isEmpty()) return@io
+        val other = dao.personNamed(clean)?.id ?: dao.insertPerson(PersonEntity(name = clean))
+        if (other == person) return@io
+        val r = when (kind) {
+            "parent" -> RelationEntity(a = other, b = person, kind = RelationEntity.PARENT)
+            "child" -> RelationEntity(a = person, b = other, kind = RelationEntity.PARENT)
+            RelationEntity.SPOUSE -> RelationEntity(a = person, b = other, kind = RelationEntity.SPOUSE)
+            else -> RelationEntity(a = person, b = other, kind = RelationEntity.SIBLING)
+        }
+        val known = dao.relationsNow().any { it.kind == r.kind && ((it.a == r.a && it.b == r.b) || (r.kind != RelationEntity.PARENT && it.a == r.b && it.b == r.a)) }
+        if (!known) dao.insertRelation(r)
+    }
+
+    suspend fun unrelate(relationId: Long) = io { dao.deleteRelation(relationId) }
+
     // ---- importing ----
 
     /** An image brought in from a file, ready to be treated like a camera shot. */
@@ -939,6 +964,8 @@ class Library(private val context: Context) {
             db.runInTransaction {
                 dao.allFacesNow().filter { it.personId == personId }.forEach { dao.updateFace(it.copy(personId = other.id)) }
                 dao.retag(personId, other.id)
+                dao.moveRelationsA(personId, other.id)
+                dao.moveRelationsB(personId, other.id)
                 dao.deletePerson(personId)
             }
         } else {

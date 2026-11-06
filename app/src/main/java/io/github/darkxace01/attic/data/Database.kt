@@ -126,6 +126,19 @@ data class FaceEntity(
     override fun hashCode() = id.hashCode()
 }
 
+/**
+ * How two people are family: [kind] is [PARENT] ([a] is [b]'s parent), [SPOUSE] or [SIBLING] (for siblings
+ * whose parents aren't in Attic; those with parents in common are siblings anyway).
+ */
+@Entity(tableName = "relation", indices = [Index("a"), Index("b")])
+data class RelationEntity(@PrimaryKey(autoGenerate = true) val id: Long = 0, val a: Long, val b: Long, val kind: String) {
+    companion object {
+        const val PARENT = "parent"
+        const val SPOUSE = "spouse"
+        const val SIBLING = "sibling"
+    }
+}
+
 /** A person with how many photos they're in and a face to show for them. */
 data class PersonSummary(val id: Long, val name: String, val count: Int, val faceId: Long?, val bornFrom: Long?, val bornTo: Long?, val bornLabel: String?) {
     val born: PhotoDate? get() = photoDate(bornFrom, bornTo, bornLabel)
@@ -261,7 +274,15 @@ interface AtticDao {
     @Query("DELETE FROM print_person WHERE personId = :personId") fun untagPerson(personId: Long)
     @Query("DELETE FROM person WHERE id = :id") fun deletePersonRow(id: Long)
     @Transaction fun retag(from: Long, to: Long) { copyTags(from, to); untagPerson(from) }
-    @Transaction fun deletePerson(id: Long) { untagPerson(id); deletePersonRow(id) }
+    @Transaction fun deletePerson(id: Long) { untagPerson(id); deleteRelationsOf(id); deletePersonRow(id) }
+
+    @Insert fun insertRelation(r: RelationEntity): Long
+    @Query("DELETE FROM relation WHERE id = :id") fun deleteRelation(id: Long)
+    @Query("DELETE FROM relation WHERE a = :person OR b = :person") fun deleteRelationsOf(person: Long)
+    @Query("SELECT * FROM relation") fun relations(): Flow<List<RelationEntity>>
+    @Query("SELECT * FROM relation") fun relationsNow(): List<RelationEntity>
+    @Query("UPDATE relation SET a = :to WHERE a = :from") fun moveRelationsA(from: Long, to: Long)
+    @Query("UPDATE relation SET b = :to WHERE b = :from") fun moveRelationsB(from: Long, to: Long)
 
     @Transaction
     fun setPeople(printId: Long, names: List<String>) {
@@ -277,8 +298,8 @@ interface AtticDao {
 }
 
 @Database(
-    entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class, FaceEntity::class],
-    version = 10,
+    entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class, FaceEntity::class, RelationEntity::class],
+    version = 11,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -286,7 +307,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -367,6 +388,18 @@ abstract class AtticDatabase : RoomDatabase() {
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `print` ADD COLUMN `negative` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /** Family. */
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `relation` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `a` INTEGER NOT NULL, " +
+                        "`b` INTEGER NOT NULL, `kind` TEXT NOT NULL)",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_relation_a` ON `relation` (`a`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_relation_b` ON `relation` (`b`)")
             }
         }
 
