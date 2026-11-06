@@ -81,6 +81,9 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   when nothing is dated near today, one photo for the day
 - Then and now: stand where an old photo was taken, line it up over the camera and take it again. Attic
   matches what hasn't changed to lay today's photo exactly over the old one; slide between the two
+- Ask the family: one web page of the faces nobody has named and the photos with no date or place. A
+  relative opens it in any browser, fills in what they know and sends back a small answers file; Attic
+  reads it in without overwriting anything already filled in
 
 **Keep**
 - Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their

@@ -58,6 +58,7 @@ fun PeopleScreen(onOpenPerson: (Long) -> Unit, onTree: () -> Unit = {}) {
     val groups by produceState(emptyList<Library.FaceGroup>(), faces.size, faces.count { it.personId != null }) { value = library.unnamedGroups() }
     var naming by remember { mutableStateOf<Library.FaceGroup?>(null) }
     val relations by remember { library.relations() }.collectAsStateWithLifecycle(emptyList())
+    val ask = io.github.darkxace01.attic.help.rememberAskFamily()
     val list = people ?: return
 
     Column(Modifier.fillMaxSize()) {
@@ -85,6 +86,11 @@ fun PeopleScreen(onOpenPerson: (Long) -> Unit, onTree: () -> Unit = {}) {
                     Column {
                         Text("Who are these?", style = MaterialTheme.typography.titleMedium, color = Palette.Ink, modifier = Modifier.padding(horizontal = 4.dp))
                         Text("The same face in more than one photo.", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = Modifier.padding(horizontal = 4.dp))
+                        androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Don't know them?", style = MaterialTheme.typography.bodyMedium, color = Palette.Muted, modifier = Modifier.padding(horizontal = 4.dp))
+                            io.github.darkxace01.attic.ui.QuietButton("Ask the family", onClick = ask.ask)
+                        }
+                        ask.status?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = Palette.Ink, modifier = Modifier.padding(horizontal = 4.dp)) }
                         Spacer(Modifier.height(12.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(groups, key = { g -> g.faces.first().id }) { g -> GroupCard(g) { naming = g } }

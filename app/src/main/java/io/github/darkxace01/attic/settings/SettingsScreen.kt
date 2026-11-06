@@ -125,6 +125,9 @@ fun SettingsScreen(onBack: () -> Unit, onLightbox: () -> Unit = {}) {
                 }
             }
 
+            Heading("Ask the family")
+            io.github.darkxace01.attic.help.AskFamilySection()
+
             Heading("Backup")
             BackupSection(backup, library.counts())
 
