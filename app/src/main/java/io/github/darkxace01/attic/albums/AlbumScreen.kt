@@ -135,6 +135,17 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
                     DropdownMenuItem(text = { Text("Add from your phone") }, onClick = { menu = false; addFromPhone() })
                     if (prints.isNotEmpty() || phone.isNotEmpty()) DropdownMenuItem(text = { Text("Play as a slideshow") }, onClick = { menu = false; onSlideshow() })
                     DropdownMenuItem(text = { Text("Tell its stories") }, onClick = { menu = false; onTellStories() })
+                    DropdownMenuItem(text = { Text("Share the album") }, onClick = {
+                        menu = false
+                        saving = "Packing the album…"
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                            val ok = runCatching {
+                                io.github.darkxace01.attic.ui.shareAlbum(context, albumId, a.title) { d, t -> saving = "Packing the album… $d of $t photos" }
+                            }.isSuccess
+                            saving = if (ok) null else "Couldn't pack the album."
+                            if (!ok) { kotlinx.coroutines.delay(3500); saving = null }
+                        }
+                    })
                     if (prints.isNotEmpty()) {
                         DropdownMenuItem(text = { Text("Save as a web page") }, onClick = { menu = false; saveHtml.launch("${a.title}.html") })
                         DropdownMenuItem(text = { Text("Save as a photobook (PDF)") }, onClick = { menu = false; savePdf.launch("${a.title}.pdf") })

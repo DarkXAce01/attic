@@ -194,52 +194,11 @@ class Backup(private val context: Context, private val library: Library) {
                             context.contentResolver.openInputStream(f.uri)!!.use { input -> dest.outputStream().use { input.copyTo(it) } }
                         }
                     }
-                    if (!File(local, fileName).exists()) continue
-                    val version = p.getInt("version")
-                    val id = dao.insertPrint(
-                        PrintEntity(
-                            albumId = album.id, scanDir = scanDir, fileName = fileName,
-                            page = p.getInt("page"), position = p.getInt("position"),
-                            width = p.getInt("width"), height = p.getInt("height"), sharpness = p.getDouble("sharpness"),
-                            quad = p.getString("quad"), enhance = p.getInt("enhance"),
-                            dateFrom = p.optLongOrNull("dateFrom"), dateTo = p.optLongOrNull("dateTo"), dateLabel = p.optStringOrNull("dateLabel"),
-                            place = p.optStringOrNull("place"), caption = p.optStringOrNull("caption"),
-                            createdAt = p.getLong("createdAt"), version = version, backedUpVersion = version,
-                            backFile = p.optStringOrNull("backFile")?.takeIf { File(local, it).exists() },
-                            borderQuad = p.optStringOrNull("borderQuad"),
-                            negative = p.optBoolean("negative"),
-                            upscaled = p.optBoolean("upscaled"),
-                        ),
-                    )
-                    val people = p.optJSONArray("people") ?: JSONArray()
-                    dao.setPeople(id, List(people.length()) { people.getString(it) })
-                    restoreFaces(id, p.getString("quad"), p.optJSONArray("faces"))
-                    val stories = p.optJSONArray("stories") ?: JSONArray()
-                    for (k in 0 until stories.length()) {
-                        val st = stories.getJSONObject(k)
-                        if (!File(local, st.getString("file")).exists()) continue
-                        dao.insertStory(StoryEntity(printId = id, file = st.getString("file"), durationMs = st.getLong("durationMs"), createdAt = st.getLong("createdAt")))
-                    }
+                    if (!restorePrint(p, album.id, local)) continue
                     restored++
                 }
             }
-            val people = json.optJSONArray("people") ?: JSONArray()
-            for (k in 0 until people.length()) {
-                val pe = people.getJSONObject(k)
-                val name = pe.getString("name")
-                val known = dao.personNamed(name) ?: PersonEntity(name = name).let { it.copy(id = dao.insertPerson(it)) }
-                if (known.bornLabel == null) {
-                    dao.updatePerson(known.copy(bornFrom = pe.optLongOrNull("bornFrom"), bornTo = pe.optLongOrNull("bornTo"), bornLabel = pe.optStringOrNull("bornLabel")))
-                }
-            }
-            val relations = json.optJSONArray("relations") ?: JSONArray()
-            val have = dao.relationsNow()
-            for (k in 0 until relations.length()) {
-                val r = relations.getJSONObject(k)
-                fun idOf(name: String) = dao.personNamed(name)?.id ?: dao.insertPerson(PersonEntity(name = name))
-                val rel = RelationEntity(a = idOf(r.getString("a")), b = idOf(r.getString("b")), kind = r.getString("kind"))
-                if (have.none { it.a == rel.a && it.b == rel.b && it.kind == rel.kind }) dao.insertRelation(rel)
-            }
+            restorePeople(json)
             library.renderMissing()
             library.fillMissingHashes()
             library.findMissingFaces()
@@ -259,8 +218,63 @@ class Backup(private val context: Context, private val library: Library) {
 
     fun clearProgress() { _progress.value = Progress.Idle }
 
+    /** Adds print [p] (as described by [describe]) to album [albumId], its files already in [local]. */
+    internal fun restorePrint(p: JSONObject, albumId: Long, local: File, backedUp: Boolean = true): Boolean {
+        val scanDir = p.getString("scanDir")
+        val fileName = p.getString("fileName")
+        if (!File(local, fileName).exists()) return false
+        val version = p.getInt("version")
+        val id = dao.insertPrint(
+            PrintEntity(
+                albumId = albumId, scanDir = scanDir, fileName = fileName,
+                page = p.getInt("page"), position = p.getInt("position"),
+                width = p.getInt("width"), height = p.getInt("height"), sharpness = p.getDouble("sharpness"),
+                quad = p.getString("quad"), enhance = p.getInt("enhance"),
+                dateFrom = p.optLongOrNull("dateFrom"), dateTo = p.optLongOrNull("dateTo"), dateLabel = p.optStringOrNull("dateLabel"),
+                place = p.optStringOrNull("place"), caption = p.optStringOrNull("caption"),
+                createdAt = p.getLong("createdAt"), version = version, backedUpVersion = if (backedUp) version else 0,
+                backFile = p.optStringOrNull("backFile")?.takeIf { File(local, it).exists() },
+                borderQuad = p.optStringOrNull("borderQuad"),
+                negative = p.optBoolean("negative"),
+                upscaled = p.optBoolean("upscaled"),
+            ),
+        )
+        val people = p.optJSONArray("people") ?: JSONArray()
+        dao.setPeople(id, List(people.length()) { people.getString(it) })
+        restoreFaces(id, p.getString("quad"), p.optJSONArray("faces"))
+        val stories = p.optJSONArray("stories") ?: JSONArray()
+        for (k in 0 until stories.length()) {
+            val st = stories.getJSONObject(k)
+            if (!File(local, st.getString("file")).exists()) continue
+            dao.insertStory(StoryEntity(printId = id, file = st.getString("file"), durationMs = st.getLong("durationMs"), createdAt = st.getLong("createdAt")))
+        }
+        return true
+    }
+
+    /** Birthdays and family from a [describe]d library, merged into this one. */
+    internal fun restorePeople(json: JSONObject) {
+        val people = json.optJSONArray("people") ?: JSONArray()
+        for (k in 0 until people.length()) {
+            val pe = people.getJSONObject(k)
+            val name = pe.getString("name")
+            val known = dao.personNamed(name) ?: PersonEntity(name = name).let { it.copy(id = dao.insertPerson(it)) }
+            if (known.bornLabel == null) {
+                dao.updatePerson(known.copy(bornFrom = pe.optLongOrNull("bornFrom"), bornTo = pe.optLongOrNull("bornTo"), bornLabel = pe.optStringOrNull("bornLabel")))
+            }
+        }
+        val relations = json.optJSONArray("relations") ?: JSONArray()
+        val have = dao.relationsNow()
+        for (k in 0 until relations.length()) {
+            val r = relations.getJSONObject(k)
+            fun idOf(name: String) = dao.personNamed(name)?.id ?: dao.insertPerson(PersonEntity(name = name))
+            val rel = RelationEntity(a = idOf(r.getString("a")), b = idOf(r.getString("b")), kind = r.getString("kind"))
+            if (have.none { it.a == rel.a && it.b == rel.b && it.kind == rel.kind }) dao.insertRelation(rel)
+        }
+    }
+
+
     /** Everything needed to rebuild Attic's library, apart from the files. */
-    private fun describe(prints: List<PrintEntity>, albums: List<AlbumEntity>): JSONObject {
+    internal fun describe(prints: List<PrintEntity>, albums: List<AlbumEntity>, everyone: Boolean = true): JSONObject {
         val byAlbum = prints.groupBy { it.albumId }
         val arr = JSONArray()
         for (a in albums.sortedBy { it.createdAt }) {
@@ -294,8 +308,10 @@ class Backup(private val context: Context, private val library: Library) {
                     .put("prints", ps),
             )
         }
+        // Sharing one album tells only about the people in it.
+        val inThese = if (everyone) null else prints.flatMap { dao.peopleInNow(it.id) }.toSet()
         val people = JSONArray(
-            dao.peopleNow().filter { it.bornLabel != null }.map { pe ->
+            dao.peopleNow().filter { it.bornLabel != null && (inThese == null || it.name in inThese) }.map { pe ->
                 JSONObject().put("name", pe.name).putOpt("bornFrom", pe.bornFrom).putOpt("bornTo", pe.bornTo).putOpt("bornLabel", pe.bornLabel)
             },
         )
@@ -304,6 +320,7 @@ class Backup(private val context: Context, private val library: Library) {
             dao.relationsNow().mapNotNull { r ->
                 val a = names[r.a] ?: return@mapNotNull null
                 val b = names[r.b] ?: return@mapNotNull null
+                if (inThese != null && (a !in inThese || b !in inThese)) return@mapNotNull null
                 JSONObject().put("a", a).put("b", b).put("kind", r.kind)
             },
         )

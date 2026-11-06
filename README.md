@@ -37,6 +37,9 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - The camera fills the screen with the album, the modes and what's happening floating over it; the
   album so far sits bottom left as a little pile of its last prints
 - Scans go into the album you pick at the top of the scan screen, one capture per page
+- Share an album with family: one .attic file (photos, backs, pages, stories, names, dates, its
+  island) sent by any app. Another phone opens it in Attic as the album; a copy passed round and back
+  only adds what's new, and never changes or deletes what's there
 - Albums don't have to be paper albums: "Add from your phone" keeps photos from the gallery in an album
   (by reference, never copied), on a page of their own after the scanned ones. Hold one to take it out
 - From files: flatbed scans or photos of prints already on the phone, split and flattened the same way

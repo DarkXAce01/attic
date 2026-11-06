@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
+import io.github.darkxace01.attic.albumFile
 import io.github.darkxace01.attic.library
 
 /**
@@ -24,4 +25,23 @@ suspend fun sharePhotos(context: Context, ids: List<Long>, title: String = "Shar
     // The preview in the sheet, and the grant, need the files in the clip too.
     send.clipData = ClipData.newRawUri(null, uris[0]).also { clip -> uris.drop(1).forEach { clip.addItem(ClipData.Item(it)) } }
     context.startActivity(Intent.createChooser(send, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+}
+
+/**
+ * Packs album [albumId] into one .attic file and opens the share sheet with it: send it by any app, and
+ * another phone with Attic opens it as the album. [progress] gets (done, total).
+ */
+suspend fun shareAlbum(context: Context, albumId: Long, title: String, progress: (Int, Int) -> Unit) {
+    val dir = java.io.File(context.cacheDir, "share").apply { deleteRecursively(); mkdirs() }
+    val af = context.albumFile
+    val file = java.io.File(dir, af.fileName(title))
+    file.outputStream().use { af.write(albumId, it, progress) }
+    val uri = FileProvider.getUriForFile(context, "${context.packageName}.share", file)
+    val send = Intent(Intent.ACTION_SEND)
+        .setType(io.github.darkxace01.attic.data.AlbumFile.MIME)
+        .putExtra(Intent.EXTRA_STREAM, uri)
+        .putExtra(Intent.EXTRA_TEXT, "$title, an album from Attic. Open it with Attic to see it page by page, with its stories.")
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    send.clipData = ClipData.newRawUri(null, uri)
+    context.startActivity(Intent.createChooser(send, "Share $title").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }

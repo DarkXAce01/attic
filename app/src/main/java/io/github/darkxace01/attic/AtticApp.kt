@@ -73,7 +73,7 @@ private sealed interface Route {
 }
 
 @Composable
-fun AtticApp() {
+fun AtticApp(incoming: android.net.Uri? = null, onIncomingDone: () -> Unit = {}) {
     val context = LocalContext.current
     var hasCamera by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED)
@@ -89,7 +89,7 @@ fun AtticApp() {
     }
     val stack = remember { mutableStateListOf<Route>(if (hasCamera) Route.Scan else Route.Albums) }
 
-    if (!welcomed) {
+    if (!welcomed && incoming == null) {
         Welcome(
             onScan = { prefs.edit().putBoolean("welcomed", true).apply(); welcomed = true; stack.clear(); stack += Route.Scan; askCamera.launch(Manifest.permission.CAMERA) },
             onLook = { prefs.edit().putBoolean("welcomed", true).apply(); welcomed = true; stack.clear(); stack += Route.Albums },
@@ -206,6 +206,10 @@ fun AtticApp() {
         } else {
             Spacer(Modifier.navigationBarsPadding())
         }
+    }
+
+    incoming?.let { uri ->
+        io.github.darkxace01.attic.albums.OpenSharedAlbum(uri, onOpen = { tab(Route.Albums); go(Route.Album(it)) }, onDone = onIncomingDone)
     }
 
     if (pickingAlbum) {

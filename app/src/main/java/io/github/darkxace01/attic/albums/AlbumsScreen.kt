@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -68,6 +69,9 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
     val counts by remember { library.counts() }.collectAsStateWithLifecycle(LibraryCounts(0, 0))
     val scope = rememberCoroutineScope()
     var creating by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
+    var shared by remember { mutableStateOf<android.net.Uri?>(null) }
+    val pickShared = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { shared = it }
     var exporting by remember { mutableStateOf<String?>(null) }
     val backup = LocalContext.current.backup
     val backupProgress by backup.progress.collectAsStateWithLifecycle()
@@ -108,7 +112,15 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Albums", style = MaterialTheme.typography.displayMedium, color = Palette.Ink, modifier = Modifier.weight(1f))
                     QuietButton("New album", onClick = { creating = true }, color = Palette.Accent)
-                    QuietButton("Settings", onClick = onSettings)
+                    Box {
+                        androidx.compose.material3.IconButton(onClick = { menu = true }) {
+                            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.MoreVert, "More", tint = Palette.Ink)
+                        }
+                        androidx.compose.material3.DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            androidx.compose.material3.DropdownMenuItem(text = { Text("Add a shared album") }, onClick = { menu = false; pickShared.launch(arrayOf("application/zip", "application/octet-stream", "application/x-zip-compressed")) })
+                            androidx.compose.material3.DropdownMenuItem(text = { Text("Settings") }, onClick = { menu = false; onSettings() })
+                        }
+                    }
                 }
                 Spacer(Modifier.height(8.dp))
                 if (counts.total > 0 || working != null) Box(Modifier.padding(end = 8.dp)) {
@@ -161,6 +173,8 @@ fun AlbumsScreen(onOpen: (Long) -> Unit, onSettings: () -> Unit) {
             )
         }
     }
+
+    shared?.let { OpenSharedAlbum(it, onOpen = onOpen, onDone = { shared = null }) }
 
     if (creating) {
         TextSheet(
