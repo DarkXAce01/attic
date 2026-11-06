@@ -2,13 +2,16 @@ package io.github.darkxace01.attic.scan
 
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,60 +22,81 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.github.darkxace01.attic.ui.PageSheet
-import io.github.darkxace01.attic.ui.QuietButton
-import io.github.darkxace01.attic.ui.theme.Palette
-import androidx.compose.ui.graphics.StrokeCap
-import io.github.darkxace01.attic.library
 import coil3.compose.AsyncImage
-import androidx.compose.foundation.layout.widthIn
+import io.github.darkxace01.attic.library
+import io.github.darkxace01.attic.ui.PageSheet
+import io.github.darkxace01.attic.ui.signature.GreasePencilLoop
+import io.github.darkxace01.attic.ui.theme.Fonts
+import io.github.darkxace01.attic.ui.theme.Palette
+import kotlin.math.abs
 
+/** The frame round the camera: Riso black, so the picture is the brightest thing on screen. */
+private val Frame = Palette.Ink
+/** Paper-coloured text on the frame. */
+private val OnFrame = Palette.Ground
+private val OnFrameQuiet = Palette.Ground.copy(alpha = 0.55f)
+
+/** The three ways of scanning, like a camera's photo, video and portrait. */
+private enum class Mode(val label: String) { Prints("Prints"), GlareFree("Glare-free"), Film("Film") }
+
+/**
+ * Scanning, as calm as a camera app: the viewfinder, the album it goes into, one line of modes above
+ * the shutter. Everything else (taking it by itself, checking each shot, files) is one tap away.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -> Unit) {
     val state by vm.state.collectAsStateWithLifecycle()
     val haptics = LocalHapticFeedback.current
     val flash = remember { Animatable(0f) }
     var pageSheet by remember { mutableStateOf<Pair<Long, Int>?>(null) }
-    // Nothing is taken while the sheet covers the camera.
-    LaunchedEffect(pageSheet) { vm.setPaused(pageSheet != null) }
+    var more by remember { mutableStateOf(false) }
+    // Nothing is taken while a sheet covers the camera.
+    LaunchedEffect(pageSheet, more) { vm.setPaused(pageSheet != null || more) }
     pageSheet?.let { (album, page) -> PageSheet(album, page, onDismiss = { pageSheet = null }) }
     val pickFiles = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         vm.importImages(uris)
@@ -81,184 +105,166 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
     LaunchedEffect(state.shutterTick) {
         if (state.shutterTick == 0L) return@LaunchedEffect
         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-        flash.snapTo(0.55f)
-        flash.animateTo(0f, tween(260))
+        flash.snapTo(0.5f)
+        flash.animateTo(0f, tween(240))
     }
+    val mode = when { state.negatives -> Mode.Film; state.glareFree -> Mode.GlareFree; else -> Mode.Prints }
+    fun setMode(m: Mode) {
+        if (m == mode) return
+        vm.setNegatives(m == Mode.Film)
+        vm.setGlareFree(m == Mode.GlareFree)
+    }
+    val ready = state.outlines.isNotEmpty() && state.outlines.all { it.locked }
 
-    Box(Modifier.fillMaxSize().background(Palette.Ground)) {
-    Column(Modifier.fillMaxSize().statusBarsPadding()) {
-        // The camera, edge to edge, with what you need floating over it.
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            Box(
-                Modifier
-                    .aspectRatio(3f / 4f, matchHeightConstraintsFirst = true)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)),
-            ) {
-                CameraPreview(vm, Modifier.fillMaxSize())
-                Outlines(state.outlines, Modifier.fillMaxSize())
-                if (flash.value > 0f) {
-                    Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = flash.value)))
-                }
-            }
-
-            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp)) {
-                // Which album the next page goes into. Tap to switch or start a new one.
-                AlbumPill(state, onPickAlbum)
-                Spacer(Modifier.height(8.dp))
-                // Check: each shot's outlines are checked before saving. Glare-free: each page from a few
-                // angles. Auto: takes the shot by itself once you hold still.
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ModeChip("Auto", state.autoCapture) { vm.setAutoCapture(!state.autoCapture) }
-                    ModeChip("Check", state.checkEachShot) { vm.setCheckEachShot(!state.checkEachShot) }
-                    ModeChip("Glare-free", state.glareFree) { vm.setGlareFree(!state.glareFree) }
-                    ModeChip("Negatives", state.negatives) { vm.setNegatives(!state.negatives) }
-                    // Scans from a flatbed, or photos of prints already on the phone.
-                    ModeChip("From files", false) { pickFiles.launch(arrayOf("image/*")) }
-                }
-            }
-
-            // What's happening, over the bottom of the camera.
-            Column(
-                Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp, start = 16.dp, end = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                StatusPill(statusLine(state), warning = state.error != null, ready = state.outlines.isNotEmpty() && state.outlines.all { it.locked })
-                // One loose print just saved: its back can come next. Taking a back: a way out.
-                when {
-                    state.backFor != null -> FloatingAction("Not now", vm::cancelBack)
-                    state.lastSavedIds.size == 1 && state.sweep == null && !state.saving && !state.justSavedBack ->
-                        FloatingAction("Add the back of this photo") { vm.scanBackOf(state.lastSavedIds.single()) }
-                }
-            }
-        }
-
-        PreviewStrip(state)
-
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(104.dp)
-                .padding(horizontal = 20.dp),
-        ) {
-            AlbumStack(state.albumId, state.albumPrints, { onOpenAlbum(state.albumId) }, Modifier.align(Alignment.CenterStart))
-            // When, who and where for the page just saved. Never in the way: scanning goes on without it.
-            if (state.lastPage > 0 && state.sweep == null) {
-                Column(
-                    Modifier
-                        .align(Alignment.CenterEnd)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Palette.Surface)
-                        .clickable { pageSheet = state.lastAlbumId to state.lastPage }
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    horizontalAlignment = Alignment.End,
+    Box(Modifier.fillMaxSize().background(Frame)) {
+        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+            // Which album: its name, small, at the top. Tap to switch or start one.
+            Row(Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.weight(1f, fill = false).clip(RoundedCornerShape(12.dp)).clickable(onClick = onPickAlbum).padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Details", style = MaterialTheme.typography.titleSmall, color = Palette.Ink)
-                    Text("Page ${state.lastPage}", style = MaterialTheme.typography.labelMedium, color = Palette.Muted)
+                    Text(
+                        state.albumTitle.ifEmpty { "Choose an album" }, color = OnFrame, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.titleMedium, modifier = Modifier.widthIn(max = 230.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Chevron()
+                }
+                Spacer(Modifier.weight(1f))
+                MoreButton { more = true }
+            }
+
+            // The viewfinder.
+            Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                Box(Modifier.aspectRatio(3f / 4f, matchHeightConstraintsFirst = true).fillMaxHeight().clip(RoundedCornerShape(18.dp))) {
+                    CameraPreview(vm, Modifier.fillMaxSize())
+                    Outlines(state.outlines, Modifier.fillMaxSize())
+                    if (flash.value > 0f) Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = flash.value)))
+                    // One back to add, or a way out of adding it: quiet, at the bottom of the picture.
+                    val action = when {
+                        state.backFor != null -> "Not now" to vm::cancelBack
+                        state.lastSavedIds.size == 1 && state.sweep == null && !state.saving && !state.justSavedBack ->
+                            "Add the back of this photo" to { vm.scanBackOf(state.lastSavedIds.single()) }
+                        else -> null
+                    }
+                    action?.let { (text, go) ->
+                        Text(
+                            text, style = MaterialTheme.typography.labelLarge, color = Color.White,
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp).clip(RoundedCornerShape(50))
+                                .background(Color.Black.copy(alpha = 0.5f)).clickable(onClick = go).padding(horizontal = 14.dp, vertical = 8.dp),
+                        )
+                    }
                 }
             }
-            Shutter(
-                enabled = !state.saving,
-                ready = state.outlines.isNotEmpty() && state.outlines.all { it.locked },
-                progress = state.readyProgress,
-                onClick = vm::capture,
-                modifier = Modifier.align(Alignment.Center),
-            )
+
+            // What's happening, in one quiet line under the picture.
+            Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                if (ready || state.error != null) {
+                    Box(Modifier.size(7.dp).clip(CircleShape).background(if (state.error != null) Palette.Warning else Palette.Accent))
+                    Spacer(Modifier.width(8.dp))
+                }
+                Text(statusLine(state), style = MaterialTheme.typography.bodyMedium, color = OnFrameQuiet, maxLines = 2, textAlign = TextAlign.Center)
+            }
+
+            ModeLine(mode, ::setMode)
+
+            Box(Modifier.fillMaxWidth().height(112.dp).padding(horizontal = 24.dp).navigationBarsPadding()) {
+                AlbumPile(state.albumId, state.justSaved, { onOpenAlbum(state.albumId) }, Modifier.align(Alignment.CenterStart))
+                Shutter(enabled = !state.saving, ready = ready, progress = state.readyProgress, onClick = vm::capture, modifier = Modifier.align(Alignment.Center))
+                if (state.lastPage > 0 && state.sweep == null) {
+                    Text(
+                        "Details", style = MaterialTheme.typography.labelLarge, color = OnFrame,
+                        modifier = Modifier.align(Alignment.CenterEnd).clip(RoundedCornerShape(50)).clickable { pageSheet = state.lastAlbumId to state.lastPage }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                    )
+                }
+            }
+        }
+        // Over the camera, which stays ready for a retake.
+        state.review?.let { ReviewScreen(it, vm) }
+    }
+
+    if (more) {
+        ModalBottomSheet(onDismissRequest = { more = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Palette.Ground) {
+            Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp).navigationBarsPadding()) {
+                Text("Camera", style = MaterialTheme.typography.titleLarge, color = Palette.Ink)
+                Spacer(Modifier.height(8.dp))
+                SheetToggle("Take it by itself", "Once every photo in view is found, hold still and it takes the shot.", state.autoCapture) { vm.setAutoCapture(it) }
+                SheetToggle("Check each shot", "See what was found before it's saved, and fix any outline.", state.checkEachShot) { vm.setCheckEachShot(it) }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Bring in scans or photos from files", style = MaterialTheme.typography.titleMedium, color = Palette.Ink,
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { more = false; pickFiles.launch(arrayOf("image/*")) }.padding(vertical = 14.dp),
+                )
+            }
         }
     }
-    // Over the camera, which stays ready for a retake.
-    state.review?.let { ReviewScreen(it, vm) }
-    }
 }
 
-/** The album being scanned into, as a chip over the camera: its name and the page coming next. */
 @Composable
-private fun AlbumPill(state: ScanUiState, onClick: () -> Unit) {
-    Row(
-        Modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(OVER_CAMERA)
-            .clickable(onClick = onClick)
-            .padding(start = 12.dp, end = 14.dp, top = 8.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column {
-            Text(
-                state.albumTitle.ifEmpty { " " },
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 240.dp),
-            )
-            Text(
-                if (state.albumPages == 0) "Ready for the first page" else "Next is page ${state.albumPages + 1}",
-                style = MaterialTheme.typography.labelMedium,
-                color = Color.White.copy(alpha = 0.7f),
-            )
+private fun SheetToggle(title: String, detail: String, on: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable { onChange(!on) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = Palette.Ink)
+            Text(detail, style = MaterialTheme.typography.bodyMedium, color = Palette.Muted)
         }
-        Spacer(Modifier.width(10.dp))
-        Text("Change", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.7f))
+        Spacer(Modifier.width(12.dp))
+        Switch(on, onChange, colors = SwitchDefaults.colors(checkedTrackColor = Palette.Accent, checkedThumbColor = Palette.OnAccent, uncheckedTrackColor = Palette.SurfaceHigh, uncheckedThumbColor = Palette.Muted, uncheckedBorderColor = Palette.SurfaceHigh))
     }
 }
 
-/** The status line, floating over the camera; the dot goes red when every photo in view is locked. */
+/** A small hand-drawn chevron after the album's name. */
 @Composable
-private fun StatusPill(text: String, warning: Boolean, ready: Boolean) {
+private fun Chevron() {
+    Canvas(Modifier.size(12.dp, 8.dp)) {
+        val w = 2.dp.toPx()
+        drawLine(OnFrameQuiet, Offset(w, w), Offset(size.width / 2, size.height - w), w, StrokeCap.Round)
+        drawLine(OnFrameQuiet, Offset(size.width / 2, size.height - w), Offset(size.width - w, w), w, StrokeCap.Round)
+    }
+}
+
+/** Three dots: the camera's other settings. */
+@Composable
+private fun MoreButton(onClick: () -> Unit) {
+    Box(Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(20.dp, 4.dp)) {
+            for (k in 0..2) drawCircle(OnFrame, 2.dp.toPx(), Offset(size.width * (0.1f + 0.4f * k), size.height / 2))
+        }
+    }
+}
+
+/** The modes in a line, the chosen one centred and underlined in pencil. Tap one, or swipe along. */
+@Composable
+private fun ModeLine(mode: Mode, onMode: (Mode) -> Unit) {
+    var drag by remember { mutableStateOf(0f) }
     Row(
         Modifier
-            .clip(RoundedCornerShape(50))
-            .background(OVER_CAMERA)
-            .padding(horizontal = 14.dp, vertical = 9.dp),
+            .fillMaxWidth()
+            .height(40.dp)
+            .pointerInput(mode) {
+                detectHorizontalDragGestures(onDragEnd = {
+                    val i = mode.ordinal + if (drag < -40f) 1 else if (drag > 40f) -1 else 0
+                    Mode.entries.getOrNull(i)?.let(onMode)
+                    drag = 0f
+                }) { _, d -> drag += d }
+            },
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(if (warning) Palette.Warning else if (ready) Palette.Accent else Color.White.copy(alpha = 0.5f)),
-        )
-        Spacer(Modifier.width(10.dp))
-        Text(text, style = MaterialTheme.typography.bodyMedium, color = Color.White)
+        for (m in Mode.entries) {
+            val on = m == mode
+            Column(Modifier.clip(RoundedCornerShape(8.dp)).clickable { onMode(m) }.padding(horizontal = 14.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    m.label, color = if (on) OnFrame else OnFrameQuiet,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = if (on) FontWeight.Bold else FontWeight.Medium),
+                )
+                Canvas(Modifier.size(28.dp, 6.dp)) {
+                    if (on) drawLine(Palette.Accent, Offset(2f, size.height * 0.7f), Offset(size.width - 2f, size.height * 0.35f), 2.5.dp.toPx(), StrokeCap.Round)
+                }
+            }
+        }
     }
-}
-
-@Composable
-private fun FloatingAction(text: String, onClick: () -> Unit) {
-    Spacer(Modifier.height(8.dp))
-    Text(
-        text,
-        style = MaterialTheme.typography.labelLarge,
-        color = Color.White,
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(OVER_CAMERA)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-    )
-}
-
-/** Dark enough to read white on over any picture, without hiding it. */
-private val OVER_CAMERA = Color.Black.copy(alpha = 0.55f)
-
-/** A mode that's on or off: white when on, see-through when off. */
-@Composable
-private fun ModeChip(text: String, on: Boolean, onClick: () -> Unit) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelLarge,
-        color = if (on) Palette.Ink else Color.White.copy(alpha = 0.8f),
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(if (on) Color.White else OVER_CAMERA)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    )
 }
 
 private fun statusLine(s: ScanUiState): String {
@@ -312,152 +318,85 @@ private fun CameraPreview(vm: ScanViewModel, modifier: Modifier) {
     AndroidView(factory = { previewView }, modifier = modifier)
 }
 
+/**
+ * The prints in view, marked the way you'd mark a contact sheet: grease-pencil corners, white while
+ * it's still looking, pencil red once each one is held steady.
+ */
 @Composable
 private fun Outlines(outlines: List<Outline>, modifier: Modifier) {
     Canvas(modifier) {
         for (o in outlines) {
             val pts = o.quad.points.map { Offset(it.x * size.width, it.y * size.height) }
-            val path = Path().apply {
-                moveTo(pts[0].x, pts[0].y)
-                for (p in pts.drop(1)) lineTo(p.x, p.y)
-                close()
-            }
-            val ink = if (o.locked) Palette.Accent else Color.White
-            if (o.locked) drawPath(path, Palette.Accent.copy(alpha = 0.14f))
-            drawPath(path, ink.copy(alpha = if (o.locked) 0.9f else 0.55f), style = Stroke(width = 1.5.dp.toPx()))
-            // Heavy corners, like the marks on a cutting mat: where the print will be cut.
-            val tick = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
+            val ink = if (o.locked) Palette.Accent else Color.White.copy(alpha = 0.85f)
+            val w = (if (o.locked) 4.dp else 3.dp).toPx()
             for (k in 0 until 4) {
                 val c = pts[k]
-                val next = pts[(k + 1) % 4]
-                val prev = pts[(k + 3) % 4]
-                val len = 18.dp.toPx()
+                val len = 22.dp.toPx()
                 fun toward(p: Offset): Offset {
                     val d = p - c
                     val n = d.getDistance().coerceAtLeast(1f)
                     return c + d * (minOf(len, n / 3) / n)
                 }
-                drawLine(ink, c, toward(next), tick.width, StrokeCap.Round)
-                drawLine(ink, c, toward(prev), tick.width, StrokeCap.Round)
+                // A pencil corner overshoots a little past the turn, as a hand does.
+                val back = c - (toward(pts[(k + 1) % 4]) - c) * 0.12f
+                drawLine(ink, back, toward(pts[(k + 1) % 4]), w, StrokeCap.Round)
+                drawLine(ink, c, toward(pts[(k + 3) % 4]), w, StrokeCap.Round)
             }
         }
     }
 }
 
-/**
- * What each print will look like once saved, flattened and straightened, live. Right after a capture
- * it shows the real saved crops instead.
- */
-@Composable
-private fun PreviewStrip(state: ScanUiState) {
-    val saved = state.lastSaved
-    LazyRow(
-        Modifier
-            .fillMaxWidth()
-            .height(84.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (saved.isNotEmpty()) {
-            items(saved.size, key = { "saved$it" }) { i -> PrintThumb(saved[i], highlighted = true) }
-        } else {
-            items(state.previews, key = { it.id }) { p -> PrintThumb(p.image, highlighted = p.locked) }
-        }
-    }
-}
-
-@Composable
-private fun PrintThumb(bitmap: ImageBitmap, highlighted: Boolean) {
-    Image(
-        bitmap = bitmap,
-        contentDescription = null,
-        contentScale = ContentScale.Fit,
-        modifier = Modifier
-            .height(76.dp)
-            .aspectRatio(bitmap.width.toFloat() / bitmap.height.coerceAtLeast(1))
-            .clip(RoundedCornerShape(2.dp))
-            .graphicsLayer { alpha = if (highlighted) 1f else 0.6f },
-    )
-}
-
+/** Paper ring, pencil-red middle; the ring fills while it counts down to taking the shot by itself. */
 @Composable
 private fun Shutter(enabled: Boolean, ready: Boolean, progress: Float, onClick: () -> Unit, modifier: Modifier) {
-    val ring = if (ready) Palette.Accent else Palette.Ink
-    Box(
-        modifier
-            .size(76.dp)
-            .clip(CircleShape)
-            .clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        // The ring fills while auto-capture counts down, so you know to keep holding still.
+    Box(modifier.size(78.dp).clip(CircleShape).clickable(enabled = enabled, onClick = onClick), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
-            val w = 3.dp.toPx()
+            val w = 3.5.dp.toPx()
             val inset = w / 2
-            val arcSize = androidx.compose.ui.geometry.Size(size.width - w, size.height - w)
-            drawArc(
-                color = ring.copy(alpha = if (enabled) (if (progress > 0f) 0.3f else 1f) else 0.4f),
-                startAngle = 0f, sweepAngle = 360f, useCenter = false,
-                topLeft = Offset(inset, inset), size = arcSize, style = Stroke(w),
-            )
-            if (progress > 0f) {
-                drawArc(
-                    color = Palette.Accent,
-                    startAngle = -90f, sweepAngle = 360f * progress, useCenter = false,
-                    topLeft = Offset(inset, inset), size = arcSize, style = Stroke(w),
-                )
-            }
+            val arc = androidx.compose.ui.geometry.Size(size.width - w, size.height - w)
+            drawArc(OnFrame.copy(alpha = if (enabled) (if (progress > 0f) 0.35f else 1f) else 0.4f), 0f, 360f, false, Offset(inset, inset), arc, style = Stroke(w))
+            if (progress > 0f) drawArc(Palette.Accent, -90f, 360f * progress, false, Offset(inset, inset), arc, style = Stroke(w))
         }
-        Box(
-            Modifier
-                .size(62.dp)
-                .clip(CircleShape)
-                .background(if (enabled) Palette.Accent else Palette.SurfaceHigh),
-        )
+        val inner by androidx.compose.animation.core.animateDpAsState(if (ready) 64.dp else 60.dp, label = "shutter")
+        Box(Modifier.size(inner).clip(CircleShape).background(if (enabled) Palette.Accent else Palette.Muted))
     }
 }
 
 /**
- * The album so far, as its last few prints in a little loose pile. Tap to open the album. The whole
- * pile and the count under it are one big target.
+ * The album so far, as its last few prints in a loose pile. Each time a page is saved the Grease
+ * Pencil loop draws itself round the pile: the one moment in Attic that gets it. Tap to open the album.
  */
 @Composable
-private fun AlbumStack(albumId: Long, count: Int, onClick: () -> Unit, modifier: Modifier) {
+private fun AlbumPile(albumId: Long, savedTick: Int, onClick: () -> Unit, modifier: Modifier) {
     val library = LocalContext.current.library
     val prints by remember(albumId) { library.printsIn(albumId) }.collectAsStateWithLifecycle(emptyList())
     val last = prints.takeLast(3)
-    Column(
-        modifier
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(enabled = albumId != 0L, onClick = onClick)
-            .padding(6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
-            if (last.isEmpty()) {
-                Box(Modifier.size(44.dp, 52.dp).clip(RoundedCornerShape(4.dp)).background(Palette.SurfaceHigh))
-            }
-            last.forEachIndexed { i, p ->
-                // Newest on top and straight; older ones turned a little underneath.
-                val turn = (last.size - 1 - i) * if (i % 2 == 0) -9f else 8f
-                AsyncImage(
-                    model = coil3.request.ImageRequest.Builder(LocalContext.current)
-                        .data(library.displayFile(p))
-                        .memoryCacheKey("${p.id}#${p.version}#thumb")
-                        .size(160)
-                        .build(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(42.dp, 52.dp)
-                        .graphicsLayer { rotationZ = turn; shadowElevation = 4.dp.toPx() }
-                        .background(Color(0xFFF4F1EA))
-                        .padding(2.dp),
-                )
-            }
+    // A new count of prints is a save: the loop plays again.
+    var loopKey by remember(albumId) { mutableStateOf(-1) }
+    var showLoop by remember { mutableStateOf(false) }
+    LaunchedEffect(prints.size) {
+        if (loopKey >= 0 && prints.size > loopKey && savedTick > 0) {
+            showLoop = true
+            kotlinx.coroutines.delay(2200)
+            showLoop = false
         }
-        Spacer(Modifier.height(4.dp))
-        Text(if (count == 1) "1 photo" else "$count photos", style = MaterialTheme.typography.labelMedium, color = Palette.Muted)
+        loopKey = prints.size
+    }
+    Box(modifier.size(64.dp), contentAlignment = Alignment.Center) {
+      Box(Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)).clickable(enabled = albumId != 0L, onClick = onClick), contentAlignment = Alignment.Center) {
+        if (last.isEmpty()) Box(Modifier.size(40.dp, 48.dp).clip(RoundedCornerShape(3.dp)).background(OnFrame.copy(alpha = 0.15f)))
+        last.forEachIndexed { i, p ->
+            // Newest on top and straight; older ones turned a little underneath.
+            val turn = (last.size - 1 - i) * if (i % 2 == 0) -10f else 9f
+            AsyncImage(
+                model = coil3.request.ImageRequest.Builder(LocalContext.current).data(library.displayFile(p)).memoryCacheKey("${p.id}#${p.version}#thumb").size(160).build(),
+                contentDescription = null, contentScale = ContentScale.Crop,
+                modifier = Modifier.size(40.dp, 48.dp).graphicsLayer { rotationZ = turn }.background(Palette.PrintWhite).padding(2.dp),
+            )
+        }
+      }
+        AnimatedVisibility(showLoop, enter = fadeIn(tween(80)), exit = fadeOut(tween(400))) {
+            GreasePencilLoop(Modifier.requiredSize(88.dp), color = Palette.Accent, strokeWidth = 0.05f, key = loopKey)
+        }
     }
 }
