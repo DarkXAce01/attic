@@ -16,10 +16,6 @@ import androidx.compose.ui.unit.dp
 import com.github.takahirom.roborazzi.captureRoboImage
 import io.github.darkxace01.attic.ui.theme.AtticTheme
 import io.github.darkxace01.attic.ui.theme.Palette
-import io.github.darkxace01.attic.world.AlbumWorld
-import io.github.darkxace01.attic.world.CLOTHS
-import io.github.darkxace01.attic.world.Island
-import io.github.darkxace01.attic.world.WorldAlbum
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -29,13 +25,13 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /**
- * The album world, rendered with made-up albums: photos from the Unsplash set used for training (never
+ * A rebuilt album page, rendered with made-up prints: photos from the Unsplash set used for training (never
  * anyone's own). Look at build/shots/ after `./gradlew testDebugUnitTest --tests '*Shots*'`.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [35], qualifiers = "w411dp-h891dp-xxhdpi")
-class WorldShots {
+class PageShots {
     @get:Rule val compose = createComposeRule()
 
     private val photos: List<ImageBitmap> by lazy {
@@ -45,57 +41,6 @@ class WorldShots {
         }
     }
 
-    private fun albums(): List<WorldAlbum> {
-        val titles = listOf("Nani's red album" to "1978 to 1986 · 112 photos", "Shimla, summer 87" to "1987 · 36 photos",
-            "Wedding" to "1991 · 64 photos", "School years" to "1990s · 48 photos", "Dad's slides" to "1970s · 20 photos")
-        return titles.mapIndexed { i, (t, m) ->
-            WorldAlbum(
-                Island(
-                    key = i.toLong() + 1, cover = photos.getOrNull(i * 5), satellites = photos.drop(i * 5 + 1).take(3),
-                    pages = listOf(30, 8, 18, 12, 4)[i], cloth = CLOTHS[i % CLOTHS.size], mirrored = i % 2 == 1,
-                    aspect = if (i == 3) 0.95f else 0.74f,
-                ),
-                t, m,
-            )
-        }
-    }
-
-    @Test
-    fun opening() {
-        val island = albums()[0].island
-        compose.setContent {
-            androidx.compose.foundation.Canvas(androidx.compose.ui.Modifier.fillMaxSize()) {
-                drawRect(io.github.darkxace01.attic.world.ATTIC)
-                val cells = listOf(0f, 0.35f, 0.7f, 1f)
-                for ((k, o) in cells.withIndex()) {
-                    val cx = size.width * (0.25f + 0.5f * (k % 2))
-                    val cy = size.height * (0.25f + 0.5f * (k / 2))
-                    io.github.darkxace01.attic.world.drawIslandForTest(this, island, androidx.compose.ui.geometry.Offset(cx, cy), size.width * (0.36f + 0.1f * o), 0f, o)
-                }
-            }
-        }
-        compose.onRoot().captureRoboImage("build/shots/opening.png")
-    }
-
-    @Test
-    fun world() {
-        val list = albums()
-        for (t in listOf(0f, 7f)) {
-            compose.setContent {
-                AtticTheme {
-                    AlbumWorld(list, time = { t }, onOpen = {}, header = {
-                        Column(Modifier.padding(horizontal = 24.dp, vertical = 20.dp)) {
-                            Text("Attic", color = Palette.Ink)
-                        }
-                    })
-                }
-            }
-            compose.onRoot().captureRoboImage("build/shots/world_t${t.toInt()}.png")
-            break
-        }
-    }
-
-    /** A page scanned from a photo: a dark album page with three prints stuck on it, a little crooked. */
     @Test
     fun page() {
         val W = 1600; val H = 1200
@@ -141,5 +86,5 @@ class WorldShots {
         compose.onRoot().captureRoboImage("build/shots/page.png")
     }
 
-    private fun Modifier.androidxBackground() = background(io.github.darkxace01.attic.world.ATTIC)
+    private fun Modifier.androidxBackground() = background(Palette.Ground)
 }
