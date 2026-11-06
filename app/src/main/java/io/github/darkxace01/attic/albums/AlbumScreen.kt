@@ -135,6 +135,20 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
                     DropdownMenuItem(text = { Text("Add from your phone") }, onClick = { menu = false; addFromPhone() })
                     if (prints.isNotEmpty() || phone.isNotEmpty()) DropdownMenuItem(text = { Text("Play as a slideshow") }, onClick = { menu = false; onSlideshow() })
                     DropdownMenuItem(text = { Text("Tell its stories") }, onClick = { menu = false; onTellStories() })
+                    // Its copies are in Pictures/Attic/<album>: the gallery opens on the first, and swiping
+                    // goes through the rest of the folder. Android has no way to open a folder itself.
+                    prints.firstOrNull { it.galleryUri != null }?.let { first ->
+                        DropdownMenuItem(text = { Text("Open in the gallery") }, onClick = {
+                            menu = false
+                            runCatching {
+                                context.startActivity(
+                                    android.content.Intent(android.content.Intent.ACTION_VIEW)
+                                        .setDataAndType(android.net.Uri.parse(first.galleryUri), "image/*")
+                                        .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                                )
+                            }
+                        })
+                    }
                     DropdownMenuItem(text = { Text("Share the album") }, onClick = {
                         menu = false
                         saving = "Packing the album…"
