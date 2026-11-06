@@ -35,6 +35,9 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - The camera fills the screen with the album, the modes and what's happening floating over it; the
   album so far sits bottom left as a little pile of its last prints
 - Scans go into the album you pick at the top of the scan screen, one capture per page
+- From files: flatbed scans or photos of prints already on the phone, split and flattened the same way
+- Negatives: film laid on a lightbox (or another phone showing Attic's Lightbox screen) is developed
+  into the picture, the orange of colour film taken out. Fixing the crop develops it again
 - Date stamps: the orange date many film cameras printed in the corner ('87 7 14) is read from every
   print, whichever way up it was scanned, and fills in the date when the photo has none. A stamp that
   reads two ways (3 5 '88) asks which day it is. Prints already in Attic are read in the background
@@ -61,11 +64,17 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
 - Story sessions: "Tell its stories" on an album shows its photos one at a time, big, while the phone
   listens. Whatever is said while a photo is up becomes its story; photos nobody talked about get none.
   Made for sitting with a grandparent
+- On an album page, a print with a story has a small mark: tap it to listen with the page open.
+  Long-press a print to turn it over to its back
 - Stories are in backups (and next to each photo in Photos/ as an m4a anyone can play)
 
 **Share**
 - Share a photo, or a whole album, through the share sheet: copies carry their date, people, place and
   caption. Attic sends nothing itself
+- Save an album as one web page that opens in any browser without the internet: pages rebuilt as they
+  were, every photo's details, its back, its stories to listen to. Or as an A4 photobook PDF to print
+- Slideshow of an album or a person: each photo drifts slowly in toward its faces; a photo with a
+  story stays up while the story plays. Cast the screen to a TV to watch together
 
 **Keep**
 - Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their

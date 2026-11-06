@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
  * their birth year is known.
  */
 @Composable
-fun PersonScreen(personId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit) {
+fun PersonScreen(personId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, onSlideshow: () -> Unit = {}) {
     val library = LocalContext.current.library
     val person by remember(personId) { library.person(personId) }.collectAsStateWithLifecycle(null)
     val prints by remember(personId) { library.printsOf(personId) }.collectAsStateWithLifecycle(emptyList())
@@ -59,7 +59,9 @@ fun PersonScreen(personId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit
     val known = ages.filterNotNull()
 
     Column(Modifier.fillMaxSize()) {
-        TopBar(p.name, onBack = onBack, onTitleClick = { renaming = true })
+        TopBar(p.name, onBack = onBack, onTitleClick = { renaming = true }) {
+            if (prints.isNotEmpty()) io.github.darkxace01.attic.ui.QuietButton("Play", onClick = onSlideshow)
+        }
         LazyVerticalGrid(
             columns = GridCells.Adaptive(104.dp),
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),

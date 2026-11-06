@@ -71,7 +71,7 @@ import kotlinx.coroutines.launch
 
 /** One album, page by page, the way it was scanned. */
 @Composable
-fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, onScanHere: () -> Unit, onTellStories: () -> Unit) {
+fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, onScanHere: () -> Unit, onTellStories: () -> Unit, onSlideshow: () -> Unit = {}) {
     val context = LocalContext.current
     val library = context.library
     val album by remember(albumId) { library.album(albumId) }.collectAsStateWithLifecycle(null)
@@ -118,6 +118,7 @@ fun AlbumScreen(albumId: Long, onBack: () -> Unit, onOpenPrint: (Long) -> Unit, 
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Default.MoreVert, "More", tint = Palette.Ink) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    if (prints.isNotEmpty()) DropdownMenuItem(text = { Text("Play as a slideshow") }, onClick = { menu = false; onSlideshow() })
                     DropdownMenuItem(text = { Text("Tell its stories") }, onClick = { menu = false; onTellStories() })
                     if (prints.isNotEmpty()) {
                         DropdownMenuItem(text = { Text("Save as a web page") }, onClick = { menu = false; saveHtml.launch("${a.title}.html") })

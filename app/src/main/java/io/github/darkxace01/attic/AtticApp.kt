@@ -61,6 +61,7 @@ private sealed interface Route {
     data class Session(val albumId: Long) : Route
     data object People : Route
     data object Lightbox : Route
+    data class Slideshow(val albumId: Long?, val personId: Long?) : Route
     data class Person(val id: Long) : Route
     data object Settings : Route
 }
@@ -102,6 +103,7 @@ fun AtticApp() {
                 }
                 Route.Timeline -> Box(Modifier.statusBarsPadding()) { TimelineScreen(onOpenPrint = { go(Route.Print(it)) }) }
                 Route.Settings -> Box(Modifier.statusBarsPadding()) { SettingsScreen(onBack = ::back, onLightbox = { go(Route.Lightbox) }) }
+                is Route.Slideshow -> io.github.darkxace01.attic.slideshow.SlideshowScreen(top.albumId, top.personId, onDone = ::back)
                 Route.Lightbox -> io.github.darkxace01.attic.settings.LightboxScreen(onDone = ::back)
                 is Route.Album -> Box(Modifier.statusBarsPadding()) {
                     AlbumScreen(
@@ -110,6 +112,7 @@ fun AtticApp() {
                         onOpenPrint = { go(Route.Print(it)) },
                         onScanHere = { scanVm.scanInto(top.id); tab(Route.Scan) },
                         onTellStories = { go(Route.Session(top.id)) },
+                        onSlideshow = { go(Route.Slideshow(top.id, null)) },
                     )
                 }
                 is Route.Print -> Box(Modifier.statusBarsPadding()) {
@@ -120,7 +123,7 @@ fun AtticApp() {
                 is Route.Crop -> Box(Modifier.statusBarsPadding()) { CropScreen(top.id, onDone = ::back) }
                 is Route.Session -> Box(Modifier.statusBarsPadding()) { SessionScreen(top.albumId, onDone = ::back) }
                 Route.People -> Box(Modifier.statusBarsPadding()) { PeopleScreen(onOpenPerson = { go(Route.Person(it)) }) }
-                is Route.Person -> Box(Modifier.statusBarsPadding()) { PersonScreen(top.id, onBack = ::back, onOpenPrint = { go(Route.Print(it)) }) }
+                is Route.Person -> Box(Modifier.statusBarsPadding()) { PersonScreen(top.id, onBack = ::back, onOpenPrint = { go(Route.Print(it)) }, onSlideshow = { go(Route.Slideshow(null, top.id)) }) }
             }
         }
         if (top == Route.Scan || top == Route.Albums || top == Route.People || top == Route.Timeline) {
