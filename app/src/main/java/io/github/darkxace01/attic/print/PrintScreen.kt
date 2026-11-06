@@ -91,6 +91,7 @@ fun PrintScreen(
     onFixCrop: (Long) -> Unit,
     onOpenPrint: (Long) -> Unit,
     onScanBack: (Long) -> Unit,
+    onThenNow: (Long) -> Unit = {},
 ) {
     val library = LocalContext.current.library
     val start by remember(startId) { library.print(startId) }.collectAsStateWithLifecycle(null)
@@ -120,6 +121,7 @@ fun PrintScreen(
             onFixCrop = onFixCrop,
             onOpenPrint = onOpenPrint,
             onScanBack = onScanBack,
+            onThenNow = onThenNow,
             // Deleting a photo shows the next one, or goes back once the album is empty.
             onDeleted = { if (ids.size <= 1) onBack() },
         )
@@ -135,6 +137,7 @@ private fun PrintPage(
     onFixCrop: (Long) -> Unit,
     onOpenPrint: (Long) -> Unit,
     onScanBack: (Long) -> Unit,
+    onThenNow: (Long) -> Unit,
     onDeleted: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -191,6 +194,8 @@ private fun PrintPage(
             DetailRow("Where", p.place, "Add a place") { editing = Editing.Place }
             DetailRow("Caption", p.caption, "Add a caption") { editing = Editing.Caption }
             StoriesSection(p)
+            val now = library.nowFile(p).exists()
+            DetailRow("Now", if (now) "Taken again today" else null, "Take it again today") { onThenNow(printId) }
 
             Spacer(Modifier.height(14.dp))
             LookChoice(p.enhance) { level -> work { library.setEnhance(printId, level) } }

@@ -529,6 +529,37 @@ class Library(private val context: Context) {
 
     suspend fun unrelate(relationId: Long) = io { dao.deleteRelation(relationId) }
 
+    // ---- then and now ----
+
+    /** Today's photo of the place [p] was taken, lined up over it; it may not exist. */
+    fun nowFile(p: PrintEntity): File = File(File(root, p.scanDir), p.fileName.substringBeforeLast('.') + "_now.jpg")
+
+    /**
+     * Keeps [jpeg] (from the camera, [frame] its turn) as today's photo of print [id], lined up over it.
+     * [guess] is where the old print sat over the camera view, as fractions of it (left, top, right,
+     * bottom). True if it lined up by what's in it, false if the framing was kept as held.
+     */
+    suspend fun saveNow(id: Long, jpeg: ByteArray, frame: io.github.darkxace01.attic.vision.FrameTransform, guess: FloatArray): Boolean? = withContext(Dispatchers.Default) {
+        val p = dao.print(id) ?: return@withContext null
+        val old = readPng(displayFile(p)) ?: return@withContext null
+        val bmp = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size) ?: run { old.release(); return@withContext null }
+        val decoded = Mat().also { Utils.bitmapToMat(bmp, it) }
+        bmp.recycle()
+        val now = frame.apply(decoded).also { if (it !== decoded) decoded.release() }
+        val w = now.cols(); val h = now.rows()
+        val rect = org.opencv.core.Rect((guess[0] * w).toInt(), (guess[1] * h).toInt(), ((guess[2] - guess[0]) * w).toInt().coerceAtLeast(1), ((guess[3] - guess[1]) * h).toInt().coerceAtLeast(1))
+        val r = io.github.darkxace01.attic.vision.Align.toOld(old, now, rect)
+        val bgr = Mat().also { Imgproc.cvtColor(r.image, it, Imgproc.COLOR_RGBA2BGR) }
+        val out = nowFile(p)
+        val tmp = File(out.parentFile, out.name + ".tmp.jpg")
+        Imgcodecs.imwrite(tmp.path, bgr, MatOfInt(Imgcodecs.IMWRITE_JPEG_QUALITY, 92))
+        tmp.renameTo(out)
+        listOf(old, now, r.image, bgr).forEach { it.release() }
+        r.matched
+    }
+
+    suspend fun deleteNow(id: Long) = io { dao.print(id)?.let { nowFile(it).delete() } }
+
     // ---- importing ----
 
     /** An image brought in from a file, ready to be treated like a camera shot. */
@@ -621,6 +652,7 @@ class Library(private val context: Context) {
         derivedFiles(p).forEach { it.delete() }
         sweepFile(p).delete()
         backFiles(p).forEach { it.delete() }
+        nowFile(p).delete()
         dao.storiesOfNow(p.id).forEach { storyFile(p, it).delete(); dao.deleteStory(it.id) }
         dao.untagAll(p.id)
         dao.deleteFacesOf(p.id)

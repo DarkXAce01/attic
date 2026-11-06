@@ -64,6 +64,7 @@ private sealed interface Route {
     data class Slideshow(val albumId: Long?, val personId: Long?) : Route
     data class Person(val id: Long) : Route
     data class FamilyTree(val rootId: Long?) : Route
+    data class ThenNow(val printId: Long) : Route
     data object Settings : Route
 }
 
@@ -119,6 +120,7 @@ fun AtticApp() {
                 is Route.Print -> Box(Modifier.statusBarsPadding()) {
                     PrintScreen(top.showing, onShowing = { top.showing = it }, onBack = ::back, onFixCrop = { go(Route.Crop(it)) }, onOpenPrint = { go(Route.Print(it)) },
                         onScanBack = { scanVm.scanBackOf(it); tab(Route.Scan) },
+                        onThenNow = { go(Route.ThenNow(it)) },
                     )
                 }
                 is Route.Crop -> Box(Modifier.statusBarsPadding()) { CropScreen(top.id, onDone = ::back) }
@@ -126,6 +128,7 @@ fun AtticApp() {
                 Route.People -> Box(Modifier.statusBarsPadding()) { PeopleScreen(onOpenPerson = { go(Route.Person(it)) }, onTree = { go(Route.FamilyTree(null)) }) }
                 is Route.Person -> Box(Modifier.statusBarsPadding()) { PersonScreen(top.id, onBack = ::back, onOpenPrint = { go(Route.Print(it)) }, onSlideshow = { go(Route.Slideshow(null, top.id)) },
                     onOpenPerson = { go(Route.Person(it)) }, onTree = { go(Route.FamilyTree(top.id)) }) }
+                is Route.ThenNow -> Box(Modifier.statusBarsPadding()) { io.github.darkxace01.attic.thennow.ThenNowScreen(top.printId, onBack = ::back) }
                 is Route.FamilyTree -> Box(Modifier.statusBarsPadding()) {
                     io.github.darkxace01.attic.people.FamilyTreeScreen(top.rootId, onBack = ::back, onOpenPerson = { go(Route.Person(it)) })
                 }

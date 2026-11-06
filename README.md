@@ -79,6 +79,8 @@ See [PLAN.md](PLAN.md) for the product plan and roadmap.
   draws the tree a generation to a row. Relatives without photos yet are drawn faintly
 - On this day, over the timeline: photos from this day in other years, or this week, or this month, and
   when nothing is dated near today, one photo for the day
+- Then and now: stand where an old photo was taken, line it up over the camera and take it again. Attic
+  matches what hasn't changed to lay today's photo exactly over the old one; slide between the two
 
 **Keep**
 - Timeline: every photo from every album by decade and year, oldest first. Rough dates sit after their
