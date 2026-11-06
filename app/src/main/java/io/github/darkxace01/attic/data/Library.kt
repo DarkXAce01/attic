@@ -12,6 +12,7 @@ import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.Faces
 import io.github.darkxace01.attic.vision.Dust
 import io.github.darkxace01.attic.vision.Curl
+import io.github.darkxace01.attic.vision.Negative
 import io.github.darkxace01.attic.vision.Border
 import io.github.darkxace01.attic.vision.FaceGroups
 import io.github.darkxace01.attic.vision.DateStamp
@@ -466,6 +467,11 @@ class Library(private val context: Context) {
             flats.forEach { it.release() }
             writeSweep(sweepFile, moved)
         }
+        if (p.negative) {
+            val developed = Negative.develop(flat)
+            flat.release()
+            flat = developed
+        }
         writePng(flat, p.file(root))
         derivedFiles(p).forEach { it.delete() }
         val updated = p.copy(
@@ -488,6 +494,9 @@ class Library(private val context: Context) {
         val border = p.borderQuad?.let(::parseQuad)?.let { b -> Quad(b.bl, b.tl, b.tr, b.br).encode() }
         recrop(id, Quad(q.bl, q.tl, q.tr, q.br), border)
     }
+
+    /** Marks freshly saved prints as taken from negatives (their crops are already developed). */
+    suspend fun markNegative(ids: List<Long>) = io { if (ids.isNotEmpty()) dao.markNegative(ids) }
 
     // ---- importing ----
 

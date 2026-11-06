@@ -55,7 +55,7 @@ import java.text.DateFormat
 import java.util.Date
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onLightbox: () -> Unit = {}) {
     val context = LocalContext.current
     val library = context.library
     val backup = context.backup
@@ -108,6 +108,21 @@ fun SettingsScreen(onBack: () -> Unit) {
             ) { on ->
                 library.settings.update { it.copy(cleanDust = on) }
                 kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch { library.rerenderAll() }
+            }
+
+            Heading("Film")
+            Row(
+                Modifier.fillMaxWidth().clickable(onClick = onLightbox).padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Use this phone as a lightbox", style = MaterialTheme.typography.bodyLarge, color = Palette.Ink)
+                    Text(
+                        "A plain white screen at full brightness to lay negatives or slides on, while another phone scans them with Negatives on.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Palette.Muted,
+                    )
+                }
             }
 
             Heading("Backup")

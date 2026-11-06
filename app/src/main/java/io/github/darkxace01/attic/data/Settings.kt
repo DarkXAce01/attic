@@ -21,6 +21,8 @@ data class Prefs(
     val uncurl: Boolean = true,
     /** New scans lose their plain borders (never one with writing on it). */
     val trimBorders: Boolean = false,
+    /** Scanning film negatives on a lightbox: each print is developed into a positive. */
+    val negatives: Boolean = false,
 )
 
 class Settings(context: Context) {
@@ -38,6 +40,7 @@ class Settings(context: Context) {
         cleanDust = sp.getBoolean("cleanDust", true),
         uncurl = sp.getBoolean("uncurl", true),
         trimBorders = sp.getBoolean("trimBorders", false),
+        negatives = sp.getBoolean("negatives", false),
     )
 
     fun update(change: (Prefs) -> Prefs) {
@@ -51,6 +54,7 @@ class Settings(context: Context) {
             .putBoolean("cleanDust", p.cleanDust)
             .putBoolean("uncurl", p.uncurl)
             .putBoolean("trimBorders", p.trimBorders)
+            .putBoolean("negatives", p.negatives)
             .apply()
         _prefs.value = p
     }

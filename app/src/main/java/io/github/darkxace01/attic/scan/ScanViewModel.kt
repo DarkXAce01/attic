@@ -38,6 +38,7 @@ import io.github.darkxace01.attic.vision.Quad
 import io.github.darkxace01.attic.vision.QuadTracker
 import io.github.darkxace01.attic.vision.Rectify
 import io.github.darkxace01.attic.vision.Curl
+import io.github.darkxace01.attic.vision.Negative
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -95,6 +96,8 @@ data class ScanUiState(
     val shutterTick: Long = 0,
     /** Glare-free mode: each page is taken from a few angles and the shots merged. */
     val glareFree: Boolean = false,
+    /** Film negatives on a lightbox: developed into positives as they're saved. */
+    val negatives: Boolean = false,
     /** While a glare-free page is being taken. */
     val sweep: SweepUi? = null,
     /** A print in view looks like it has glare on it. */
@@ -130,6 +133,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     private val _state = MutableStateFlow(ScanUiState(
             autoCapture = library.settings.now.autoCapture,
             glareFree = library.settings.now.glareFree,
+            negatives = library.settings.now.negatives,
             checkEachShot = library.settings.now.checkEachShot,
         ))
     val state: StateFlow<ScanUiState> = _state
@@ -285,6 +289,11 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
     fun setPaused(on: Boolean) { paused = on }
 
     /** Turning glare-free off in the middle of a page drops the shots taken so far. */
+    fun setNegatives(on: Boolean) {
+        library.settings.update { it.copy(negatives = on) }
+        _state.update { it.copy(negatives = on) }
+    }
+
     fun setGlareFree(on: Boolean) {
         library.settings.update { it.copy(glareFree = on) }
         _state.update { it.copy(glareFree = on, sweep = null) }
@@ -818,10 +827,18 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
 
     /** Saves [prints] with [save], puts them in the gallery and releases them. */
     private suspend fun store(prints: List<Library.NewPrint>, save: suspend (List<Library.NewPrint>) -> List<io.github.darkxace01.attic.data.PrintEntity>): Stored {
-        val saved = if (prints.isEmpty()) emptyList() else save(prints)
-        val thumbs = prints.map { previewOf(it.image, Quad.ofSize(it.image.cols(), it.image.rows()), enhance = true) }
-        val soft = prints.count { it.sharpness < SOFT_SHARPNESS }
-        prints.forEach { it.image.release() }
+        // Negatives become positives before anything else sees them.
+        val negative = library.settings.now.negatives
+        val developed = if (!negative) prints else prints.map { p ->
+            val pos = Negative.develop(p.image)
+            p.image.release()
+            Library.NewPrint(pos, p.quad, p.sharpness, p.others)
+        }
+        val saved = if (developed.isEmpty()) emptyList() else save(developed)
+        if (negative) library.markNegative(saved.map { it.id })
+        val thumbs = developed.map { previewOf(it.image, Quad.ofSize(it.image.cols(), it.image.rows()), enhance = true) }
+        val soft = developed.count { it.sharpness < SOFT_SHARPNESS }
+        developed.forEach { it.image.release() }
         // New prints go straight into the gallery too, so they're safe the moment they're scanned.
         if (library.settings.now.saveToGallery) saved.forEach { library.export(it.id) }
         // Borders and faces after, in the background: the next page shouldn't wait for them.

@@ -117,6 +117,7 @@ fun ScanScreen(vm: ScanViewModel, onOpenAlbum: (Long) -> Unit, onPickAlbum: () -
                     ModeChip("Auto", state.autoCapture) { vm.setAutoCapture(!state.autoCapture) }
                     ModeChip("Check", state.checkEachShot) { vm.setCheckEachShot(!state.checkEachShot) }
                     ModeChip("Glare-free", state.glareFree) { vm.setGlareFree(!state.glareFree) }
+                    ModeChip("Negatives", state.negatives) { vm.setNegatives(!state.negatives) }
                     // Scans from a flatbed, or photos of prints already on the phone.
                     ModeChip("From files", false) { pickFiles.launch(arrayOf("image/*")) }
                 }
@@ -284,6 +285,7 @@ private fun statusLine(s: ScanUiState): String {
                 else -> " ${s.justSavedTwins} look like ones you already have."
             }
         s.waitingForNext -> "Done. Turn the page or move to the next photo."
+        n == 0 && s.negatives -> "Lay the film on a lightbox (another phone on Lightbox works) and point at it."
         n == 0 -> if (s.glareFree) "Point at a page. You'll take it from a few angles." else "Point at a photo or an album page."
         s.glareSeen && !s.glareFree && s.readyProgress == 0f -> "Found $photos. There's glare; try Glare-free."
         s.outlines.all { it.locked } && !s.autoCapture -> if (s.checkEachShot) "Found $photos. Tap to take it and check." else "Found $photos. Tap to capture."

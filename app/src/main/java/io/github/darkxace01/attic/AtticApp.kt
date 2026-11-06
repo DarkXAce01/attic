@@ -60,6 +60,7 @@ private sealed interface Route {
     data class Crop(val id: Long) : Route
     data class Session(val albumId: Long) : Route
     data object People : Route
+    data object Lightbox : Route
     data class Person(val id: Long) : Route
     data object Settings : Route
 }
@@ -100,7 +101,8 @@ fun AtticApp() {
                     AlbumsScreen(onOpen = { go(Route.Album(it)) }, onSettings = { go(Route.Settings) })
                 }
                 Route.Timeline -> Box(Modifier.statusBarsPadding()) { TimelineScreen(onOpenPrint = { go(Route.Print(it)) }) }
-                Route.Settings -> Box(Modifier.statusBarsPadding()) { SettingsScreen(onBack = ::back) }
+                Route.Settings -> Box(Modifier.statusBarsPadding()) { SettingsScreen(onBack = ::back, onLightbox = { go(Route.Lightbox) }) }
+                Route.Lightbox -> io.github.darkxace01.attic.settings.LightboxScreen(onDone = ::back)
                 is Route.Album -> Box(Modifier.statusBarsPadding()) {
                     AlbumScreen(
                         top.id,

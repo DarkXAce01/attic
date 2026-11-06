@@ -79,6 +79,8 @@ data class PrintEntity(
     val facesQuad: String? = null,
     /** While the print's border is trimmed off: its outline with the border, to put it back. */
     val borderQuad: String? = null,
+    /** Taken from a film negative: the crop is developed into a positive every time it's made. */
+    @ColumnInfo(defaultValue = "0") val negative: Boolean = false,
 ) {
     val date: PhotoDate? get() = photoDate(dateFrom, dateTo, dateLabel)
     /** The dates the stamp can mean: one, two when it reads both ways, none without a stamp. */
@@ -234,6 +236,7 @@ interface AtticDao {
     @Query("SELECT * FROM face WHERE ignored = 0") fun allFacesNow(): List<FaceEntity>
     @Query("SELECT * FROM face WHERE ignored = 0") fun allFaces(): Flow<List<FaceEntity>>
     @Query("SELECT * FROM print WHERE facesQuad IS NULL OR facesQuad != quad") fun printsWithoutFaces(): List<PrintEntity>
+    @Query("UPDATE print SET negative = 1 WHERE id IN (:ids)") fun markNegative(ids: List<Long>)
     @Query("UPDATE print SET facesQuad = :quad WHERE id = :id") fun setFacesQuad(id: Long, quad: String)
     @Query("UPDATE face SET personId = NULL WHERE personId = :personId AND printId = :printId") fun unnameFacesOn(printId: Long, personId: Long)
 
@@ -275,7 +278,7 @@ interface AtticDao {
 
 @Database(
     entities = [AlbumEntity::class, PrintEntity::class, PersonEntity::class, PrintPersonEntity::class, StoryEntity::class, FaceEntity::class],
-    version = 9,
+    version = 10,
     exportSchema = true,
 )
 abstract class AtticDatabase : RoomDatabase() {
@@ -283,7 +286,7 @@ abstract class AtticDatabase : RoomDatabase() {
 
     companion object {
         fun open(context: Context): AtticDatabase =
-            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9).build()
+            Room.databaseBuilder(context, AtticDatabase::class.java, "attic.db").addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10).build()
 
         /** colorFix (on/off) became enhance (off/natural/strong). Prints keep the look they had. */
         val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -357,6 +360,13 @@ abstract class AtticDatabase : RoomDatabase() {
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `print` ADD COLUMN `borderQuad` TEXT")
+            }
+        }
+
+        /** Film negatives. */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `print` ADD COLUMN `negative` INTEGER NOT NULL DEFAULT 0")
             }
         }
 
