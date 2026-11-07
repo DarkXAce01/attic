@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attic logo, round two</title>
+<style>
+:root{--paper:#EEEDE8;--ink:#1D1E22;--muted:#5F6068}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 17px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1200px;margin:0 auto;padding:44px 22px 90px}
+h1{font-size:clamp(40px,6vw,66px);line-height:.95;margin:0 0 14px;letter-spacing:-.025em}
+h2{font-size:28px;line-height:1.05;margin:0 0 6px;letter-spacing:-.015em}
+p{max-width:68ch;margin:0 0 12px}
+.lede{font-size:19px;color:#2c2d31}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(540px,1fr));gap:28px;margin-top:36px}
+.card{background:#fff;border-radius:22px;padding:26px;box-shadow:0 1px 0 rgba(0,0,0,.06),0 10px 30px rgba(0,0,0,.06)}
+.why{color:var(--muted);font-size:15.5px;margin-bottom:14px}
+.hero{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.lock{display:flex;align-items:center;gap:14px;margin-top:18px;padding:14px 16px;border-radius:14px;background:#F6F5F1}
+.lock b{font-size:26px;letter-spacing:-.02em}
+.lock span{font-size:13px;color:var(--muted)}
+.home{display:flex;gap:16px;align-items:flex-end;padding:16px 18px;border-radius:16px;margin-top:12px}
+.home.light{background:#dfe2e7}.home.dark{background:#17191f}
+.app{display:grid;justify-items:center;gap:5px;font-size:11.5px}
+.home.dark .app{color:#e8e8ea}
+.tiny{display:flex;gap:14px;align-items:center;margin-top:12px;font-size:13px;color:var(--muted)}
+.cmp{display:flex;gap:24px;align-items:center;margin-top:26px;background:#fff;border-radius:18px;padding:16px 22px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Logos, round two</h1>
+  <p class="lede">No grease-pencil ring this time. Each of these is a mark that stands on its own, drawn on a grid, flat colour only, so it stays crisp from the Play Store down to a notification. None uses a letter or the name, so a rename costs nothing.</p>
+  <p>Each one is shown big, in the three shapes phones cut icons to, on light and dark home screens, as the one-colour themed icon, and beside a name to see it as a logo. The colours are the app's Riso inks; where two inks cross, the overlap is its own flat colour, as a real overprint would be, which also means it builds as a plain Android vector.</p>
+
+  <div class="cmp"><div id="old"></div><div><b>Today's icon</b><br><span style="color:#5F6068;font-size:14px">A tilted print in a big red ring, too close to Sweepy's. This replaces it.</span></div></div>
+
+  <div class="grid" id="grid"></div>
+</main>
+<script>
+/* Each mark draws into the 108 x 108 adaptive-icon canvas; the art keeps to the middle 72 that every
+   phone shows. color: full mark. mono: the single-colour shape for themed icons. */
+const W='#F7F4EC';
+function wedge(cx,cy,r,a0,a1){const R=Math.PI/180,x0=cx+r*Math.cos(a0*R),y0=cy+r*Math.sin(a0*R),x1=cx+r*Math.cos(a1*R),y1=cy+r*Math.sin(a1*R);return `M${cx},${cy} L${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 0 1 ${x1.toFixed(2)},${y1.toFixed(2)} Z`;}
+const MARKS=[
+ {id:'overprint',name:'Overprint',bg:'#F7F4EC',
+  why:'Three prints laid down in three inks, each a pass through the press; where they cross, new colours appear. It says printing, layers and memory at once, and nothing in the store looks like it. The front print carries a small sun.',
+  color(){const P='M31,24 h24 a7,7 0 0 1 7,7 v24 a7,7 0 0 1 -7,7 h-24 a7,7 0 0 1 -7,-7 v-24 a7,7 0 0 1 7,-7z', Y='M42,35 h24 a7,7 0 0 1 7,7 v24 a7,7 0 0 1 -7,7 h-24 a7,7 0 0 1 -7,-7 v-24 a7,7 0 0 1 7,-7z', T='M53,46 h24 a7,7 0 0 1 7,7 v24 a7,7 0 0 1 -7,7 h-24 a7,7 0 0 1 -7,-7 v-24 a7,7 0 0 1 7,-7z';
+   const id='op'+(n++);
+   return `<defs><clipPath id="${id}p"><path d="${P}"/></clipPath><clipPath id="${id}y"><path d="${Y}"/></clipPath><clipPath id="${id}t"><path d="${T}"/></clipPath></defs>
+   <path d="${P}" fill="#FF48B0"/><path d="${Y}" fill="#FFE34A"/><path d="${T}" fill="#2FA4B4"/>
+   <g clip-path="url(#${id}p)"><path d="${Y}" fill="#FF5A2C"/></g>
+   <g clip-path="url(#${id}y)"><path d="${T}" fill="#3E9A3A"/></g>
+   <g clip-path="url(#${id}p)"><g clip-path="url(#${id}y)"><path d="${T}" fill="#2B2A4A"/></g></g>
+   <circle cx="73" cy="73" r="5" fill="${W}"/>`;},
+  mono(){return `<rect x="24" y="24" width="38" height="38" rx="7" fill="#fff" opacity=".45"/><rect x="35" y="35" width="38" height="38" rx="7" fill="#fff" opacity=".7"/><rect x="46" y="46" width="38" height="38" rx="7" fill="#fff"/>`;}},
+ {id:'dogear',name:'Turned corner',bg:'#1E2547',
+  why:'One print with its corner turned up, the way old photos curl after years in an album, showing the paper behind. A single confident shape: the print is the hero, the fold is the story of its age.',
+  color(){return `
+   <g transform="rotate(-6 54 54)">
+    <path d="M26,26 H66 L82,42 V82 H26Z" fill="${W}"/>
+    <path d="M31,31 H63 L77,45 V64 H31Z" fill="#E8466A"/>
+    <circle cx="62" cy="52" r="7" fill="#FFB511"/>
+    <path d="M31,64 L31,58 L43,49 L53,56 L60,51 L77,62 L77,64Z" fill="#3255A4"/>
+    <path d="M31,64 H77 V77 H31Z" fill="#14306E"/>
+    <path d="M66,26 L66,42 L82,42Z" fill="#D9D3C6"/>
+    <path d="M66,42 L82,42 L80,45 L66,45Z" fill="#000" opacity=".18"/>
+   </g>`;},
+  mono(){return `<g transform="rotate(-6 54 54)"><path d="M26,26 H66 L82,42 V82 H26Z" fill="#fff"/><path d="M66,26 L66,42 L82,42Z" fill="#000" opacity=".35"/></g>`;}},
+ {id:'slide',name:'Slide mount',bg:'#FFB511',
+  why:'A 35 mm slide in its card mount: the format half the world kept its holidays in, and an instantly readable square. The window holds a sunset; the mount is cream on Kodachrome yellow. Bold at every size.',
+  color(){return `
+   <rect x="22" y="22" width="64" height="64" rx="9" fill="${W}"/>
+   <rect x="31" y="35" width="46" height="38" rx="5" fill="#E8466A"/>
+   <path d="M31,52 H77 V68 a5,5 0 0 1 -5,5 H36 a5,5 0 0 1 -5,-5Z" fill="#FF6C2F"/>
+   <circle cx="54" cy="56" r="8" fill="#FFE34A"/>
+   <path d="M31,60 Q42,55 54,60 T77,59 V68 a5,5 0 0 1 -5,5 H36 a5,5 0 0 1 -5,-5Z" fill="#1E2547"/>
+   <rect x="27" y="27" width="6" height="3" rx="1.5" fill="#1D1E22" opacity=".25"/>`;},
+  mono(){return `<path fill-rule="evenodd" fill="#fff" d="M31,22 h46 a9,9 0 0 1 9,9 v46 a9,9 0 0 1 -9,9 h-46 a9,9 0 0 1 -9,-9 v-46 a9,9 0 0 1 9,-9z M36,35 a5,5 0 0 0 -5,5 v28 a5,5 0 0 0 5,5 h36 a5,5 0 0 0 5,-5 v-28 a5,5 0 0 0 -5,-5z"/><circle cx="54" cy="56" r="7" fill="#fff"/>`;}},
+ {id:'isle',name:'Island print',bg:'#14172E',
+  why:'The app\'s own world, redrawn as a mark: a floating island, and standing on it a single print with the sun in it. Geometric, quiet, and it connects the icon to the first screen people see.',
+  color(){return `
+   <path d="M20,64 H88 L80,72 L70,71 L62,88 L54,79 L46,90 L38,74 L28,73Z" fill="#3255A4"/>
+   <path d="M54,79 L46,90 L38,74Z M62,88 L54,79 L70,71Z" fill="#26407E"/>
+   <path d="M20,64 H88 L84,70 H24Z" fill="#00A95C"/>
+   <path d="M20,64 H88 V62 Q54,56 20,62Z" fill="#2FC17A"/>
+   <rect x="38" y="30" width="32" height="32" rx="2" fill="${W}" transform="rotate(4 54 46)"/>
+   <g transform="rotate(4 54 46)"><rect x="42" y="34" width="24" height="24" fill="#E8466A"/><circle cx="58" cy="44" r="5" fill="#FFB511"/><path d="M42,58 V52 L50,46 L56,51 L66,45 V58Z" fill="#14306E"/></g>
+   <rect x="52.5" y="60" width="3" height="4" fill="${W}"/>`;},
+  mono(){return `<path d="M20,64 H88 L80,72 L70,71 L62,88 L54,79 L46,90 L38,74 L28,73Z" fill="#fff"/><rect x="38" y="30" width="32" height="32" rx="2" fill="#fff" transform="rotate(4 54 46)"/>`;}},
+ {id:'corners',name:'Mount corners',bg:'#F4EFE4',
+  why:'The black paper corners that held every photo in a family album, framing a sunrise. The most recognisable thing about old albums, set as a clean square mark; calm and grown-up.',
+  color(){return `
+   <path d="M26,26 H44 L26,44Z M82,26 V44 L64,26Z M82,82 H64 L82,64Z M26,82 V64 L44,82Z" fill="#1D1E22"/>
+   <path d="M34,66 a20,20 0 0 1 40,0Z" fill="#E4472B"/>
+   <rect x="34" y="66" width="40" height="4" rx="2" fill="#1D1E22"/>
+   <rect x="40" y="74" width="28" height="3" rx="1.5" fill="#3255A4"/>`;},
+  mono(){return `<path d="M26,26 H44 L26,44Z M82,26 V44 L64,26Z M82,82 H64 L82,64Z M26,82 V64 L44,82Z" fill="#fff"/><path d="M34,66 a20,20 0 0 1 40,0Z" fill="#fff"/>`;}},
+];
+const SHAPES={circle:'<circle cx="54" cy="54" r="54"/>',squircle:'<path d="M54,0C92,0 108,16 108,54C108,92 92,108 54,108C16,108 0,92 0,54C0,16 16,0 54,0Z"/>',rounded:'<rect width="108" height="108" rx="24"/>'};
+let n=0;
+function icon(m,size,shape,mono){const id='c'+(n++);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 108 108"><defs><clipPath id="${id}">${SHAPES[shape]}</clipPath></defs><g clip-path="url(#${id})"><rect width="108" height="108" fill="${mono?'#2A3550':m.bg}"/>${mono?m.mono():m.color()}</g></svg>`;}
+function bare(m,size){return `<svg width="${size}" height="${size}" viewBox="18 18 72 72">${m.color()}</svg>`;}
+const grid=document.getElementById('grid');
+for(const m of MARKS){
+  const el=document.createElement('section'); el.className='card';
+  const dummy=(c,r)=>`<div class="app"><svg width="52" height="52"><rect width="52" height="52" rx="${r}" fill="${c}"/></svg><span>App</span></div>`;
+  el.innerHTML=`<h2>${m.name}</h2><p class="why">${m.why}</p>
+   <div class="hero">${icon(m,168,'squircle')}${icon(m,104,'circle')}${icon(m,104,'rounded')}${icon(m,80,'circle',true)}</div>
+   <div class="lock">${bare(m,46)}<div><b>Attic</b><br><span>As a logo beside the name, on a page or a store listing.</span></div></div>
+   <div class="home light">${dummy('#7fa9a8',26)}${dummy('#cf9a62',26)}<div class="app">${icon(m,52,'circle')}<span>Attic</span></div>${dummy('#8c89c0',26)}</div>
+   <div class="home dark">${dummy('#56756f',16)}<div class="app">${icon(m,52,'squircle')}<span>Attic</span></div>${dummy('#9a6853',16)}<div class="app">${icon(m,52,'squircle',true)}<span>Themed</span></div></div>
+   <div class="tiny">${icon(m,24,'circle')} ${icon(m,18,'circle')} <span>Small: settings lists and the share sheet.</span></div>`;
+  grid.appendChild(el);
+}
+document.getElementById('old').innerHTML=`<svg width="84" height="84" viewBox="0 0 108 108"><circle cx="54" cy="54" r="54" fill="#EDEDE9"/><g transform="rotate(-7 54 54) translate(10.8 10.8) scale(.8)"><path fill="#00838A" d="M37,38h38v38h-38z"/><path fill="#FBFAF6" d="M34,34h38v40h-38z"/><path fill="#FF48B0" d="M37.5,37.5h31v26h-31z"/><circle cx="58" cy="46" r="5" fill="#FFB511"/><path fill="#3255A4" d="M37.5,63.5l0,-6l9,-9l7,7l5,-4l10,9l0,3z"/></g><g transform="translate(24.5 21.5)"><path fill="none" stroke="#D4432A" stroke-width="3.2" stroke-linecap="round" d="M20,7.5C37,3 53,9 55,26C57,44 46,60 28,61C12,62 2,50 4,32C5.5,19 13,11 26,8.5"/></g></svg>`;
+</script>
+</body>
+</html>

@@ -76,7 +76,7 @@ data class ScanUiState(
     val lastSaved: List<ImageBitmap> = emptyList(),
     /** 0..1 while everything in view is locked and auto-capture is counting down. */
     val readyProgress: Float = 0f,
-    val autoCapture: Boolean = true,
+    val autoCapture: Boolean = false,
     val saving: Boolean = false,
     /** Already captured what's in view; waiting for the page to change. */
     val waitingForNext: Boolean = false,
