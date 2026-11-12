@@ -11,6 +11,7 @@ data class Prefs(
     val newScanLook: Int = Enhance.NATURAL,
     /** New scans also go into the phone's gallery (Pictures/Attic). */
     val saveToGallery: Boolean = true,
+    /** Takes the shot by itself once every photo in view is found and the phone is still. Off until chosen. */
     val autoCapture: Boolean = false,
     val glareFree: Boolean = false,
     /** Each shot waits on a check of its outlines before it's saved, like a document scanner. */
@@ -44,7 +45,8 @@ class Settings(context: Context) {
     private fun read() = Prefs(
         newScanLook = sp.getInt("newScanLook", Enhance.NATURAL),
         saveToGallery = sp.getBoolean("saveToGallery", true),
-        autoCapture = sp.getBoolean("autoCapture", false),
+        // A new key: early builds stored "on" for everyone, so only a choice made since then counts.
+        autoCapture = sp.getBoolean("takeByItself", false),
         glareFree = sp.getBoolean("glareFree", false),
         checkEachShot = sp.getBoolean("checkEachShot", true),
         cleanDust = sp.getBoolean("cleanDust", true),
@@ -63,7 +65,8 @@ class Settings(context: Context) {
         sp.edit()
             .putInt("newScanLook", p.newScanLook)
             .putBoolean("saveToGallery", p.saveToGallery)
-            .putBoolean("autoCapture", p.autoCapture)
+            .putBoolean("takeByItself", p.autoCapture)
+            .remove("autoCapture")
             .putBoolean("glareFree", p.glareFree)
             .putBoolean("checkEachShot", p.checkEachShot)
             .putBoolean("cleanDust", p.cleanDust)

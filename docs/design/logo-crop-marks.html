@@ -1,0 +1,163 @@
+<title>Attic Logo: Crop Marks</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap">
+<style>
+/* Layout: one big mark, the idea beside it, then the mark at work: shapes, home screens, themed, next to Sweepy. */
+:root{
+  --ground:#EDEDE9; --surface:#F7F7F4; --ink:#17181C; --muted:#5E616B; --line:#D6D6D0; --pencil:#D4432A;
+  --display:"Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground:#121317;--surface:#1B1C21;--ink:#EDEDEA;--muted:#9A9DA6;--line:#2C2E35;--pencil:#E5553A;color-scheme:dark}}
+:root[data-theme="dark"]{--ground:#121317;--surface:#1B1C21;--ink:#EDEDEA;--muted:#9A9DA6;--line:#2C2E35;--pencil:#E5553A;color-scheme:dark}
+body{background:var(--ground);color:var(--ink);font:16px/1.55 var(--body)}
+.wrap{max-width:1040px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:56px}
+h1,h2{font-family:var(--display);font-weight:700;text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(34px,5vw,52px);line-height:1.05}
+h2{font-size:22px}
+p{margin:0;max-width:62ch}
+.muted{color:var(--muted)}
+.hero{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:48px;align-items:center}
+.hero svg{width:100%;height:auto;display:block}
+.copy{display:grid;gap:16px;min-width:0}
+.copy em{font-style:normal;color:var(--pencil);font-weight:600}
+section{display:grid;gap:20px}
+.row{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-end}
+.cell{display:grid;gap:10px;justify-items:center;font-size:13px;color:var(--muted)}
+.screens{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.screen{border-radius:22px;padding:28px 22px;display:grid;grid-template-columns:repeat(4,1fr);gap:22px 10px;justify-items:center}
+.screen.light{background:#D9DCD3}
+.screen.dark{background:#16181D}
+.app{display:grid;gap:6px;justify-items:center;font-size:11.5px;width:100%}
+.screen.light .app{color:#2A2C30}.screen.dark .app{color:#D5D7DB}
+.app svg,.tile{width:54px;height:54px;max-width:100%}
+.tile{border-radius:50%}
+.screen.light .tile{background:#BFC3B8}.screen.dark .tile{background:#2E3138}
+.screen.themed.light .tile{background:#C9CDC0}
+.pair{display:grid;grid-template-columns:repeat(2,minmax(0,220px));gap:28px}
+.pair .cell svg{width:150px;height:150px}
+.notes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
+.notes div{display:grid;gap:6px;align-content:start}
+.notes b{font-family:var(--display);font-size:17px}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.sw{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.sw i{width:22px;height:22px;border-radius:6px;border:1px solid var(--line)}
+.draw path.pm{stroke-dasharray:20;stroke-dashoffset:20;animation:draw .5s ease-out forwards}
+.draw path.pm:nth-of-type(2){animation-delay:.18s}.draw path.pm:nth-of-type(3){animation-delay:.7s}.draw path.pm:nth-of-type(4){animation-delay:.88s}
+@keyframes draw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.draw path.pm{animation:none;stroke-dashoffset:0}}
+@media (max-width:720px){.hero{grid-template-columns:1fr;gap:28px}.hero .big{max-width:260px}.screens,.notes{grid-template-columns:1fr}.pair{grid-template-columns:repeat(2,minmax(0,1fr))}.pair .cell svg{width:120px;height:120px}}
+</style>
+<script>
+// The mark, in the 108 x 108 adaptive-icon canvas; launchers show the middle 72 (18..90), masked.
+const MARK = {
+  bg: '#1B2142', paper: '#F4F1E8', sky: '#7FD0E6', sun: '#FFB511',
+  hillBack: '#00838A', hillFront: '#3255A4', pencil: '#E5553A',
+  print: 'M38.5,34A1.79,1.79 0 0 1 40.88,34.00A1.79,1.79 0 0 1 43.27,34.00A1.79,1.79 0 0 1 45.65,34.00A1.79,1.79 0 0 1 48.04,34.00A1.79,1.79 0 0 1 50.42,34.00A1.79,1.79 0 0 1 52.81,34.00A1.79,1.79 0 0 1 55.19,34.00A1.79,1.79 0 0 1 57.58,34.00A1.79,1.79 0 0 1 59.96,34.00A1.79,1.79 0 0 1 62.35,34.00A1.79,1.79 0 0 1 64.73,34.00A1.79,1.79 0 0 1 67.12,34.00A1.79,1.79 0 0 1 69.50,34.00A1.81,1.81 0 0 1 69.50,36.41A1.81,1.81 0 0 1 69.50,38.82A1.81,1.81 0 0 1 69.50,41.24A1.81,1.81 0 0 1 69.50,43.65A1.81,1.81 0 0 1 69.50,46.06A1.81,1.81 0 0 1 69.50,48.47A1.81,1.81 0 0 1 69.50,50.88A1.81,1.81 0 0 1 69.50,53.29A1.81,1.81 0 0 1 69.50,55.71A1.81,1.81 0 0 1 69.50,58.12A1.81,1.81 0 0 1 69.50,60.53A1.81,1.81 0 0 1 69.50,62.94A1.81,1.81 0 0 1 69.50,65.35A1.81,1.81 0 0 1 69.50,67.76A1.81,1.81 0 0 1 69.50,70.18A1.81,1.81 0 0 1 69.50,72.59A1.81,1.81 0 0 1 69.50,75.00A1.79,1.79 0 0 1 67.12,75.00A1.79,1.79 0 0 1 64.73,75.00A1.79,1.79 0 0 1 62.35,75.00A1.79,1.79 0 0 1 59.96,75.00A1.79,1.79 0 0 1 57.58,75.00A1.79,1.79 0 0 1 55.19,75.00A1.79,1.79 0 0 1 52.81,75.00A1.79,1.79 0 0 1 50.42,75.00A1.79,1.79 0 0 1 48.04,75.00A1.79,1.79 0 0 1 45.65,75.00A1.79,1.79 0 0 1 43.27,75.00A1.79,1.79 0 0 1 40.88,75.00A1.79,1.79 0 0 1 38.50,75.00A1.81,1.81 0 0 1 38.50,72.59A1.81,1.81 0 0 1 38.50,70.18A1.81,1.81 0 0 1 38.50,67.76A1.81,1.81 0 0 1 38.50,65.35A1.81,1.81 0 0 1 38.50,62.94A1.81,1.81 0 0 1 38.50,60.53A1.81,1.81 0 0 1 38.50,58.12A1.81,1.81 0 0 1 38.50,55.71A1.81,1.81 0 0 1 38.50,53.29A1.81,1.81 0 0 1 38.50,50.88A1.81,1.81 0 0 1 38.50,48.47A1.81,1.81 0 0 1 38.50,46.06A1.81,1.81 0 0 1 38.50,43.65A1.81,1.81 0 0 1 38.50,41.24A1.81,1.81 0 0 1 38.50,38.82A1.81,1.81 0 0 1 38.50,36.41A1.81,1.81 0 0 1 38.50,34.00Z',
+  photo: 'M41.5,37 H66.5 V65 H41.5Z',
+  sunAt: [60.5, 45, 4.4],
+  back: 'M41.5,65 V56 L49,49.5 L55.5,54.5 L61,50.5 L66.5,54 V65Z',
+  front: 'M41.5,65 V60.5 Q50,55.5 56.5,59.5 T66.5,58.5 V65Z',
+  // Grease-pencil crop marks at two corners, each two strokes that cross a little past the turn.
+  marks: [
+    'M34.6,43.5 Q34.1,36.5 34.4,29.6', 'M32.9,30.6 Q39.5,30.1 45.5,30.4',
+    'M73.4,64.5 Q73.9,71.5 73.6,79', 'M75.1,78 Q68.5,78.5 62.5,78.2',
+  ],
+};
+function markSvg(size, { shape = 'squircle', mono = false, full = false } = {}) {
+  const m = MARK;
+  const shapes = {
+    circle: '<circle cx="54" cy="54" r="36"/>',
+    squircle: '<path d="M54,18C79.3,18 90,28.7 90,54C90,79.3 79.3,90 54,90C28.7,90 18,79.3 18,54C18,28.7 28.7,18 54,18Z"/>',
+    rounded: '<rect x="18" y="18" width="72" height="72" rx="16"/>',
+    teardrop: '<path d="M18,18H54A36,36 0 0 1 54,90A36,36 0 0 1 18,54Z"/>',
+  };
+  const id = 'k' + Math.random().toString(36).slice(2, 8);
+  const sw = 3.4;
+  const pencil = (d) => mono
+    ? `<path d="${d}" fill="none" stroke="#fff" stroke-width="${sw}" stroke-linecap="round"/>`
+    : `<path d="${d}" fill="none" stroke="${m.pencil}" stroke-width="${sw}" stroke-linecap="round"/>`;
+  const art = mono
+    ? `<path fill-rule="evenodd" fill="#fff" fill-opacity=".92" d="${m.print} ${m.photo}"/>
+       <path d="${m.back}" fill="#fff" fill-opacity=".5"/><circle cx="${m.sunAt[0]}" cy="${m.sunAt[1]}" r="${m.sunAt[2]}" fill="#fff" fill-opacity=".5"/>
+       ${m.marks.map(pencil).join('')}`
+    : `<path d="${m.print}" fill="${m.paper}"/><path d="${m.photo}" fill="${m.sky}"/>
+       <circle cx="${m.sunAt[0]}" cy="${m.sunAt[1]}" r="${m.sunAt[2]}" fill="${m.sun}"/>
+       <path d="${m.back}" fill="${m.hillBack}"/><path d="${m.front}" fill="${m.hillFront}"/>
+       ${m.marks.map(pencil).join('')}`;
+  const vb = full ? '0 0 108 108' : '18 18 72 72';
+  const mask = full ? '<rect width="108" height="108"/>' : shapes[shape];
+  return `<svg width="${size}" height="${size}" viewBox="${vb}" xmlns="http://www.w3.org/2000/svg"><defs><clipPath id="${id}">${mask}</clipPath></defs><g clip-path="url(#${id})"><rect width="108" height="108" fill="${mono ? '#2A3550' : m.bg}"/>${art}</g>${full ? '<circle cx="54" cy="54" r="33" fill="none" stroke="#f0f" stroke-width=".4"/>' : ''}</svg>`;
+}
+
+</script>
+<div class="wrap">
+  <div class="hero">
+    <div class="big" id="hero"></div>
+    <div class="copy">
+      <h1>Crop marks</h1>
+      <p>Before scanners, picture editors marked the frame they wanted on a print with two corners of red grease pencil. Attic does the same job: it finds the photo on the page and cuts it out. So the pencil here is the editor’s crop mark, <em>two waxy corners</em>, and there’s no ring.</p>
+      <p class="muted">The print has a deckle edge, the scalloped border of old family snapshots. That and the navy ground keep it apart from Sweepy’s straight print on cream. There are no letters in it, so it still works if the app gets a new name.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>In every launcher shape</h2>
+    <div class="row" id="shapes"></div>
+  </section>
+
+  <section>
+    <h2>On a home screen</h2>
+    <div class="screens">
+      <div class="screen light" id="hsLight"></div>
+      <div class="screen dark" id="hsDark"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Themed icons</h2>
+    <p class="muted">Android 13 and later can tint every icon to the wallpaper. Then only the outline is used: the print, the hills and the two crop marks.</p>
+    <div class="screens">
+      <div class="screen themed light" id="thLight"></div>
+      <div class="screen themed dark" id="thDark"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Next to Sweepy</h2>
+    <div class="pair">
+      <div class="cell" id="cmpA"></div>
+      <div class="cell" id="cmpB"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What goes into the app</h2>
+    <div class="notes">
+      <div><b>Built as vectors</b><span class="muted">A foreground, a navy background and a monochrome layer, all flat shapes, so it stays sharp at every size.</span></div>
+      <div><b>Inside the safe zone</b><span class="muted">Everything sits within the circle every launcher keeps, so no shape cuts a crop mark.</span></div>
+      <div><b>The pencil is red</b><span class="muted">The crop marks are the only pencil red. The photo carries the other colours.</span></div>
+    </div>
+    <div class="swatches" id="sw"></div>
+  </section>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+$('hero').innerHTML=markSvg(340,{shape:'squircle'}).replace('<svg ','<svg class="draw" ');
+document.querySelectorAll('#hero path').forEach(p=>{if(p.getAttribute('stroke')===MARK.pencil)p.classList.add('pm')});
+$('shapes').innerHTML=[['circle',132,'Circle'],['squircle',132,'Squircle'],['rounded',132,'Rounded square'],['teardrop',132,'Teardrop'],['circle',48,'48 dp'],['circle',24,'24 dp']]
+  .map(([s,n,l])=>`<div class="cell">${markSvg(n,{shape:s})}<span>${l}</span></div>`).join('');
+const sweepy=(n,shape)=>{const c={circle:'<circle cx="54" cy="54" r="36"/>',squircle:'<path d="M54,18C79.3,18 90,28.7 90,54C90,79.3 79.3,90 54,90C28.7,90 18,79.3 18,54C18,28.7 28.7,18 54,18Z"/>'}[shape];const id='s'+Math.random().toString(36).slice(2,7);
+ return `<svg width="${n}" height="${n}" viewBox="18 18 72 72"><defs><clipPath id="${id}">${c}</clipPath></defs><g clip-path="url(#${id})"><rect width="108" height="108" fill="#F2EFE8"/><g transform="rotate(-6 54 54)"><path fill="#1C1A17" d="M38,32h32a3,3 0,0 1,3 3v40a3,3 0,0 1,-3 3h-32a3,3 0,0 1,-3 -3v-40a3,3 0,0 1,3 -3z"/><path fill="#FDFCF9" d="M39,33.5h30a2,2 0,0 1,2 2v38.5a2,2 0,0 1,-2 2h-30a2,2 0,0 1,-2 -2v-38.5a2,2 0,0 1,2 -2z"/><path fill="#1C1A17" d="M40,36.5h28v28h-28z"/><path fill="#F2EFE8" d="M40,58l9,-8 6,5 5,-4 8,7v6.5h-28z"/><circle cx="60" cy="44.5" r="3" fill="#F2EFE8"/></g><path fill="none" stroke="#D4432A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M44,27.5C61,23 77,29 79,46C81,64 70,80 52,81C36,82 26,70 28,52C29.5,39 37,31 50,28.5"/></g></svg>`};
+const names=['Clock','Notes','Maps','Files','Camera','Weather','Music','Mail','Phone','Calendar','Contacts'];
+function screen(el,{mono=false}={}){let h='';const cells=12;for(let i=0;i<cells;i++){
+  if(i===5)h+=`<div class="app">${mono?markSvg(54,{shape:'circle',mono:true}):markSvg(54,{shape:'circle'})}<span>Attic</span></div>`;
+  else if(i===6&&!mono)h+=`<div class="app">${sweepy(54,'circle')}<span>Sweepy</span></div>`;
+  else h+=`<div class="app"><div class="tile"></div><span>${names[i%names.length]}</span></div>`;}
+  el.innerHTML=h;}
+screen($('hsLight'));screen($('hsDark'));screen($('thLight'),{mono:true});screen($('thDark'),{mono:true});
+$('cmpA').innerHTML=markSvg(150,{shape:'squircle'})+'<span>Attic: deckled print, crop marks, navy</span>';
+$('cmpB').innerHTML=sweepy(150,'squircle')+'<span>Sweepy: tilted print, loop, cream</span>';
+$('sw').innerHTML=[['Ground',MARK.bg],['Print',MARK.paper],['Sky',MARK.sky],['Sun',MARK.sun],['Hills',MARK.hillBack],['Water',MARK.hillFront],['Pencil',MARK.pencil]].map(([n,c])=>`<span class="sw"><i style="background:${c}"></i>${n}</span>`).join('');
+</script>

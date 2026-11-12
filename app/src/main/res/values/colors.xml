@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Riso paper. -->
-    <color name="ic_launcher_background">#EDEDE9</color>
+    <color name="ic_launcher_background">#1B2142</color>
     <color name="paper">#EDEDE9</color>
     <!-- The On this day widget: paper by day, midnight when the phone is dark (values-night). -->
     <color name="widget_ground">#EDEDE9</color>
