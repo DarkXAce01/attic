@@ -70,9 +70,9 @@ fun ReviewScreen(review: ReviewUi, vm: ScanViewModel) {
             )
             Text(
                 when {
-                    n == 0 -> "Add one and drag it onto the photo, or take it again."
-                    selected >= 0 -> "Drag a corner or a side onto the photo's edge."
-                    else -> "Tap an outline to fix it."
+                    n == 0 -> "Add an outline for each photo and drag it into place, or take it again."
+                    selected >= 0 -> "Drag a corner or a side onto the photo's edge. Missed one? Add a photo."
+                    else -> "Tap an outline to fix it, or add one for a photo that was missed."
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Palette.Muted,

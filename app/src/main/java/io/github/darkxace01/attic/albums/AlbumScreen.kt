@@ -361,11 +361,13 @@ internal fun PrintTile(p: PrintEntity, file: java.io.File, onClick: () -> Unit) 
 
 /**
  * A page as it was: when all its prints came from one photo, that photo is the page and each print sits
- * where it was; otherwise the prints are laid out neatly on album paper.
+ * where it was; otherwise (or when there's only one) the prints are laid out neatly on album paper.
  */
 private suspend fun pageModel(library: Library, number: Int, prints: List<PrintEntity>): PageModel {
     val dirs = prints.map { it.scanDir }.distinct()
-    if (dirs.size == 1) {
+    // A page photo is worth showing behind its prints when it's an album page: two or more prints on it.
+    // Behind a single print it only shows the print again, as a copy under it.
+    if (dirs.size == 1 && prints.size > 1) {
         val bd = library.pageBackdrop(dirs[0])
         val bmp = bd?.let { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { android.graphics.BitmapFactory.decodeFile(it.file.path) } }
         if (bd != null && bmp != null) {

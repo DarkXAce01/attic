@@ -30,6 +30,8 @@ import io.github.darkxace01.attic.finalOutline
 import io.github.darkxace01.attic.library
 import io.github.darkxace01.attic.printNet
 import io.github.darkxace01.attic.vision.Deglare
+import io.github.darkxace01.attic.vision.ShotCheck
+import android.util.Log
 import io.github.darkxace01.attic.vision.Enhance
 import io.github.darkxace01.attic.vision.FrameTransform
 import io.github.darkxace01.attic.vision.PrintHash
@@ -312,6 +314,7 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         }
         val w = frame.cols().toFloat()
         val h = frame.rows().toFloat()
+        liveColour = Core.mean(frame).`val`.copyOf(3)
 
         val found = detector.detect(frame).map { it.scale(1f / w, 1f / h) }
         val tracks = tracker.update(found, now)
@@ -484,10 +487,15 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
         )
     }
 
-    private fun takeShot(onShot: (ByteArray, FrameTransform) -> Unit, onError: () -> Unit) {
+    /** The mean colour of the latest live frame, to check each shot against ([ShotCheck]). */
+    @Volatile private var liveColour: DoubleArray? = null
+
+    private fun takeShot(onShot: (ByteArray, FrameTransform) -> Unit, onError: () -> Unit, attempt: Int = 0) {
         val capture = imageCapture ?: return onError()
-        lastCaptureAt = SystemClock.elapsedRealtime()
-        _state.update { it.copy(shutterTick = lastCaptureAt, error = null, readyProgress = 0f) }
+        if (attempt == 0) {
+            lastCaptureAt = SystemClock.elapsedRealtime()
+            _state.update { it.copy(shutterTick = lastCaptureAt, error = null, readyProgress = 0f) }
+        }
         capture.takePicture(captureExecutor, object : ImageCapture.OnImageCapturedCallback() {
             override fun onCaptureSuccess(image: ImageProxy) {
                 val crop = image.cropRect
@@ -498,6 +506,16 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
                 val buffer = image.planes[0].buffer
                 val jpeg = ByteArray(buffer.remaining()).also(buffer::get)
                 image.close()
+                // A shot taken before the camera's colour settled (green, or black): take it again.
+                val live = liveColour
+                if (live != null && attempt < SHOT_RETRIES && shotColour(jpeg)?.let { ShotCheck.looksWrong(live, it) } == true) {
+                    Log.w(TAG, "Shot doesn't match the live view; taking it again")
+                    analysisExecutor.execute {
+                        SystemClock.sleep(400)
+                        takeShot(onShot, onError, attempt + 1)
+                    }
+                    return
+                }
                 // Sweep state lives on the analysis thread, like the tracker.
                 analysisExecutor.execute { onShot(jpeg, frame) }
             }
@@ -511,6 +529,19 @@ class ScanViewModel(app: Application) : AndroidViewModel(app), ImageAnalysis.Ana
                 }
             }
         })
+    }
+
+    /** The mean R, G, B of a JPEG, from a small decode. */
+    private fun shotColour(jpeg: ByteArray): DoubleArray? {
+        val opts = BitmapFactory.Options().apply { inSampleSize = 16 }
+        val bmp = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size, opts) ?: return null
+        val px = IntArray(bmp.width * bmp.height)
+        bmp.getPixels(px, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+        bmp.recycle()
+        if (px.isEmpty()) return null
+        var r = 0.0; var g = 0.0; var b = 0.0
+        for (c in px) { r += (c shr 16) and 0xFF; g += (c shr 8) and 0xFF; b += c and 0xFF }
+        return doubleArrayOf(r / px.size, g / px.size, b / px.size)
     }
 
     private fun decodeUpright(jpeg: ByteArray, frame: FrameTransform): Mat {
@@ -916,6 +947,11 @@ private fun ImageProxy.toUprightRgba(): Mat {
 
 /** Under this, a print looks soft (focus or shake) and is worth retaking. */
 const val SOFT_SHARPNESS = 60.0
+
+private const val TAG = "Scan"
+
+/** How many times a shot that doesn't match the live view is taken again before it's kept anyway. */
+private const val SHOT_RETRIES = 2
 
 /** The longest side of the photo shown for checking outlines. */
 private const val REVIEW_SIDE = 1600f
